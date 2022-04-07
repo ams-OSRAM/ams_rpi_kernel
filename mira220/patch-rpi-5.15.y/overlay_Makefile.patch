@@ -1,0 +1,12 @@
+diff --git a/arch/arm/boot/dts/overlays/Makefile b/arch/arm/boot/dts/overlays/Makefile
+index 4d05bb8f8..f94c0974a 100644
+--- a/arch/arm/boot/dts/overlays/Makefile
++++ b/arch/arm/boot/dts/overlays/Makefile
+@@ -97,6 +97,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
+ 	i2c6.dtbo \
+ 	i2s-gpio28-31.dtbo \
+ 	ilitek251x.dtbo \
++	mira220.dtbo \
+ 	imx219.dtbo \
+ 	imx290.dtbo \
+ 	imx378.dtbo \

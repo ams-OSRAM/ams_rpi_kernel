@@ -1,0 +1,13 @@
+diff --git a/arch/arm/configs/bcm2711_defconfig b/arch/arm/configs/bcm2711_defconfig
+index 41d9189d6..4affa63c8 100644
+--- a/arch/arm/configs/bcm2711_defconfig
++++ b/arch/arm/configs/bcm2711_defconfig
+@@ -931,6 +931,8 @@ CONFIG_VIDEO_TVP5150=m
+ CONFIG_VIDEO_TW2804=m
+ CONFIG_VIDEO_TW9903=m
+ CONFIG_VIDEO_TW9906=m
++CONFIG_VIDEO_MIRA220=m
++CONFIG_VIDEO_MIRA220PMIC=m
+ CONFIG_VIDEO_IMX219=m
+ CONFIG_VIDEO_IMX290=m
+ CONFIG_VIDEO_IMX477=m
