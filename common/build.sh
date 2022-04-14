@@ -6,9 +6,21 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 # Since Raspberry OS is 32-bit by default (64-bit versions are not oficially released yet) we build
 # the kernel for a 32-bit ARM architecture.
+
+# For 32-bit OS, use the following settings
 export ARCH=arm
 export CROSS_COMPILE=arm-linux-gnueabihf-
+export IMG_NAME=zImage
 export KERNEL=kernel7l
+
+# For 64-bit OS, use the following settings instead
+# export ARCH=arm64
+# export CROSS_COMPILE=aarch64-linux-gnu-
+# export IMG_NAME=Image
+# export KERNEL=kernel8
+
+# Remaining configs are the same for 32bit and 64bit OS
+
 
 CONFIG=bcm2711_defconfig
 NAME=$0
@@ -71,7 +83,7 @@ install_cross_compiler() {
     echo "Would you like to install it now? (you may be asked for your password)"
     select response in "Yes" "No"; do
         case ${response} in
-            Yes) sudo apt install -y gcc-arm-linux-gnueabihf; break;;
+            Yes) sudo apt install -y gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu; break;;
             No) exit 0;;
             *) echo "Please select one of the available options";;
         esac
@@ -126,14 +138,18 @@ run_install_modules() {
 
 run_install_dtbs() {
     run_command_as_su mkdir -p "${INSTALL_DIR}/boot/overlays"
-    run_command_as_su cp "${BUILD_DIR}"/arch/arm/boot/dts/*.dtb "${INSTALL_DIR}/boot/"
-    run_command_as_su cp "${BUILD_DIR}"/arch/arm/boot/dts/overlays/*.dtb* "${INSTALL_DIR}/boot/overlays"
+    if [ "$ARCH" = "arm" ]; then
+        run_command_as_su cp "${BUILD_DIR}"/arch/${ARCH}/boot/dts/*.dtb "${INSTALL_DIR}/boot/"
+    else
+        run_command_as_su cp "${BUILD_DIR}"/arch/${ARCH}/boot/dts/broadcom/*.dtb "${INSTALL_DIR}/boot/"
+    fi
+    run_command_as_su cp "${BUILD_DIR}"/arch/${ARCH}/boot/dts/overlays/*.dtb* "${INSTALL_DIR}/boot/overlays"
 }
 
 run_install_kernel() {
     run_command_as_su mkdir -p "${INSTALL_DIR}/boot"
     run_command_as_su_no_fail cp "${INSTALL_DIR}/boot/$KERNEL.img" "${INSTALL_DIR}/boot/${KERNEL}-backup.img"
-    run_command_as_su cp "${BUILD_DIR}/arch/arm/boot/zImage" "${INSTALL_DIR}/boot/${KERNEL}.img"
+    run_command_as_su cp "${BUILD_DIR}/arch/${ARCH}/boot/${IMG_NAME}" "${INSTALL_DIR}/boot/${KERNEL}.img"
 }
 
 run_install() {
@@ -167,10 +183,10 @@ case ${COMMAND} in
         run_command rm -rf ${BUILD_DIR};;
     restoreconfig) run_make ${CONFIG};;
     menuconfig) run_make menuconfig;;
-    build) run_build zImage dtbs modules;;
+    build) run_build ${IMG_NAME} dtbs modules;;
     modules) run_build modules;;
     dtbs) run_build dtbs;;
-    kernel) run_make zImage;;
+    kernel) run_make ${IMG_NAME};;
     install) run_install;;
     install_modules) run_install_modules;;
     install_dtbs) run_install_dtbs;;
