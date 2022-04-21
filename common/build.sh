@@ -4,25 +4,61 @@ set -e
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
-# Since Raspberry OS is 32-bit by default (64-bit versions are not oficially released yet) we build
-# the kernel for a 32-bit ARM architecture.
+# Set OSBIT to 32 or 64 to switch builds
+OSBIT=64
 
-# For 32-bit OS, use the following settings
-export ARCH=arm
-export CROSS_COMPILE=arm-linux-gnueabihf-
-export IMG_NAME=zImage
-export KERNEL=kernel7l
+# SET RPIHW to RPI4B or RPI3BP
+RPIHW=RPI4B
 
-# For 64-bit OS, use the following settings instead
-# export ARCH=arm64
-# export CROSS_COMPILE=aarch64-linux-gnu-
-# export IMG_NAME=Image
-# export KERNEL=kernel8
+# The OSBIT and RPIHW controls KERNEL and CONFIG
+# Details in doc:
+# https://www.raspberrypi.com/documentation/computers/linux_kernel.html#kernel-configuration
 
-# Remaining configs are the same for 32bit and 64bit OS
+# Configure variables according to OSBIT and RPIHW
+if [ "$OSBIT" = "32" ]; then
+	# For 32-bit OS, use the following settings
+	export ARCH=arm
+	export CROSS_COMPILE=arm-linux-gnueabihf-
+	export IMG_NAME=zImage
+	if [ "$RPIHW" = "RPI4B" ]; then
+		export KERNEL=kernel7l
+	elif [ "$RPIHW" = "RPI3B" ]; then
+		export KERNEL=kernel7
+	else
+		echo "ERROR: RPIHW should be RPI4B or RPI3B."
+		exit 1
+	fi
+elif [ "$OSBIT" = "64" ]; then
+	# For 64-bit OS, use the following settings instead
+	export ARCH=arm64
+	export CROSS_COMPILE=aarch64-linux-gnu-
+	export IMG_NAME=Image
+	export KERNEL=kernel8
+else
+	echo "ERROR: OSBIT should be 32 or 64."
+	exit 1
+fi
 
+if [ "$RPIHW" = "RPI4B" ]; then
+	CONFIG=bcm2711_defconfig
+elif [ "$RPIHW" = "RPI3B" ]; then
+	if [ "$OSBIT" = "64" ]; then
+		CONFIG=bcm2711_defconfig
+	elif [ "$OSBIT" = "32" ]; then
+		CONFIG=bcm2709_defconfig
+	else
+		echo "ERROR: OSBIT should be 32 or 64."
+		exit 1
+	fi
+else
+	echo "ERROR: RPIHW should be RPI4B or RPI3B."
+	exit 1
+fi
 
-CONFIG=bcm2711_defconfig
+#
+# The variables below are independent of OSBIT and RPIHW
+#
+
 NAME=$0
 COMMAND=$1
 RPI_KERNEL_INSTALL_DIR=/media/pi

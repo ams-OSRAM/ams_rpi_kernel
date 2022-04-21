@@ -19,27 +19,30 @@ insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist () {
 
 
 # Patch defconfig of RPI 3&4 CPUs for 32&64bit OS
+# Different combinations of 32-bit/64-bit OS and RPI hardware uses different defconfig
+# See doc:
+# https://www.raspberrypi.com/documentation/computers/linux_kernel.html#kernel-configuration
 
-# 64bit OS RPI 3
+# 64bit OS RPI 4B and 3B
 INSERT_FILE=$PATCH_PATH/defconfig.txt
-TARGET_FILE=$LINUX_PATH/arch/arm64/configs/bcmrpi3_defconfig
+TARGET_FILE=$LINUX_PATH/arch/arm64/configs/bcm2711_defconfig
 INSERT_BEFORE="CONFIG_VIDEO_IMX219=m"
 INSERT_IF_NOT_EXIST="CONFIG_VIDEO_MIRA220=m"
 insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist "$INSERT_FILE" "$TARGET_FILE" "$INSERT_BEFORE" "$INSERT_IF_NOT_EXIST" 
 
-# 64bit OS RPI 4
-TARGET_FILE=$LINUX_PATH/arch/arm64/configs/bcm2711_defconfig
+# 64bit OS legacy for RPI 3 and 3B. Unused, but patched anyway.
+TARGET_FILE=$LINUX_PATH/arch/arm64/configs/bcmrpi3_defconfig
 insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist "$INSERT_FILE" "$TARGET_FILE" "$INSERT_BEFORE" "$INSERT_IF_NOT_EXIST" 
 
-# 32bit OS RPI 3
-TARGET_FILE=$LINUX_PATH/arch/arm/configs/bcm2709_defconfig
-insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist "$INSERT_FILE" "$TARGET_FILE" "$INSERT_BEFORE" "$INSERT_IF_NOT_EXIST" 
-
-# 32bit OS RPI 4
+# 32bit OS RPI 4B
 TARGET_FILE=$LINUX_PATH/arch/arm/configs/bcm2711_defconfig
 insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist "$INSERT_FILE" "$TARGET_FILE" "$INSERT_BEFORE" "$INSERT_IF_NOT_EXIST" 
 
-# 32bit OS RPI 3
+# 32bit OS RPI 3B
+TARGET_FILE=$LINUX_PATH/arch/arm/configs/bcm2709_defconfig
+insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist "$INSERT_FILE" "$TARGET_FILE" "$INSERT_BEFORE" "$INSERT_IF_NOT_EXIST" 
+
+# 32bit OS earlier RPI. Unused, but patched anyway.
 TARGET_FILE=$LINUX_PATH/arch/arm/configs/bcmrpi_defconfig
 insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist "$INSERT_FILE" "$TARGET_FILE" "$INSERT_BEFORE" "$INSERT_IF_NOT_EXIST" 
 
