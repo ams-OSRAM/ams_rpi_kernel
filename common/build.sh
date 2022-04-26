@@ -5,7 +5,7 @@ set -e
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 # Set OSBIT to 32 or 64 to switch builds
-OSBIT=64
+OSBIT=32
 
 # SET RPIHW to RPI4B or RPI3BP
 RPIHW=RPI4B

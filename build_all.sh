@@ -1,12 +1,14 @@
 
 # checkout kernel source
-TAG=rpi-5.15.y
-echo "Cloning Raspberry Pi Linux source tag ${TAG}"
-git clone --depth 1 --branch $TAG https://github.com/raspberrypi/linux.git
+COMMIT=6dafd553901ea01d8871010488121e21d131fea4
+wget https://github.com/raspberrypi/linux/archive/${COMMIT}.zip
+echo "Downloading Raspberry Pi Linux repo commit ${COMMIT}"
+unzip ${COMMIT}.zip
+ln -s $PWD/linux-${COMMIT} linux
 
 # apply patches and sources
 echo "Applying patches to Linux source"
-(cd mira220/patch-$TAG && ./apply_patch.sh)
+(cd mira220/patch && ./apply_patch.sh)
 echo "Copying source files to Linux source"
 (cd mira220/src && ./apply_src.sh)
 

@@ -1,3 +1,11 @@
+# Version v0.1.2
+
+New features:
+- Use simplified flags `OSBIT` and `RPIHW` in `common/build.sh` to configure 32&64bit OS, and HW version of RPI.
+
+Bug fixes:
+- The RPI Linux kernel tag rpi-5.15.y is unstable. Use commit id instead. Tested on 32&64bit OS.
+
 # Version v0.1.1
 
 New features:
