@@ -208,7 +208,7 @@ gen_compile_commands() {
     run_command pushd ${BUILD_DIR}
     run_command ${KERNEL_SOURCE_DIR}/scripts/clang-tools/gen_compile_commands.py
     run_command popd
-    run_command ln -s -f ${BUILD_DIR}/compile_commands.json compile_commands.json
+    run_command ln -sf ${BUILD_DIR}/compile_commands.json compile_commands.json
 }
 
 check_dependencies
