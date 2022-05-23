@@ -14,6 +14,6 @@ Compilation and installation:
 
 Tests:
 - Test whether installation script successfully copies files. After reboot, issue the command `uname -a` and the printed out timestamp of the kernel should match the time that you compile it.
-- Test whether Mira220 driver is loaded. As mentioned above, the line `dtoverlay=mira220` should be added to `/boot/config.txt` on RPI. After reboot, the `dmesg` command should print out logs with keywords `MIRA220` and `MIRA220PMIC`.
+- Test whether Mira220 driver is loaded. As mentioned above, the line `dtoverlay=mira220` should be added to `/boot/config.txt` on RPI. After reboot, the `dmesg` command should print out logs with keywords `MIRA220`and `MIRA220PMIC`. For a 64 bit kernel - it could be that you need to add `kernel=kernel8.img` to `config.txt`
 - Test whether the power management IC driver module (MIRA220PMIC) is working. The green LED on the Mira220 sensor board should be turned on.
 - To further test the actual driver module (MIRA220), please refer to a separate repo `ams_rpi_software` and follow instructions from there.
