@@ -21,6 +21,11 @@ echo "Applying patches to Linux source"
 (cd $PWD/mira220/patch && ./apply_patch.sh)
 echo "Copying source files to Linux source"
 (cd $PWD/mira220/src && ./apply_src.sh)
+echo "Applying patches to Linux source"
+(cd $PWD/mira050/patch && ./apply_patch.sh)
+echo "Copying source files to Linux source"
+(cd $PWD/mira050/src && ./apply_src.sh)
+
 
 # prepare compilation script
 echo "Preparing a build.sh script inside Linux source dir"
