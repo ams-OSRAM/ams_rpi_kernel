@@ -219,7 +219,7 @@ static int mira050pmic_init_controls(struct i2c_client *client)
 	// Enable 2.85V //
 	usleep_range(50,60);
 	// LDO4=2.85V VDDHI alternativ
-	ret = mira050pmic_write(client, 0x1A, 0x00);
+	ret = mira050pmic_write(client, 0x1A, 0xB8); // Either 0x00 or 0xB8
 	// Disable LDO9 Lock
 	ret = mira050pmic_write(client, 0x24, 0x48);
 	// LDO9=2.85V VDDHI
@@ -228,6 +228,15 @@ static int mira050pmic_init_controls(struct i2c_client *client)
 	ret = mira050pmic_write(client, 0x20, 0xB9);
 	ret = mira050pmic_read(client, 0x20, &val);
 	dev_err(&client->dev, "Read 0x20 with val %x\n", val);
+
+	// VPIXH on cob = vdd25A on interposer = LDO4 on pmic
+	// VPIXH should connect to VDD28 on pcb, or enable 4th supply
+	ret = mira050pmic_read(client, 0x19, &val);
+	dev_err(&client->dev, "Read 0x19 with val %x\n", val);
+	ret = mira050pmic_write(client, 0x19, 0x38);
+	ret = mira050pmic_read(client, 0x19, &val);
+	dev_err(&client->dev, "Read 0x19 with val %x\n", val);
+
 
 	// Enable 1.2V //
 	usleep_range(700,710);
@@ -270,96 +279,6 @@ static int mira050pmic_init_controls(struct i2c_client *client)
 	ret = mira050pmic_write(client, 0x61, 0x10); // led seq -- use this to turn on leds. abc0000- 1110000 for all leds
 
 	usleep_range(2000000,2001000);
-
-
-	/**** Unneded code ****/
-	ret = mira050pmic_write(client, 0x62, 0x00);
-	ret = mira050pmic_write(client, 0x61, 0x00);
-
-	ret = mira050pmic_read(client, 0x61, &val);
-	dev_err(&client->dev, "Read 0x61 with val %x\n", val);
-
-
-	usleep_range(100, 110);
-
-	ret = mira050pmic_write(client, 0x05, 0x00);
-	ret = mira050pmic_write(client, 0x0e, 0x00);
-	ret = mira050pmic_write(client, 0x11, 0x00);
-	ret = mira050pmic_write(client, 0x14, 0x00);
-	ret = mira050pmic_write(client, 0x17, 0x00);
-	ret = mira050pmic_write(client, 0x1a, 0x00);
-	ret = mira050pmic_write(client, 0x1c, 0x00);
-	ret = mira050pmic_write(client, 0x1d, 0x00);
-	ret = mira050pmic_write(client, 0x1e, 0x00);
-	ret = mira050pmic_write(client, 0x1f, 0x00);
-
-	ret = mira050pmic_write(client, 0x24, 0x48);
-	ret = mira050pmic_write(client, 0x20, 0x00);
-	ret = mira050pmic_write(client, 0x21, 0x00);
-	ret = mira050pmic_write(client, 0x1a, 0x00);
-	ret = mira050pmic_write(client, 0x01, 0x00);
-	ret = mira050pmic_write(client, 0x08, 0x00);
-	ret = mira050pmic_write(client, 0x02, 0x00);
-	ret = mira050pmic_write(client, 0x0b, 0x00);
-	ret = mira050pmic_write(client, 0x14, 0x00);
-	ret = mira050pmic_write(client, 0x17, 0x00);
-	ret = mira050pmic_write(client, 0x1c, 0x00);
-	ret = mira050pmic_write(client, 0x1d, 0x00);
-	ret = mira050pmic_write(client, 0x1f, 0x00);
-
-	usleep_range(50, 60);
-
-	ret = mira050pmic_write(client, 0x62, 0x0d);
-
-	usleep_range(50, 60);
-	usleep_range(50000, 50000+100);
-
-	ret = mira050pmic_write(client, 0x27, 0xff);
-	ret = mira050pmic_write(client, 0x28, 0xff);
-	ret = mira050pmic_write(client, 0x29, 0xff);
-	ret = mira050pmic_write(client, 0x2a, 0xff);
-	ret = mira050pmic_write(client, 0x2b, 0xff);
-
-	ret = mira050pmic_write(client, 0x41, 0x04);
-	usleep_range(50, 60);
-
-	ret = mira050pmic_read(client, 0x20, &val);
-	dev_err(&client->dev, "Read 0x20 with val %x\n", val);
-
-	// PCB V2.0 or above, enable LDO9=2.50V for VDD25
-	ret = mira050pmic_write(client, 0x20, 0xb2);
-	// For PCB V1.0, VDD28 on 2.85V for older PCBs
-	// ret = mira050pmic_write(client, 0x20, 0xb9);
-
-	ret = mira050pmic_read(client, 0x20, &val);
-	dev_err(&client->dev, "Read 0x20 with val %x\n", val);
-
-	usleep_range(700, 710);
-
-	ret = mira050pmic_write(client, 0x12, 0x16);
-	ret = mira050pmic_write(client, 0x10, 0x16);
-	ret = mira050pmic_write(client, 0x11, 0x96);
-	ret = mira050pmic_write(client, 0x1e, 0x96);
-	ret = mira050pmic_write(client, 0x21, 0x96);
-	usleep_range(50, 60);
-
-	ret = mira050pmic_write(client, 0x00, 0x04);
-	ret = mira050pmic_write(client, 0x04, 0x34);
-	ret = mira050pmic_write(client, 0x06, 0xbf);
-	ret = mira050pmic_write(client, 0x05, 0xb4);
-	ret = mira050pmic_write(client, 0x03, 0x00);
-	ret = mira050pmic_write(client, 0x0d, 0x34);
-	ret = mira050pmic_write(client, 0x0f, 0xbf);
-	ret = mira050pmic_write(client, 0x0e, 0xb4);
-	usleep_range(50, 60);
-
-	ret = mira050pmic_write(client, 0x42, 0x05);
-	usleep_range(50, 60);
-
-	ret = mira050pmic_write(client, 0x45, 0x40);
-	ret = mira050pmic_write(client, 0x57, 0x02);
-	ret = mira050pmic_write(client, 0x5d, 0x10);
-	ret = mira050pmic_write(client, 0x61, 0x10);
 
 	return 0;
 }
@@ -469,7 +388,7 @@ static int mira050pmic_remove(struct i2c_client *client)
 }
 
 static const struct of_device_id mira050pmic_dt_ids[] = {
-	{ .compatible = "ams,pmic" },
+	{ .compatible = "ams,mira050pmic" },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, mira050pmic_dt_ids);

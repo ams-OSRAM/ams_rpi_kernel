@@ -344,7 +344,7 @@ static int mira220pmic_remove(struct i2c_client *client)
 }
 
 static const struct of_device_id mira220pmic_dt_ids[] = {
-	{ .compatible = "ams,pmic" },
+	{ .compatible = "ams,mira220pmic" },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, mira220pmic_dt_ids);

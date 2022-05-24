@@ -47,14 +47,14 @@
 			#size-cells = <0>;
 			status = "okay";
 
-			pmic: pmic@2d {
-				compatible = "ams,pmic";
+			mira220pmic: mira220pmic@2d {
+				compatible = "ams,mira220pmic";
 				// I2C addresses range from 0x54 to 0x57 (7-bit address)
 				// The interface board uses 0x54 by default
 				// MIRA220CSP: 0x54; PMIC: 0x2D; LM86: 0x4C; LM2759: 0x53;
 				// dsPIC33EP32MC503: 0x0A
 				reg = <0x2D>;
-				reg-names = "pmic";
+				reg-names = "mira220pmic";
 				status = "okay";
 
 				//clocks = <&mira220_clk>;
@@ -68,7 +68,7 @@
 				VDDL-supply = <&cam_dummy_reg>;	/* 1.2v */
 
 				port {
-					pmic_0: endpoint {
+					mira220pmic_0: endpoint {
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
