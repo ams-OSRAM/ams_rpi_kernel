@@ -19,6 +19,9 @@
 // Power on function timing
 #define MIRA050PMIC_SUPPORTED_XCLK_FREQ		24000000
 
+// DEfault address of other I2C devices to be controlled by PMIC driver
+#define MIRA050PMIC_DEFAULT_UC_I2C_ADDR		0x0A
+
 /* regulator supplies */
 static const char * const mira050pmic_supply_name[] = {
 	// TODO(jalv): Check supply names
@@ -36,6 +39,7 @@ struct mira050pmic {
 	struct clk *xclk; /* system clock to MIRA050 */
 	u32 xclk_freq;
 
+	struct i2c_client       *uc_client; /* microcontroller I2C */
 	struct regulator_bulk_data supplies[MIRA050PMIC_NUM_SUPPLIES];
 };
 
@@ -143,7 +147,7 @@ static int mira050pmic_get_regulators(struct i2c_client *client, struct mira050p
 
 
 /* Verify chip ID */
-static int mira050pmic_init_controls(struct i2c_client *client)
+static int mira050pmic_init_controls(struct i2c_client *client, struct mira050pmic *mira050pmic)
 {
 	int ret;
 	u8 val;
@@ -278,6 +282,19 @@ static int mira050pmic_init_controls(struct i2c_client *client)
 	ret = mira050pmic_write(client, 0x5D, 0x10); // ledc ctrl7
 	ret = mira050pmic_write(client, 0x61, 0x10); // led seq -- use this to turn on leds. abc0000- 1110000 for all leds
 
+	// uC, set atb and jtag high
+	// according to old uC fw (svn rev41)
+	// 12[3] ldo en
+	// 11[4,5] atpg jtag
+	// 11/12 i/o direction, 15/16 output high/low
+	// uC, set atb and jtag high
+	// WARNING this only works on interposer v2 if R307 is not populated. otherwise, invert the bit for ldo
+	ret = mira050pmic_write(mira050pmic->uc_client, 12, 0xF3);
+	ret = mira050pmic_write(mira050pmic->uc_client, 16, 0xFF); // ldo en:0
+	ret = mira050pmic_write(mira050pmic->uc_client, 11, 0XCF);
+	ret = mira050pmic_write(mira050pmic->uc_client, 15, 0xFF);
+	ret = mira050pmic_write(mira050pmic->uc_client, 6, 1); // write
+
 	usleep_range(2000000,2001000);
 
 	return 0;
@@ -349,6 +366,12 @@ static int mira050pmic_probe(struct i2c_client *client)
 		return ret;
 	}
 
+	mira050pmic->uc_client = i2c_new_dummy_device(client->adapter,
+                                MIRA050PMIC_DEFAULT_UC_I2C_ADDR);
+	if (IS_ERR(mira050pmic->uc_client)) {
+		ret = PTR_ERR(mira050pmic->uc_client);
+		goto error_unregister_uc_client;
+        }
 
 	printk(KERN_INFO "[MIRA050PMIC]: Entering power on function.\n");
 
@@ -362,7 +385,7 @@ static int mira050pmic_probe(struct i2c_client *client)
 
 	printk(KERN_INFO "[MIRA050PMIC]: Entering init controls function.\n");
 
-	ret = mira050pmic_init_controls(client);
+	ret = mira050pmic_init_controls(client, mira050pmic);
 	if (ret)
 		goto error_power_off;
 
@@ -373,6 +396,8 @@ static int mira050pmic_probe(struct i2c_client *client)
 
 	return 0;
 
+error_unregister_uc_client:
+        i2c_unregister_device(mira050pmic->uc_client);
 error_power_off:
 	return ret;
 }
@@ -383,6 +408,9 @@ static int mira050pmic_remove(struct i2c_client *client)
 	if (!pm_runtime_status_suspended(&client->dev))
 		mira050pmic_power_off(&client->dev);
 	pm_runtime_set_suspended(&client->dev);
+
+	// TODO: Not able to unregister uc_client from master i2c_client
+	// i2c_unregister_device(mira050pmic->uc_client);
 
 	return 0;
 }
