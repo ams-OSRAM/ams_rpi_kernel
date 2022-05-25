@@ -953,10 +953,12 @@ static int mira050_write_regs(struct mira050 *mira050,
 			return ret;
 		} else {
 			// Debug code below
+			/*
 			u8 val;
 			ret = mira050_read(mira050, regs[i].address, &val);
 			printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
 					regs[i].address, val);
+			*/
 		}
 	}
 
@@ -2080,7 +2082,7 @@ static int mira050_probe(struct i2c_client *client)
 	}
 
 	/* For debug purpose */
-	mira050_start_streaming(mira050);
+	// mira050_start_streaming(mira050);
 
 	/* Enable runtime PM and turn off the device */
 	pm_runtime_set_active(dev);
