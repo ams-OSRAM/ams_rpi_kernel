@@ -71,14 +71,14 @@
 					mira050pmic_0: endpoint {
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
-						data-lanes = <1 2>;
+						data-lanes = <1>;
 						clock-noncontinuous;
 						link-frequencies =
 							/bits/ 64 <456000000>;
 					};
 				};
 			};
-			mira050: mira050@54 {
+			mira050: mira050@36 {
 				compatible = "ams,mira050";
 				// I2C addresses (7-bit address)
 				// The interface board uses 0x36 by default
@@ -99,14 +99,14 @@
 				VDDL-supply = <&cam_dummy_reg>;	/* 1.2v */
 
 				// FIXME(jalv): Make sure orientation is correct
-				rotation = <180>;
+				rotation = <0>;
 				orientation = <2>;
 
 				port {
 					mira050_0: endpoint {
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
-						data-lanes = <1 2>;
+						data-lanes = <1>;
 						clock-noncontinuous;
 						link-frequencies =
 							/bits/ 64 <456000000>;
@@ -127,7 +127,7 @@
 				csi_ep: endpoint {
 					remote-endpoint = <&mira050_0>;
 					clock-lanes = <0>;
-					data-lanes = <1 2>;
+					data-lanes = <1>;
 					clock-noncontinuous;
 				};
 			};

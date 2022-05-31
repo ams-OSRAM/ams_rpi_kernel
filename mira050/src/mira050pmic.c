@@ -35,7 +35,6 @@ static const char * const mira050pmic_supply_name[] = {
 
 
 struct mira050pmic {
-
 	struct clk *xclk; /* system clock to MIRA050 */
 	u32 xclk_freq;
 
@@ -152,6 +151,19 @@ static int mira050pmic_init_controls(struct i2c_client *client, struct mira050pm
 	int ret;
 	u8 val;
 
+	// uC, set atb and jtag high
+        // according to old uC fw (svn rev41)
+        // 12[3] ldo en
+        // 11[4,5] atpg jtag
+        // 11/12 i/o direction, 15/16 output high/low
+        // uC, set atb and jtag high
+        // WARNING this only works on interposer v2 if R307 is not populated. otherwise, invert the bit for ldo
+	ret = mira050pmic_write(mira050pmic->uc_client, 12, 0xF7);
+	ret = mira050pmic_write(mira050pmic->uc_client, 16, 0xFF); // ldo en:1
+	ret = mira050pmic_write(mira050pmic->uc_client, 11, 0XCF);
+	ret = mira050pmic_write(mira050pmic->uc_client, 15, 0xFF);
+	ret = mira050pmic_write(mira050pmic->uc_client, 6, 1); // write
+
 	// Disable master switch //
 	ret = mira050pmic_write(client, 0x62, 0x00);
 
@@ -220,6 +232,19 @@ static int mira050pmic_init_controls(struct i2c_client *client, struct mira050pm
 
 	ret = mira050pmic_write(client, 0x42, 4);
 
+	// Enable 1.80V //
+	usleep_range(50,60);
+	// DCDC1=1.8V VINLDO1p8 >=1P8
+	ret = mira050pmic_write(client, 0x00, 0x00);
+	ret = mira050pmic_write(client, 0x04, 0x34);
+	ret = mira050pmic_write(client, 0x06, 0xBF);
+	ret = mira050pmic_write(client, 0x05, 0xB4);
+	// DCDC4=1.8V VDDIO
+	ret = mira050pmic_write(client, 0x03, 0x00);
+	ret = mira050pmic_write(client, 0x0D, 0x34);
+	ret = mira050pmic_write(client, 0x0F, 0xBF);
+	ret = mira050pmic_write(client, 0x0E, 0xB4);
+
 	// Enable 2.85V //
 	usleep_range(50,60);
 	// LDO4=2.85V VDDHI alternativ
@@ -253,46 +278,32 @@ static int mira050pmic_init_controls(struct i2c_client *client, struct mira050pm
 	// LDO10=1.2V VDDLO_ANA
 	ret = mira050pmic_write(client, 0x21, 0x90);
 
-	// Enable 1.80V //
-	usleep_range(50,60);
-	// DCDC1=1.8V VINLDO1p8 >=1P8
-	ret = mira050pmic_write(client, 0x00, 0x00);
-	ret = mira050pmic_write(client, 0x04, 0x34);
-	ret = mira050pmic_write(client, 0x06, 0xBF);
-	ret = mira050pmic_write(client, 0x05, 0xB4);
-	// DCDC4=1.8V VDDIO
-	ret = mira050pmic_write(client, 0x03, 0x00);
-	ret = mira050pmic_write(client, 0x0D, 0x34);
-	ret = mira050pmic_write(client, 0x0F, 0xBF);
-	ret = mira050pmic_write(client, 0x0E, 0xB4);
-
 	// Enable green LED //
 	usleep_range(50,60);
-	ret = mira050pmic_write(client, 0x43, 0x40); // leda
-	ret = mira050pmic_write(client, 0x44, 0x40); // ledb
+	ret = mira050pmic_write(client, 0x42, 0x15); // gpio2
+	// ret = mira050pmic_write(client, 0x43, 0x40); // leda
+	// ret = mira050pmic_write(client, 0x44, 0x40); // ledb
 	ret = mira050pmic_write(client, 0x45, 0x40); // ledc
 
-	ret = mira050pmic_write(client, 0x47, 0x02); // leda ctrl1
-	ret = mira050pmic_write(client, 0x4F, 0x02); // ledb ctrl1
+	// ret = mira050pmic_write(client, 0x47, 0x02); // leda ctrl1
+	// ret = mira050pmic_write(client, 0x4F, 0x02); // ledb ctrl1
 	ret = mira050pmic_write(client, 0x57, 0x02); // ledc ctrl1
 
 
-	ret = mira050pmic_write(client, 0x4D, 0x01); // leda ctrl1
-	ret = mira050pmic_write(client, 0x55, 0x10); // ledb ctrl7
+	// ret = mira050pmic_write(client, 0x4D, 0x01); // leda ctrl1
+	// ret = mira050pmic_write(client, 0x55, 0x10); // ledb ctrl7
 	ret = mira050pmic_write(client, 0x5D, 0x10); // ledc ctrl7
 	ret = mira050pmic_write(client, 0x61, 0x10); // led seq -- use this to turn on leds. abc0000- 1110000 for all leds
 
-	// uC, set atb and jtag high
-	// according to old uC fw (svn rev41)
-	// 12[3] ldo en
-	// 11[4,5] atpg jtag
-	// 11/12 i/o direction, 15/16 output high/low
-	// uC, set atb and jtag high
-	// WARNING this only works on interposer v2 if R307 is not populated. otherwise, invert the bit for ldo
-	ret = mira050pmic_write(mira050pmic->uc_client, 12, 0xF3);
-	ret = mira050pmic_write(mira050pmic->uc_client, 16, 0xFF); // ldo en:0
-	ret = mira050pmic_write(mira050pmic->uc_client, 11, 0XCF);
-	ret = mira050pmic_write(mira050pmic->uc_client, 15, 0xFF);
+	// uC, set atb and jtag high and ldo_en
+	ret = mira050pmic_write(mira050pmic->uc_client, 12, 0xF7);
+	ret = mira050pmic_write(mira050pmic->uc_client, 16, 0xF7); // ldo en:0
+	/*
+	 * In Mira050-bringup.py, write 11, 0xCF; 15: 0x30.
+	 * In mira050.py, write 11, 0x8D; 15, 0xFD.
+	 */
+	ret = mira050pmic_write(mira050pmic->uc_client, 11, 0X8D);
+	ret = mira050pmic_write(mira050pmic->uc_client, 15, 0xFD);
 	ret = mira050pmic_write(mira050pmic->uc_client, 6, 1); // write
 
 	usleep_range(2000000,2001000);
@@ -389,6 +400,8 @@ static int mira050pmic_probe(struct i2c_client *client)
 	if (ret)
 		goto error_power_off;
 
+	i2c_set_clientdata(client, mira050pmic);
+
 	/* Enable runtime PM and turn off the device */
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
@@ -404,13 +417,15 @@ error_power_off:
 
 static int mira050pmic_remove(struct i2c_client *client)
 {
+	struct mira050pmic *mira050pmic = i2c_get_clientdata(client);
+
 	pm_runtime_disable(&client->dev);
 	if (!pm_runtime_status_suspended(&client->dev))
 		mira050pmic_power_off(&client->dev);
 	pm_runtime_set_suspended(&client->dev);
 
 	// TODO: Not able to unregister uc_client from master i2c_client
-	// i2c_unregister_device(mira050pmic->uc_client);
+	i2c_unregister_device(mira050pmic->uc_client);
 
 	return 0;
 }

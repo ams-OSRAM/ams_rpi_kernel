@@ -21,16 +21,16 @@
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
 
-#define MIRA050_NATIVE_WIDTH			600U
-#define MIRA050_NATIVE_HEIGHT			800U
+#define MIRA050_NATIVE_WIDTH			576U
+#define MIRA050_NATIVE_HEIGHT			768U
 
 #define MIRA050_PIXEL_ARRAY_LEFT		0U
 #define MIRA050_PIXEL_ARRAY_TOP			0U
-#define MIRA050_PIXEL_ARRAY_WIDTH		600U
-#define MIRA050_PIXEL_ARRAY_HEIGHT		800U
+#define MIRA050_PIXEL_ARRAY_WIDTH		576U
+#define MIRA050_PIXEL_ARRAY_HEIGHT		768U
 
-#define MIRA050_ANALOG_GAIN_REG			0x400A
-#define MIRA050_ANALOG_GAIN_MAX			4
+// #define MIRA050_ANALOG_GAIN_REG			0x400A
+#define MIRA050_ANALOG_GAIN_MAX			1
 #define MIRA050_ANALOG_GAIN_MIN			1
 #define MIRA050_ANALOG_GAIN_STEP		1
 #define MIRA050_ANALOG_GAIN_DEFAULT		MIRA050_ANALOG_GAIN_MIN
@@ -41,8 +41,8 @@
 #define MIRA050_BIT_DEPTH_8_BIT			0x06
 
 #define MIRA050_CSI_DATA_TYPE_REG		0x208D
-#define MIRA050_CSI_DATA_TYPE_12_BIT		0x04
-#define MIRA050_CSI_DATA_TYPE_10_BIT		0x02
+#define MIRA050_CSI_DATA_TYPE_12_BIT	0x04
+#define MIRA050_CSI_DATA_TYPE_10_BIT	0x02
 #define MIRA050_CSI_DATA_TYPE_8_BIT		0x01
 
 #define MIRA050_BANK_SEL_REG			0xE000
@@ -58,9 +58,9 @@
 #define MIRA050_POWER_MODE_IDLE			0x02
 #define MIRA050_POWER_MODE_ACTIVE		0x0C
 
-// Exposure time is indicated in number of rows
-#define MIRA050_EXP_TIME_LO_REG			0x100C
-#define MIRA050_EXP_TIME_HI_REG			0x100D
+// Exposure time is indicated in us
+#define MIRA050_EXP_TIME_L_REG			0x000E
+#define MIRA050_EXP_TIME_S_REG			0x0012
 
 // VBLANK is indicated in number of rows
 #define MIRA050_VBLANK_LO_REG			0x1012
@@ -146,12 +146,16 @@
 						    / MIRA050_MIN_ROW_LENGTH)
 
 // Default exposure is adjusted to 1 ms
-#define MIRA050_DEFAULT_EXPOSURE		0x0b32
-#define MIRA050_EXPOSURE_MIN			0
+#define MIRA050_DEFAULT_EXPOSURE		1000
+#define MIRA050_LUT_DEL_008			66
+#define MIRA050_GRAN_TG				34
+#define MIRA050_DATA_RATE			1000 // Mbit/s
+#define MIRA050_EXPOSURE_MIN			(int)((151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG * 8 / MIRA050_DATA_RATE)
+#define MIRA050_EXPOSURE_MAX			0xFFFFFFFF
 
 // Power on function timing
-#define MIRA050_XCLR_MIN_DELAY_US		40000
-#define MIRA050_XCLR_DELAY_RANGE_US		30
+#define MIRA050_XCLR_MIN_DELAY_US		150000
+#define MIRA050_XCLR_DELAY_RANGE_US		3000
 
 /* Chip ID */
 #define MIRA050_REG_CHIP_ID		0x0000
@@ -161,14 +165,20 @@
 #define MIRA050_REG_VALUE_16BIT		2
 
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
-// 1.5Gb/s * 2 * 2 / 12 = 536870912
-#define MIRA050_PIXEL_RATE		(536870912)
+// 1.0Gb/s * 2 * 1 / 12 = 178956970
+#define MIRA050_PIXEL_RATE		(178956970)
 /* Should match device tree link freq */
 #define MIRA050_DEFAULT_LINK_FREQ	456000000
 
-#define MIRA050_REG_TEST_PATTERN	0x2091
-#define	MIRA050_TEST_PATTERN_DISABLE	0x00
-#define	MIRA050_TEST_PATTERN_VERTICAL_GRADIENT	0x01
+// For test pattern with fixed data
+#define MIRA050_TRAINING_WORD_REG		0x0060
+// For test pattern with 2D gradiant
+#define MIRA050_DELTA_TEST_IMG_REG		0x0056
+// For setting test pattern type
+#define MIRA050_TEST_PATTERN_REG		0x0062
+#define	MIRA050_TEST_PATTERN_DISABLE		0x00
+#define	MIRA050_TEST_PATTERN_FIXED_DATA		0x01
+#define	MIRA050_TEST_PATTERN_2D_GRADIENT	0x02
 
 /* Embedded metadata stream structure */
 #define MIRA050_EMBEDDED_LINE_WIDTH 16384
@@ -179,6 +189,8 @@
 #define MIRA050_DEFAULT_PIXEL_CLOCK    (160)
 #define MIRA050_DEFAULT_FRAME_LENGTH    (0x07C0)
 
+#define MIRA050_PLL_LOCKED_REG			0x207C
+#define MIRA050_CSI2_TX_HS_ACTIVE_REG		0x209A
 
 enum pad_types {
 	IMAGE_PAD,
@@ -207,557 +219,666 @@ struct mira050_mode {
 	struct v4l2_rect crop;
 
 	/* Default register values */
-	struct mira050_reg_list reg_list;
+	struct mira050_reg_list reg_list_pre_soft_reset;
+	struct mira050_reg_list reg_list_post_soft_reset;
 
 	u32 vblank;
 	u32 hblank;
 };
 
-// 600_800_30fps_10b_2lanes
-// Taken from ams_jetcis/scripts/Mira050/Mira050-bringup.py initSensor_2()
-static const struct mira050_reg full_600_800_30fps_10b_2lanes_reg[] = {
+// 576_768_60fps_12b_1lane
+// Taken from Mira050_register_sequence_12b_60fps_576_768_1000Mbit_24M.txt
+static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_pre_soft_reset[] = {
+	// Base Configuration
+	{57344, 0},
+	{484, 0},
+	{485, 19},
+	{482, 23},
+	{483, 136},
+	{486, 0},
+	{487, 202},
+	{364, 1},
+	{363, 1},
+	{520, 1},
+	{521, 240},
+	{522, 3},
+	{523, 77},
+	{524, 2},
+	{525, 16},
+	{526, 3},
+	{527, 1},
+	{528, 0},
+	{529, 19},
+	{530, 0},
+	{531, 3},
+	{532, 3},
+	{533, 239},
+	{534, 3},
+	{535, 243},
+	{536, 3},
+	{537, 244},
+	{538, 1},
+	{539, 241},
+	{540, 3},
+	{541, 36},
+	{542, 0},
+	{543, 2},
+	{544, 1},
+	{545, 242},
+	{546, 3},
+	{547, 47},
+	{548, 0},
+	{549, 33},
+	{550, 3},
+	{551, 240},
+	{552, 3},
+	{553, 241},
+	{554, 3},
+	{555, 242},
+	{556, 3},
+	{557, 245},
+	{558, 3},
+	{559, 246},
+	{560, 0},
+	{561, 193},
+	{562, 0},
+	{563, 2},
+	{564, 1},
+	{565, 242},
+	{566, 3},
+	{567, 107},
+	{568, 3},
+	{569, 255},
+	{570, 3},
+	{571, 49},
+	{572, 1},
+	{573, 240},
+	{574, 3},
+	{575, 135},
+	{576, 0},
+	{577, 10},
+	{578, 0},
+	{579, 11},
+	{580, 1},
+	{581, 249},
+	{582, 3},
+	{583, 13},
+	{584, 0},
+	{585, 7},
+	{586, 3},
+	{587, 239},
+	{588, 3},
+	{589, 243},
+	{590, 3},
+	{591, 244},
+	{592, 3},
+	{593, 0},
+	{594, 0},
+	{595, 7},
+	{596, 0},
+	{597, 12},
+	{598, 1},
+	{599, 241},
+	{600, 3},
+	{601, 67},
+	{602, 1},
+	{603, 248},
+	{604, 3},
+	{605, 16},
+	{606, 0},
+	{607, 7},
+	{608, 3},
+	{609, 240},
+	{610, 3},
+	{611, 241},
+	{612, 3},
+	{613, 242},
+	{614, 3},
+	{615, 245},
+	{616, 3},
+	{617, 246},
+	{618, 3},
+	{619, 0},
+	{620, 2},
+	{621, 135},
+	{622, 0},
+	{623, 1},
+	{624, 3},
+	{625, 255},
+	{626, 3},
+	{627, 0},
+	{628, 3},
+	{629, 255},
+	{630, 2},
+	{631, 135},
+	{632, 3},
+	{633, 2},
+	{634, 3},
+	{635, 15},
+	{636, 3},
+	{637, 247},
+	{638, 0},
+	{639, 22},
+	{640, 0},
+	{641, 51},
+	{642, 0},
+	{643, 4},
+	{644, 0},
+	{645, 17},
+	{646, 3},
+	{647, 9},
+	{648, 0},
+	{649, 2},
+	{650, 0},
+	{651, 32},
+	{652, 0},
+	{653, 181},
+	{654, 0},
+	{655, 229},
+	{656, 0},
+	{657, 18},
+	{658, 0},
+	{659, 181},
+	{660, 0},
+	{661, 229},
+	{662, 0},
+	{663, 0},
+	{664, 0},
+	{665, 18},
+	{666, 0},
+	{667, 18},
+	{668, 0},
+	{669, 32},
+	{670, 0},
+	{671, 181},
+	{672, 0},
+	{673, 229},
+	{674, 0},
+	{675, 0},
+	{676, 0},
+	{677, 18},
+	{678, 0},
+	{679, 18},
+	{680, 0},
+	{681, 32},
+	{682, 0},
+	{683, 71},
+	{684, 0},
+	{685, 39},
+	{686, 0},
+	{687, 181},
+	{688, 0},
+	{689, 229},
+	{690, 0},
+	{691, 0},
+	{692, 0},
+	{693, 4},
+	{694, 0},
+	{695, 67},
+	{696, 0},
+	{697, 1},
+	{698, 3},
+	{699, 2},
+	{700, 0},
+	{701, 8},
+	{702, 3},
+	{703, 255},
+	{704, 2},
+	{705, 135},
+	{706, 3},
+	{707, 137},
+	{708, 3},
+	{709, 247},
+	{710, 0},
+	{711, 119},
+	{712, 0},
+	{713, 23},
+	{714, 0},
+	{715, 8},
+	{716, 3},
+	{717, 255},
+	{718, 0},
+	{719, 56},
+	{720, 0},
+	{721, 23},
+	{722, 0},
+	{723, 8},
+	{724, 3},
+	{725, 255},
+	{726, 3},
+	{727, 255},
+	{728, 3},
+	{729, 255},
+	{730, 3},
+	{731, 255},
+	{732, 3},
+	{733, 255},
+	{734, 3},
+	{735, 255},
+	{736, 3},
+	{737, 255},
+	{738, 3},
+	{739, 255},
+	{740, 3},
+	{741, 255},
+	{742, 3},
+	{743, 255},
+	{744, 3},
+	{745, 255},
+	{746, 3},
+	{747, 255},
+	{748, 3},
+	{749, 255},
+	{750, 3},
+	{751, 255},
+	{752, 3},
+	{753, 255},
+	{754, 3},
+	{755, 255},
+	{756, 3},
+	{757, 255},
+	{758, 3},
+	{759, 255},
+	{760, 3},
+	{761, 255},
+	{762, 3},
+	{763, 255},
+	{764, 3},
+	{765, 255},
+	{766, 3},
+	{767, 255},
+	{768, 3},
+	{769, 255},
+	{770, 3},
+	{771, 255},
+	{489, 0},
+	{488, 25},
+	{490, 53},
+	{491, 55},
+	{492, 92},
+	{493, 99},
+	{504, 15},
+	{92, 0},
+	{93, 0},
+	{474, 1},
+	{476, 1},
+	{478, 1},
+	{393, 1},
+	{439, 1},
+	{449, 14},
+	{450, 246},
+	{451, 255},
+	{457, 7},
+	{440, 1},
+	{442, 51},
+	{447, 60},
+	{448, 92},
+	{113, 1},
+	{436, 1},
+	{437, 1},
+	{497, 1},
+	{500, 1},
+	{501, 1},
+	{788, 1},
+	{789, 1},
+	{790, 1},
+	{519, 0},
+	{16903, 2},
+	{8711, 2},
+	{8349, 0},
+	{99, 1},
+	{503, 15},
+	{233, 3},
+	{234, 40},
+	{777, 7},
+	{778, 4},
+	{779, 13},
+	{780, 7},
+	{782, 21},
+	{781, 10},
+	{784, 13},
+	{464, 31},
+	{465, 15},
+	{22, 0},
+	{23, 5},
+	{232, 3},
+	{57536, 0},
+	{57537, 32},
+	{57538, 0},
+	{57539, 32},
+	{362, 2},
+	{360, 44},
+	// PLL
+	{57344, 0},
+	{8311, 0},
+	{8310, 147},
+	{206, 1},
+	{112, 6},
+	{365, 34},
+	{374, 66},
+	{8390, 0},
+	{8391, 0},
+	{8392, 1},
+	{8393, 0},
+	{8394, 0},
+	{8395, 1},
+	{8309, 0},
+	// Low Power State
+	{57344, 0},
+	{30, 1},
+	// MIPI
+	{57344, 0},
+	{8318, 0},
+	{8319, 0},
+	{8320, 0},
+	{8321, 3},
+	{8322, 0},
+	{8323, 2},
+	{144, 0},
+	{8343, 0},
+	// Sensor Control Mode
+	{57344, 0},
+	{17, 3},
+	{285, 0},
+	// Time Bases
+	{57344, 0},
+	{18, 0},
+	{19, 24},
+	{346, 0},
+	{347, 70},
+	{348, 0},
+	{349, 70},
+	{350, 0},
+	{351, 70},
+	{354, 0},
+	{355, 5},
+	{356, 4},
+	{357, 76},
+	{358, 4},
+	{359, 76},
+	// Analog Gain
+	{57344, 0},
+	{443, 200},
+	{444, 192},
+	{208, 0},
+	{496, 8},
+	{499, 2},
+	{366, 206},
+	{370, 0},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 206},
+	{372, 0},
+	{373, 32},
+	{395, 3},
+	{396, 82},
+	{397, 2},
+	{398, 86},
+	{399, 11},
+	{400, 207},
+	{494, 21},
+	{495, 106},
+	{418, 5},
+	{419, 221},
+	{799, 5},
+	{800, 230},
+	{422, 6},
+	{423, 116},
+	{420, 11},
+	{421, 70},
+	{801, 11},
+	{802, 79},
+	{424, 11},
+	{425, 221},
+	{416, 0},
+	{417, 177},
+	{434, 0},
+	{435, 201},
+	{432, 0},
+	{433, 196},
+	{428, 0},
+	{429, 207},
+	// Black Level
+	{57344, 0},
+	{403, 6},
+	{404, 144},
+};
 
-    {0xE000, 0},
-    {0xE1E4, 0},
-    {0xE1E5, 19},
-    {0xE1E2, 23},
-    {0xE1E3, 136},
-    {0xE1E6, 0},
-    {0xE1E7, 202},
-    {0xE16C, 1},
-    {0xE16B, 1},
-    {0xE16D, 50},
-    {0xE31F, 0},
-    {0xE320, 10},
-    {0xE321, 4},
-    {0xE322, 131},
-    {0xE1A2, 0},
-    {0xE1A3, 1},
-    {0xE1A4, 4},
-    {0xE1A5, 122},
-    {0xE19E, 0},
-    {0xE19F, 0},
-    {0xE1A6, 0},
-    {0xE1A7, 152},
-    {0xE1A8, 5},
-    {0xE1A9, 17},
-    {0xE1A0, 0},
-    {0xE1A1, 76},
-    {0xE1B0, 0},
-    {0xE1B1, 95},
-    {0xE16E, 44},
-    {0xE16F, 0},
-    {0xE170, 0},
-    {0xE171, 134},
-    {0xE172, 0},
-    {0xE173, 0},
-    {0xE174, 0},
-    {0xE175, 0},
-    {0xE176, 0},
-    {0xE177, 0},
-    {0xE178, 0},
-    {0xE179, 0},
-    {0xE17A, 0},
-    {0xE17B, 0},
-    {0xE17C, 0},
-    {0xE17D, 0},
-    {0xE208, 1},
-    {0xE209, 240},
-    {0xE20A, 3},
-    {0xE20B, 77},
-    {0xE20C, 2},
-    {0xE20D, 16},
-    {0xE20E, 3},
-    {0xE20F, 1},
-    {0xE210, 0},
-    {0xE211, 19},
-    {0xE212, 0},
-    {0xE213, 3},
-    {0xE214, 3},
-    {0xE215, 239},
-    {0xE216, 0},
-    {0xE217, 33},
-    {0xE218, 0},
-    {0xE219, 2},
-    {0xE21A, 1},
-    {0xE21B, 242},
-    {0xE21C, 3},
-    {0xE21D, 113},
-    {0xE21E, 0},
-    {0xE21F, 33},
-    {0xE220, 3},
-    {0xE221, 240},
-    {0xE222, 3},
-    {0xE223, 241},
-    {0xE224, 3},
-    {0xE225, 242},
-    {0xE226, 0},
-    {0xE227, 33},
-    {0xE228, 0},
-    {0xE229, 2},
-    {0xE22A, 1},
-    {0xE22B, 242},
-    {0xE22C, 3},
-    {0xE22D, 117},
-    {0xE22E, 3},
-    {0xE22F, 255},
-    {0xE230, 3},
-    {0xE231, 49},
-    {0xE232, 2},
-    {0xE233, 32},
-    {0xE234, 3},
-    {0xE235, 47},
-    {0xE236, 0},
-    {0xE237, 10},
-    {0xE238, 2},
-    {0xE239, 185},
-    {0xE23A, 3},
-    {0xE23B, 164},
-    {0xE23C, 0},
-    {0xE23D, 7},
-    {0xE23E, 3},
-    {0xE23F, 239},
-    {0xE240, 3},
-    {0xE241, 0},
-    {0xE242, 0},
-    {0xE243, 7},
-    {0xE244, 0},
-    {0xE245, 12},
-    {0xE246, 2},
-    {0xE247, 33},
-    {0xE248, 3},
-    {0xE249, 147},
-    {0xE24A, 2},
-    {0xE24B, 135},
-    {0xE24C, 3},
-    {0xE24D, 240},
-    {0xE24E, 3},
-    {0xE24F, 241},
-    {0xE250, 3},
-    {0xE251, 242},
-    {0xE252, 3},
-    {0xE253, 0},
-    {0xE254, 2},
-    {0xE255, 135},
-    {0xE256, 0},
-    {0xE257, 1},
-    {0xE258, 3},
-    {0xE259, 255},
-    {0xE25A, 3},
-    {0xE25B, 49},
-    {0xE25C, 1},
-    {0xE25D, 245},
-    {0xE25E, 3},
-    {0xE25F, 16},
-    {0xE260, 0},
-    {0xE261, 10},
-    {0xE262, 2},
-    {0xE263, 185},
-    {0xE264, 3},
-    {0xE265, 164},
-    {0xE266, 0},
-    {0xE267, 7},
-    {0xE268, 3},
-    {0xE269, 239},
-    {0xE26A, 3},
-    {0xE26B, 0},
-    {0xE26C, 2},
-    {0xE26D, 87},
-    {0xE26E, 3},
-    {0xE26F, 1},
-    {0xE270, 1},
-    {0xE271, 172},
-    {0xE272, 1},
-    {0xE273, 246},
-    {0xE274, 3},
-    {0xE275, 88},
-    {0xE276, 2},
-    {0xE278, 3},
-    {0xE279, 240},
-    {0xE27A, 3},
-    {0xE27B, 241},
-    {0xE27C, 3},
-    {0xE27D, 242},
-    {0xE27E, 3},
-    {0xE27F, 0},
-    {0xE280, 2},
-    {0xE281, 103},
-    {0xE282, 0},
-    {0xE283, 8},
-    {0xE284, 3},
-    {0xE285, 255},
-    {0xE286, 3},
-    {0xE287, 0},
-    {0xE288, 3},
-    {0xE289, 255},
-    {0xE28A, 2},
-    {0xE28B, 135},
-    {0xE28C, 3},
-    {0xE28D, 2},
-    {0xE28E, 2},
-    {0xE28F, 54},
-    {0xE290, 3},
-    {0xE291, 2},
-    {0xE292, 2},
-    {0xE293, 64},
-    {0xE294, 3},
-    {0xE295, 0},
-    {0xE296, 0},
-    {0xE297, 5},
-    {0xE298, 0},
-    {0xE299, 2},
-    {0xE29A, 1},
-    {0xE29B, 241},
-    {0xE29C, 3},
-    {0xE29D, 3},
-    {0xE29E, 0},
-    {0xE29F, 18},
-    {0xE2A0, 0},
-    {0xE2A1, 55},
-    {0xE2A2, 1},
-    {0xE2A3, 247},
-    {0xE2A4, 3},
-    {0xE2A5, 3},
-    {0xE2A6, 2},
-    {0xE2A7, 64},
-    {0xE2A8, 0},
-    {0xE2A9, 5},
-    {0xE2AA, 0},
-    {0xE2AB, 1},
-    {0xE2AC, 2},
-    {0xE2AD, 54},
-    {0xE2AE, 0},
-    {0xE2AF, 39},
-    {0xE2B0, 0},
-    {0xE2B1, 8},
-    {0xE2B2, 3},
-    {0xE2B3, 255},
-    {0xE2B4, 1},
-    {0xE2B5, 248},
-    {0xE2B6, 3},
-    {0xE2B7, 21},
-    {0xE2B8, 0},
-    {0xE2B9, 23},
-    {0xE2BA, 0},
-    {0xE2BB, 8},
-    {0xE2BC, 3},
-    {0xE2BD, 255},
-    {0xE2BE, 0},
-    {0xE2BF, 56},
-    {0xE2C0, 0},
-    {0xE2C1, 23},
-    {0xE2C2, 0},
-    {0xE2C3, 8},
-    {0xE2C4, 3},
-    {0xE2C5, 255},
-    {0xE2C6, 3},
-    {0xE2C7, 255},
-    {0xE2C8, 3},
-    {0xE2C9, 255},
-    {0xE2CA, 3},
-    {0xE2CB, 255},
-    {0xE2CC, 3},
-    {0xE2CD, 255},
-    {0xE2CE, 3},
-    {0xE2CF, 255},
-    {0xE2D0, 3},
-    {0xE2D1, 255},
-    {0xE2D2, 3},
-    {0xE2D3, 255},
-    {0xE2D4, 3},
-    {0xE2D5, 255},
-    {0xE2D6, 3},
-    {0xE2D7, 255},
-    {0xE2D8, 3},
-    {0xE2D9, 255},
-    {0xE2DA, 3},
-    {0xE2DB, 255},
-    {0xE2DC, 3},
-    {0xE2DD, 255},
-    {0xE2DE, 3},
-    {0xE2DF, 255},
-    {0xE2E0, 3},
-    {0xE2E1, 255},
-    {0xE2E2, 3},
-    {0xE2E3, 255},
-    {0xE2E4, 3},
-    {0xE2E5, 255},
-    {0xE2E6, 3},
-    {0xE2E7, 255},
-    {0xE2E8, 3},
-    {0xE2E9, 255},
-    {0xE2EA, 3},
-    {0xE2EB, 255},
-    {0xE2EC, 3},
-    {0xE2ED, 255},
-    {0xE2EE, 3},
-    {0xE2EF, 255},
-    {0xE2F0, 3},
-    {0xE2F1, 255},
-    {0xE2F2, 3},
-    {0xE2F3, 255},
-    {0xE2F4, 3},
-    {0xE2F5, 255},
-    {0xE2F6, 3},
-    {0xE2F7, 255},
-    {0xE2F8, 3},
-    {0xE2F9, 255},
-    {0xE2FA, 3},
-    {0xE2FB, 255},
-    {0xE2FC, 3},
-    {0xE2FD, 255},
-    {0xE2FE, 3},
-    {0xE2FF, 255},
-    {0xE300, 3},
-    {0xE301, 255},
-    {0xE302, 3},
-    {0xE303, 255},
-    {0xE1E9, 0},
-    {0xE1E8, 20},
-    {0xE1EA, 63},
-    {0xE1EB, 65},
-    {0xE1EC, 86},
-    {0xE1ED, 91},
-    {0x01EE, 10},
-    {0x01EF, 140},
-    {0x01F8, 15},
-    {0x01D8, 1},
-    {0x01DA, 1},
-    {0x01DC, 1},
-    {0x01DE, 1},
-    {0x0189, 1},
-    {0x01B7, 1},
-    {0x01C1, 14},
-    {0x01C2, 255},
-    {0x01C3, 255},
-    {0x01B8, 1},
-    {0x01BA, 59},
-    {0x0071, 1},
-    {0x01B4, 1},
-    {0x01B5, 1},
-    {0x01F1, 1},
-    {0x01F4, 1},
-    {0x01F5, 1},
-    {0x0314, 1},
-    {0x0315, 1},
-    {0x0316, 1},
-    {0x0207, 0},
-    {0x4207, 2},
-    {0x2207, 2},
-    {0x01AC, 0},
-    {0x01AD, 95},
-    {0x209D, 0},
-    {0x0063, 1},
-    {0x2000, 0},
-    {0x207C, 0},
-    {0xE000, 0},
-    {0x2077, 0},
-    {0x2076, 222},
-    {0x00CE, 2},
-    {0x0070, 7},
-    {0x016D, 40},
-    {0x20C6, 0},
-    {0x20C7, 0},
-    {0x20C8, 1},
-    {0x20C9, 0},
-    {0x20CA, 0},
-    {0x20CB, 1},
-    {0x2075, 0},
-    {0x2000, 0},
-    {0x207C, 1},
-    {0xE000, 0},
-    {0xE0A0, 1},
-    {0xE000, 0},
-    {0xE0BD, 1},
-    {0xE000, 0},
-    {0xE1D9, 1},
-    {0xE000, 0},
-    {0xE1DB, 1},
-    {0xE000, 0},
-    {0xE1DD, 1},
-    {0xE000, 0},
-    {0xE1DF, 1},
-    {0xE000, 0},
-    {0xE060, 2},
-    {0xE061, 170},
-    {0xE000, 0},
-    {0xE062, 2},
-    {0xE000, 0},
-    {0x207E, 0},
-    {0x207F, 0},
-    {0x2080, 0},
-    {0x2081, 3},
-    {0x2082, 0},
-    {0x2083, 2},
-    {0x0090, 1},
-    {0x001E, 0},
-    {0x2097, 0},
-    {0x01B2, 0},
-    {0x01B3, 100},
-    {0xE000, 0},
-    {0x0011, 3},
-    {0x011D, 0},
-    {0xE000, 0},
-    {0x0012, 0},
-    {0x0013, 38},
-    {0x015A, 0},
-    {0x015B, 27},
-    {0x015C, 0},
-    {0x015D, 27},
-    {0x015E, 0},
-    {0x015F, 27},
-    {0x0162, 0},
-    {0x0163, 3},
-    {0x0164, 4},
-    {0x0165, 88},
-    {0x0166, 4},
-    {0x0167, 88},
-    {0xE000, 0},
-    {0x005C, 0},
-    {0x005D, 32},
-    {0xE000, 0},
-    {0xE009, 1},
-    {0x212F, 1},
-    {0x2130, 1},
-    {0x2131, 1},
-    {0x2132, 1},
-    {0x2133, 1},
-    {0x2134, 1},
-    {0x2135, 1},
-    {0xE0E1, 1},
-    {0x018A, 1},
-    {0x00E0, 1},
-    {0xE004, 0},
-    {0xE000, 1},
-    {0xE02C, 0},
-    {0xE02D, 0},
-    {0xE02E, 2},
-    {0xE02F, 87},
-    {0xE030, 0},
-    {0xE025, 0},
-    {0xE02A, 0},
-    {0x2029, 70},
-    {0x0034, 1},
-    {0x0035, 44},
-    {0xE004, 0},
-    {0x001E, 0},
-    {0x001F, 1},
-    {0x002B, 0},
-    {0xE004, 0},
-    {0x000E, 0},
-    {0x000F, 0},
-    {0x0010, 3},
-    {0x0011, 232},
-    {0x0012, 0},
-    {0x0013, 0},
-    {0x0014, 0},
-    {0x0015, 0},
-    {0x0007, 5},
-    {0xE004, 0},
-    {0x0008, 0},
-    {0x0009, 0},
-    {0x000A, 97},
-    {0x000B, 168},
-    {0xE004, 0},
-    {0x0024, 15},
-    {0xE004, 0},
-    {0x0031, 0},
-    {0xE004, 0},
-    {0x0026, 0},
-    {0xE004, 0},
-    {0x001C, 0},
-    {0x0019, 0},
-    {0x001A, 7},
-    {0x001B, 83},
-    {0x0016, 8},
-    {0x0017, 0},
-    {0x0018, 0},
-    {0xE004, 0},
-    {0x001D, 0},
-    {0xE004, 0},
-    {0xE000, 1},
-    {0x001E, 0},
-    {0x001F, 1},
-    {0x002B, 0},
-    {0xE004, 1},
-    {0x001E, 0},
-    {0x001F, 1},
-    {0x002B, 0},
-    {0xE000, 0},
-    {0x001F, 0},
-    {0x0020, 0},
-    {0x0023, 0},
-    {0x0024, 3},
-    {0x0025, 32},
-    {0x0026, 0},
-    {0x0027, 8},
-    {0x0028, 0},
-    {0x0029, 0},
-    {0x002A, 0},
-    {0x002B, 0},
-    {0x002C, 0},
-    {0x002D, 0},
-    {0x002E, 0},
-    {0x002F, 0},
-    {0x0030, 0},
-    {0x0031, 0},
-    {0x0032, 0},
-    {0x0033, 0},
-    {0x0034, 0},
-    {0x0035, 0},
-    {0x0036, 0},
-    {0x0037, 0},
-    {0x0038, 0},
-    {0x0039, 0},
-    {0x003A, 0},
-    {0x003B, 0},
-    {0x003C, 0},
-    {0x003D, 0},
-    {0x003E, 0},
-    {0x003F, 0},
-    {0x0040, 0},
-    {0x0041, 0},
-    {0x0042, 0},
-    {0x0043, 0},
-    {0x0044, 0},
-    {0x0045, 0},
-    {0x0046, 0},
-    {0x0047, 0},
-    {0x0048, 0},
-    {0x0049, 0},
-    {0x004A, 0},
-    {0x004B, 0},
-    {0x004C, 0},
-    {0x004D, 0},
-    {0x004E, 0},
-    {0x004F, 0},
-    {0x0050, 0},
-    {0x0051, 0},
-    {0x0052, 0},
-    {0x0053, 0},
-    {0x0054, 0},
-    {0x0055, 0},
-    {0xE000, 0},
-    {0xE0F3, 3},
-    {0xE100, 34},
-    {0xE0F4, 4},
-    {0xE101, 35},
-    {0xE0F5, 5},
-    {0xE102, 13},
-    {0xE0F6, 6},
-    {0xE103, 12},
-    {0xE004, 0},
-
+static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset[] = {
+	// Release Soft Reset
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	// Horizontal ROI
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 12},
+	{57390, 2},
+	{57391, 75},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 70},
+	{52, 1},
+	{53, 32},
+	{57348, 1},
+	{57388, 0},
+	{57389, 0},
+	{57390, 2},
+	{57391, 87},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 70},
+	{52, 1},
+	{53, 44},
+	// Vertical ROI
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 1},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 1},
+	{43, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 3},
+	{37, 0},
+	{38, 0},
+	{39, 24},
+	{40, 0},
+	{41, 0},
+	{42, 0},
+	{43, 0},
+	{44, 0},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	// Frame and Exposure Control
+	{57348, 0},
+	{57344, 1},
+	{14, 0},
+	{15, 0},
+	{16, 19},
+	{17, 136},
+	{18, 0},
+	{19, 0},
+	{20, 0},
+	{21, 0},
+	{57348, 1},
+	{14, 0},
+	{15, 0},
+	{16, 3},
+	{17, 232},
+	{18, 0},
+	{19, 0},
+	{20, 0},
+	{21, 0},
+	{57348, 0},
+	{50, 9},
+	{51, 122},
+	{57348, 1},
+	{50, 9},
+	{51, 122},
+	{57348, 0},
+	{7, 1},
+	{8, 0},
+	{9, 0},
+	{10, 65},
+	{11, 26},
+	{57348, 1},
+	{7, 1},
+	{8, 0},
+	{9, 0},
+	{10, 65},
+	{11, 26},
+	// Digital Gain
+	{57348, 0},
+	{57344, 1},
+	{36, 15},
+	{57348, 1},
+	{36, 15},
+	// Defect Pixel Correction
+	{57344, 0},
+	{87, 0},
+	{88, 0},
+	{89, 2},
+	{90, 2},
+	{91, 0},
+	// Context Switching
+	{57344, 0},
+	{57352, 0},
+	{6, 1},
+	{57347, 0},
+	{6, 0},
+	{57352, 0},
+	// Event Detection
+	{57348, 0},
+	{57344, 1},
+	{49, 0},
+	{57348, 1},
+	{49, 0},
+	{57344, 0},
+	{312, 0},
+	{57349, 0},
+	{313, 0},
+	{314, 0},
+	{315, 150},
+	{316, 0},
+	{317, 0},
+	{318, 160},
+	{319, 6},
+	{320, 1},
+	{321, 20},
+	{322, 1},
+	{323, 0},
+	{324, 0},
+	{325, 0},
+	{326, 0},
+	{327, 0},
+	{328, 0},
+	// Image Statistics
+	{57348, 0},
+	{57344, 1},
+	{38, 0},
+	{57348, 1},
+	{38, 0},
+	{57344, 0},
+	{361, 18},
+	// Illumination Trigger
+	{57348, 0},
+	{57344, 1},
+	{28, 0},
+	{25, 0},
+	{26, 7},
+	{27, 83},
+	{22, 8},
+	{23, 0},
+	{24, 0},
+	{57348, 1},
+	{28, 0},
+	{25, 0},
+	{26, 7},
+	{27, 83},
+	{22, 8},
+	{23, 0},
+	{24, 0},
+	// Synchronization Trigger
+	{57348, 0},
+	{57344, 1},
+	{29, 0},
+	{57348, 1},
+	{29, 0},
+	{57344, 0},
+	{26, 0},
+	{27, 0},
+	{28, 0},
+	{29, 0},
 };
 
 static const char * const mira050_test_pattern_menu[] = {
 	"Disabled",
-	"Vertial Gradient",
+	"Fixed Data",
+	"2D Gradient",
 };
 
 static const int mira050_test_pattern_val[] = {
 	MIRA050_TEST_PATTERN_DISABLE,
-	MIRA050_TEST_PATTERN_VERTICAL_GRADIENT,
+	MIRA050_TEST_PATTERN_FIXED_DATA,
+	MIRA050_TEST_PATTERN_2D_GRADIENT,
 };
 
 
@@ -780,26 +901,30 @@ static const u32 codes[] = {
 	//MEDIA_BUS_FMT_Y8_1X8,
 	//MEDIA_BUS_FMT_Y10_1X10,
 	//MEDIA_BUS_FMT_Y12_1X12,
-	MEDIA_BUS_FMT_SRGGB8_1X8,
-	MEDIA_BUS_FMT_SRGGB10_1X10,
-	MEDIA_BUS_FMT_SRGGB12_1X12,
+	MEDIA_BUS_FMT_SGRBG8_1X8,
+	MEDIA_BUS_FMT_SGRBG10_1X10,
+	MEDIA_BUS_FMT_SGRBG12_1X12,
 };
 
 /* Mode configs */
 static const struct mira050_mode supported_modes[] = {
 	{
 		/* 2 MPx 30fps mode */
-		.width = 600,
-		.height = 800,
+		.width = 576,
+		.height = 768,
 		.crop = {
 			.left = MIRA050_PIXEL_ARRAY_LEFT,
 			.top = MIRA050_PIXEL_ARRAY_TOP,
-			.width = 600,
-			.height = 800
+			.width = 576,
+			.height = 768
 		},
-		.reg_list = {
-			.num_of_regs = ARRAY_SIZE(full_600_800_30fps_10b_2lanes_reg),
-			.regs = full_600_800_30fps_10b_2lanes_reg,
+		.reg_list_pre_soft_reset = {
+			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_pre_soft_reset),
+			.regs = full_576_768_60fps_12b_1lane_reg_pre_soft_reset,
+		},
+		.reg_list_post_soft_reset = {
+			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_post_soft_reset),
+			.regs = full_576_768_60fps_12b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
 		.hblank = 0, // TODO
@@ -889,6 +1014,8 @@ static int mira050_write(struct mira050 *mira050, u16 reg, u8 val)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 
 	ret = i2c_master_send(client, data, 3);
+	
+	
 	/*
 	 * Writing the wrong number of bytes also needs to be flagged as an
 	 * error. Success needs to produce a 0 return code.
@@ -902,21 +1029,51 @@ static int mira050_write(struct mira050 *mira050, u16 reg, u8 val)
 			ret = -EINVAL;
 	}
 
+	/*
+	 * The code below is for debug purpose.
+	 * It reads back the written values.
+	 * Some registers have different read and write addresses.
+	 * These registers typically have WR addr 0xE... but RD addr 0x4...
+	 */
+	/*
+	{
+		usleep_range(50, 300);
+		u8 ret_val;
+		u16 ret_reg;
+		if (((reg >>12) & 0x000F) == 0x000E) {
+			ret_reg = ((reg & 0x0FFF) | 0x4000);
+		} else {
+			ret_reg = reg;
+		}
+		ret = mira050_read(mira050, ret_reg, &ret_val);
+		printk(KERN_INFO "[MIRA050]: Write reg 0x%4.4x, Read ret_reg 0x%4.4x, val = 0x%x.\n",
+				reg, ret_reg, ret_val);
+		if (val != ret_val) {
+			printk(KERN_INFO "[MIRA050]: WARNING Write reg 0x%4.4x, val = 0x%x, read ret_reg = 0x%4.4x, ret_val = 0x%x.\n",
+				reg, val, ret_reg, ret_val);
+		}
+	}
+	*/
+
 	return ret;
 }
 
-static int mira050_write16(struct mira050 *mira050, u16 reg, u16 val)
+/*
+ * Mira050 is big-endian: MSB of val goes to lower reg addr
+ * Mira220 is little-endian: LSB of val goes to lower reg addr
+ */
+static int mira050_write32(struct mira050 *mira050, u16 reg, u32 val)
 {
        int ret;
-       unsigned char data[4] = { reg >> 8, reg & 0xff, val & 0xff, val >> 8};
+       unsigned char data[6] = { reg >> 8, reg & 0xff, (val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
        struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 
-       ret = i2c_master_send(client, data, 4);
+       ret = i2c_master_send(client, data, 6);
        /*
         * Writing the wrong number of bytes also needs to be flagged as an
         * error. Success needs to produce a 0 return code.
         */
-       if (ret == 4) {
+       if (ret == 6) {
                ret = 0;
        } else {
                dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
@@ -946,12 +1103,10 @@ static int mira050_write_regs(struct mira050 *mira050,
 			return ret;
 		} else {
 			// Debug code below
-			/*
-			u8 val;
-			ret = mira050_read(mira050, regs[i].address, &val);
-			printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
-					regs[i].address, val);
-			*/
+			// u8 val;
+			// ret = mira050_read(mira050, regs[i].address, &val);
+			// printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
+			// 		regs[i].address, val);
 		}
 	}
 
@@ -966,35 +1121,31 @@ static u32 mira050_calculate_max_exposure_time(u32 row_length, u32 vsize,
 
 static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
-	u32 reg_value;
-	u32 ret;
+	u32 ret = 0;
 
-	if ((gain < MIRA050_ANALOG_GAIN_MIN) || (gain > MIRA050_ANALOG_GAIN_MAX)) {
-		return -EINVAL;
-	}
+	//if ((gain < MIRA050_ANALOG_GAIN_MIN) || (gain > MIRA050_ANALOG_GAIN_MAX)) {
+	//	return -EINVAL;
+	//}
 
-	reg_value = 8 / gain;
-	ret = mira050_write(mira050, MIRA050_ANALOG_GAIN_REG, reg_value);
-
-	if (ret) {
-		dev_err_ratelimited(&client->dev, "Error setting analog gain register to %d",
-				reg_value);
-	}
-
+	// TODO: There is no easy way to change analog gain by a single value.
+	// ret = mira050_write(mira050, MIRA050_ANALOG_GAIN_REG, reg_value);
+	dev_err_ratelimited(&client->dev, "Analog gain is fixed to 1. Ignore analog gain of %d",
+			gain);
 	return ret;
 }
 
 static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
-	const u32 max_exposure = mira050_calculate_max_exposure_time(MIRA050_ROW_LENGTH_MIN,
-		mira050->mode->height, mira050->mode->vblank);
+	const u32 min_exposure = MIRA050_EXPOSURE_MIN;
 	u32 ret = 0;
 
-	if (exposure > max_exposure) {
-		return -EINVAL;
+	if (exposure < min_exposure) {
+		exposure = min_exposure;
 	}
 
-	ret = mira050_write16(mira050, MIRA050_EXP_TIME_LO_REG, exposure);
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
+	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
+	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
 	if (ret) {
 		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", exposure);
 		return -EINVAL;
@@ -1021,7 +1172,6 @@ static int mira050_write_start_streaming_regs(struct mira050* mira050) {
 		return ret;
 	}
 
-
 	// Raising CMD_REQ_1 to 1 for REQ_EXP
 	ret = mira050_write(mira050, MIRA050_CMD_REQ_1_REG,
 				1);
@@ -1029,6 +1179,8 @@ static int mira050_write_start_streaming_regs(struct mira050* mira050) {
 		dev_err(&client->dev, "Error setting CMD_REQ_1 to 1 for REQ_EXP.");
 		return ret;
 	}
+	
+	usleep_range(10, 20);
 
 	// Setting CMD_REQ_1 tp 0 for REQ_EXP
 	ret = mira050_write(mira050, MIRA050_CMD_REQ_1_REG,
@@ -1037,6 +1189,7 @@ static int mira050_write_start_streaming_regs(struct mira050* mira050) {
 		dev_err(&client->dev, "Error setting CMD_REQ_1 to 0 for REQ_EXP.");
 		return ret;
 	}
+	usleep_range(10, 20);
 
 	return ret;
 }
@@ -1044,7 +1197,6 @@ static int mira050_write_start_streaming_regs(struct mira050* mira050) {
 static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
-	u32 frame_time;
 
 	// Set conetxt bank 0 or 1
 	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
@@ -1061,6 +1213,8 @@ static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
 		return ret;
 	}
 
+	usleep_range(10, 20);
+
 	// Setting CMD_HALT_BLOCK to 0 to stop streaming
 	ret = mira050_write(mira050, MIRA050_CMD_HALT_BLOCK_REG,
 				0);
@@ -1068,6 +1222,7 @@ static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
 		dev_err(&client->dev, "Error setting CMD_HALT_BLOCK to 0.");
 		return ret;
 	}
+	usleep_range(10, 20);
 
         /*
          * Wait for one frame to make sure sensor is set to
@@ -1077,6 +1232,7 @@ static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
          * Tline = line length / pixel clock (in MHz)
          */
 	/*
+	u32 frame_time;
         frame_time = MIRA050_DEFAULT_FRAME_LENGTH *
             MIRA050_DEFAULT_LINE_LENGTH / MIRA050_DEFAULT_PIXEL_CLOCK;
 
@@ -1112,7 +1268,7 @@ static void mira050_set_default_format(struct mira050 *mira050)
 	struct v4l2_mbus_framefmt *fmt;
 
 	fmt = &mira050->fmt;
-	fmt->code = MEDIA_BUS_FMT_SRGGB10_1X10; // MEDIA_BUS_FMT_Y12_1X12;
+	fmt->code = MEDIA_BUS_FMT_SGRBG12_1X12; // MEDIA_BUS_FMT_Y12_1X12;
 	fmt->colorspace = V4L2_COLORSPACE_RAW;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
@@ -1139,7 +1295,7 @@ static int mira050_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_fmt_img->width = supported_modes[0].width;
 	try_fmt_img->height = supported_modes[0].height;
 	try_fmt_img->code = mira050_validate_format_code_or_default(mira050,
-						   MEDIA_BUS_FMT_SRGGB10_1X10);
+						   MEDIA_BUS_FMT_SGRBG12_1X12);
 	try_fmt_img->field = V4L2_FIELD_NONE;
 
 	/* TODO(jalv): Initialize try_fmt for the embedded metadata pad */
@@ -1198,20 +1354,28 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		ret = mira050_write_exposure_reg(mira050, ctrl->val);
 		break;
 	case V4L2_CID_TEST_PATTERN:
-		ret = mira050_write(mira050, MIRA050_REG_TEST_PATTERN,
-				       mira050_test_pattern_val[ctrl->val]);
+		ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+		// Fixed data is hard coded to 0xAB.
+		ret = mira050_write(mira050, MIRA050_TRAINING_WORD_REG, 0xAB);
+		// Gradient is hard coded to 45 degree.
+		ret = mira050_write(mira050, MIRA050_DELTA_TEST_IMG_REG, 0x01);
+		ret = mira050_write(mira050, MIRA050_TEST_PATTERN_REG,
+				        mira050_test_pattern_val[ctrl->val]);
 		break;
 	case V4L2_CID_HFLIP:
-		ret = mira050_write(mira050, MIRA050_HFLIP_REG,
-				        ctrl->val);
+		// TODO: HFLIP requires multiple register writes
+		//ret = mira050_write(mira050, MIRA050_HFLIP_REG,
+		//		        ctrl->val);
 		break;
 	case V4L2_CID_VFLIP:
-		ret = mira050_write(mira050, MIRA050_VFLIP_REG,
-				        ctrl->val);
+		// TODO: VFLIP seems not supported in Mira050
+		//ret = mira050_write(mira050, MIRA050_VFLIP_REG,
+		//		        ctrl->val);
 		break;
 	case V4L2_CID_VBLANK:
-		ret = mira050_write16(mira050, MIRA050_VBLANK_LO_REG,
-				        mira050->mode->height + ctrl->val);
+		// TODO: check whether blanking control is supported in Mira050
+		//ret = mira050_write16(mira050, MIRA050_VBLANK_LO_REG,
+		//		        mira050->mode->height + ctrl->val);
 		break;
 	default:
 		dev_info(&client->dev,
@@ -1437,21 +1601,22 @@ static int mira050_set_pad_format(struct v4l2_subdev *sd,
 
 static int mira050_set_framefmt(struct mira050 *mira050)
 {
+	// TODO: There is no easy way to change frame format
 	switch (mira050->fmt.code) {
-	case MEDIA_BUS_FMT_SRGGB8_1X8:
-		mira050_write(mira050, MIRA050_BIT_DEPTH_REG, MIRA050_BIT_DEPTH_8_BIT);
-		mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
-			MIRA050_CSI_DATA_TYPE_8_BIT);
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG, MIRA050_BIT_DEPTH_8_BIT);
+		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
+		//	MIRA050_CSI_DATA_TYPE_8_BIT);
 		return 0;
-	case MEDIA_BUS_FMT_SRGGB10_1X10:
-		mira050_write(mira050, MIRA050_BIT_DEPTH_REG,MIRA050_BIT_DEPTH_10_BIT);
-		mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
-			MIRA050_CSI_DATA_TYPE_10_BIT);
+	case MEDIA_BUS_FMT_SGRBG10_1X10:
+		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG,MIRA050_BIT_DEPTH_10_BIT);
+		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
+		//	MIRA050_CSI_DATA_TYPE_10_BIT);
 		return 0;
-	case MEDIA_BUS_FMT_SRGGB12_1X12:
-		mira050_write(mira050, MIRA050_BIT_DEPTH_REG, MIRA050_BIT_DEPTH_12_BIT);
-		mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
-			MIRA050_CSI_DATA_TYPE_12_BIT);
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG, MIRA050_BIT_DEPTH_12_BIT);
+		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
+		//	MIRA050_CSI_DATA_TYPE_12_BIT);
 		return 0;
 	default:
 		printk(KERN_ERR "Unknown format requested %d", mira050->fmt.code);
@@ -1520,23 +1685,26 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: Entering start streaming function.\n");
 
 	ret = pm_runtime_get_sync(&client->dev);
+
 	if (ret < 0) {
 		printk(KERN_INFO "[MIRA050]: get_sync failed, but continue.\n");
 		pm_runtime_put_noidle(&client->dev);
-		// return ret;
+		return ret;
 	}
 
-	printk(KERN_INFO "[MIRA050]: Writing stop streaming regs.\n");
+	/* Apply pre soft reset default values of current mode */
+	reg_list = &mira050->mode->reg_list_pre_soft_reset;
+	printk(KERN_INFO "[MIRA050]: Write %d regs.\n", reg_list->num_of_regs);
+	ret = mira050_write_regs(mira050, reg_list->regs, reg_list->num_of_regs);
+	if (ret) {
+		dev_err(&client->dev, "%s failed to set mode\n", __func__);
+		goto err_rpm_put;
+	}
 
-	//ret = mira050_write_stop_streaming_regs(mira050);
-	//if (ret) {
-	//	dev_err(&client->dev, "Could not write stream-on sequence");
-	//	goto err_rpm_put;
-	//}
+	usleep_range(10, 50);
 
-
-	/* Apply default values of current mode */
-	reg_list = &mira050->mode->reg_list;
+	/* Apply post soft reset default values of current mode */
+	reg_list = &mira050->mode->reg_list_post_soft_reset;
 	printk(KERN_INFO "[MIRA050]: Write %d regs.\n", reg_list->num_of_regs);
 	ret = mira050_write_regs(mira050, reg_list->regs, reg_list->num_of_regs);
 	if (ret) {
@@ -1644,6 +1812,8 @@ static int mira050_power_on(struct device *dev)
 	struct mira050 *mira050 = to_mira050(sd);
 	int ret = -EINVAL;
 
+	printk(KERN_INFO "[MIRA050]: Entering power on function.\n");
+
 	ret = regulator_bulk_enable(MIRA050_NUM_SUPPLIES, mira050->supplies);
 	if (ret) {
 		dev_err(&client->dev, "%s: failed to enable regulators\n",
@@ -1658,9 +1828,9 @@ static int mira050_power_on(struct device *dev)
 		goto reg_off;
 	}
 
-	// gpiod_set_value_cansleep(mira050->reset_gpio, 1);
 	usleep_range(MIRA050_XCLR_MIN_DELAY_US,
 		     MIRA050_XCLR_MIN_DELAY_US + MIRA050_XCLR_DELAY_RANGE_US);
+
 	return 0;
 
 reg_off:
@@ -1727,52 +1897,11 @@ static int mira050_get_regulators(struct mira050 *mira050)
 				       mira050->supplies);
 }
 
-/* OTP power on */
-static int mira050_otp_power_on(struct mira050 *mira050)
-{
-	int ret;
-
-	ret = mira050_write(mira050, 0x0080, 0x04);
-
-	return 0;
-}
-
-/* OTP power off */
-static int mira050_otp_power_off(struct mira050 *mira050)
-{
-	int ret;
-
-	ret = mira050_write(mira050, 0x0080, 0x08);
-
-	return 0;
-}
-
-/* OTP power on */
-static int mira050_otp_read(struct mira050 *mira050, u8 addr, u8 offset, u8 *val)
-{
-	int ret;
-
-	ret = mira050_write(mira050, 0x0086, addr);
-	ret = mira050_write(mira050, 0x0080, 0x02);
-	ret = mira050_read(mira050, 0x0082 + offset, val);
-	return 0;
-}
-
-
 /* Verify chip ID */
 static int mira050_identify_module(struct mira050 *mira050)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	int ret;
 	u8 val;
-
-	/*
-	mira050_otp_power_on(mira050);
-	usleep_range(100, 110);
-	ret = mira050_otp_read(mira050, 0x0d, 0, &val);
-	dev_err(&client->dev, "Read OTP add 0x0d with val %x\n", val);
-	mira050_otp_power_off(mira050);
-	*/
 
 	ret = mira050_read(mira050, 0x25, &val);
 	printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
@@ -1783,8 +1912,6 @@ static int mira050_identify_module(struct mira050 *mira050)
 	ret = mira050_read(mira050, 0x4, &val);
 	printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
 		      0x4, val);
-
-
 
 	return 0;
 }
@@ -1823,7 +1950,6 @@ static int mira050_init_controls(struct mira050 *mira050)
 	struct v4l2_ctrl_handler *ctrl_hdlr;
 	struct v4l2_fwnode_device_properties props;
 	int ret;
-	u32 max_exposure = 0;
 
 	ctrl_hdlr = &mira050->ctrl_handler;
 	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 11);
@@ -1865,15 +1991,11 @@ static int mira050_init_controls(struct mira050 *mira050)
 
 	// Exposure is indicated in number of lines here
 	// Max is determined by vblank + vsize and Tglob.
-	max_exposure = mira050_calculate_max_exposure_time(MIRA050_MIN_ROW_LENGTH,
-	                                                   mira050->mode->height,
-	                                                   mira050->mode->vblank);
-
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_EXPOSURE %X.\n", __func__, V4L2_CID_EXPOSURE);
 
 	mira050->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
 					     V4L2_CID_EXPOSURE,
-					     MIRA050_EXPOSURE_MIN, max_exposure,
+					     MIRA050_EXPOSURE_MIN, MIRA050_EXPOSURE_MAX,
 					     1,
 					     MIRA050_DEFAULT_EXPOSURE);
 
@@ -1886,14 +2008,14 @@ static int mira050_init_controls(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_HFLIP %X.\n", __func__, V4L2_CID_HFLIP);
 
 	mira050->hflip = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
-					  V4L2_CID_HFLIP, 0, 1, 1, 0);
+					  V4L2_CID_HFLIP, 0, 0, 1, 0);
 	if (mira050->hflip)
 		mira050->hflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
 
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_VFLIP %X.\n", __func__, V4L2_CID_VFLIP);
 
 	mira050->vflip = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
-					  V4L2_CID_VFLIP, 0, 1, 1, 0);
+					  V4L2_CID_VFLIP, 0, 0, 1, 0);
 	if (mira050->vflip)
 		mira050->vflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
 
@@ -1956,8 +2078,8 @@ static int mira050_check_hwcfg(struct device *dev)
 	}
 
 	/* Check the number of MIPI CSI2 data lanes */
-	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 2) {
-		dev_err(dev, "only 2 data lanes are currently supported\n");
+	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 1) {
+		dev_err(dev, "only 1 data lanes are currently supported\n");
 		goto error_out;
 	}
 
@@ -2029,13 +2151,6 @@ static int mira050_probe(struct i2c_client *client)
 		dev_err(dev, "failed to get regulators\n");
 		return ret;
 	}
-
-	/* Request optional enable pin */
-	// mira050->reset_gpio = devm_gpiod_get_optional(dev, "reset",
-	//					     GPIOD_OUT_HIGH);
-
-
-	printk(KERN_INFO "[MIRA050]: Entering power on function.\n");
 
 	/*
 	 * The sensor must be powered for mira050_identify_module()
