@@ -21,13 +21,13 @@
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
 
-#define MIRA050_NATIVE_WIDTH			1600U
-#define MIRA050_NATIVE_HEIGHT			1400U
+#define MIRA050_NATIVE_WIDTH			600U
+#define MIRA050_NATIVE_HEIGHT			800U
 
 #define MIRA050_PIXEL_ARRAY_LEFT		0U
 #define MIRA050_PIXEL_ARRAY_TOP			0U
-#define MIRA050_PIXEL_ARRAY_WIDTH		1600U
-#define MIRA050_PIXEL_ARRAY_HEIGHT		1400U
+#define MIRA050_PIXEL_ARRAY_WIDTH		600U
+#define MIRA050_PIXEL_ARRAY_HEIGHT		800U
 
 #define MIRA050_ANALOG_GAIN_REG			0x400A
 #define MIRA050_ANALOG_GAIN_MAX			4
@@ -45,18 +45,10 @@
 #define MIRA050_CSI_DATA_TYPE_10_BIT		0x02
 #define MIRA050_CSI_DATA_TYPE_8_BIT		0x01
 
-#define MIRA050_IMAGER_STATE_REG		0x1003
-#define MIRA050_IMAGER_STATE_STOP_AT_ROW	0x02
-#define MIRA050_IMAGER_STATE_STOP_AT_FRAME	0x04
-#define MIRA050_IMAGER_STATE_MASTER_CONTROL	0x10
-
-#define MIRA050_IMAGER_RUN_REG			0x10F0
-#define MIRA050_IMAGER_RUN_START		0x01
-#define MIRA050_IMAGER_RUN_STOP			0x00
-
-#define MIRA050_IMAGER_RUN_CONT_REG		0x1002
-#define MIRA050_IMAGER_RUN_CONT_ENABLE		0x04
-#define MIRA050_IMAGER_RUN_CONT_DISABLE		0x00
+#define MIRA050_BANK_SEL_REG			0xE000
+#define MIRA050_RW_CONTEXT_REG			0xE004
+#define MIRA050_CMD_REQ_1_REG			0x000A
+#define MIRA050_CMD_HALT_BLOCK_REG		0x000C
 
 #define MIRA050_NB_OF_FRAMES_LO_REG		0x10F2
 #define MIRA050_NB_OF_FRAMES_HI_REG		0x10F3
@@ -222,6 +214,7 @@ struct mira050_mode {
 };
 
 // 600_800_30fps_10b_2lanes
+// Taken from ams_jetcis/scripts/Mira050/Mira050-bringup.py initSensor_2()
 static const struct mira050_reg full_600_800_30fps_10b_2lanes_reg[] = {
 
     {0xE000, 0},
@@ -1014,26 +1007,34 @@ static int mira050_write_start_streaming_regs(struct mira050* mira050) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
 
-	// Setting master control
-	ret = mira050_write(mira050, MIRA050_IMAGER_STATE_REG,
-				MIRA050_IMAGER_STATE_MASTER_CONTROL);
+	// Set conetxt bank 0 or 1
+	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
 	if (ret) {
-		dev_err(&client->dev, "Error setting master control");
+		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
 		return ret;
 	}
 
-	// Enable continuous streaming
-	ret = mira050_write(mira050, MIRA050_IMAGER_RUN_CONT_REG, 
-				MIRA050_IMAGER_RUN_CONT_ENABLE);
+	// Set context bank 1A or bank 1B
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
 	if (ret) {
-		dev_err(&client->dev, "Error enabling continuous streaming");
+		dev_err(&client->dev, "Error setting RW_CONTEXT.");
 		return ret;
 	}
 
-	ret = mira050_write(mira050, MIRA050_IMAGER_RUN_REG,
-				MIRA050_IMAGER_RUN_START);
+
+	// Raising CMD_REQ_1 to 1 for REQ_EXP
+	ret = mira050_write(mira050, MIRA050_CMD_REQ_1_REG,
+				1);
 	if (ret) {
-		dev_err(&client->dev, "Error setting internal trigger");
+		dev_err(&client->dev, "Error setting CMD_REQ_1 to 1 for REQ_EXP.");
+		return ret;
+	}
+
+	// Setting CMD_REQ_1 tp 0 for REQ_EXP
+	ret = mira050_write(mira050, MIRA050_CMD_REQ_1_REG,
+				0);
+	if (ret) {
+		dev_err(&client->dev, "Error setting CMD_REQ_1 to 0 for REQ_EXP.");
 		return ret;
 	}
 
@@ -1045,17 +1046,26 @@ static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
 	int ret = 0;
 	u32 frame_time;
 
-	ret = mira050_write(mira050, MIRA050_IMAGER_STATE_REG,
-				MIRA050_IMAGER_STATE_STOP_AT_ROW);
+	// Set conetxt bank 0 or 1
+	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
 	if (ret) {
-		dev_err(&client->dev, "Error setting stop-at-row imager state");
+		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
 		return ret;
 	}
 
-	ret = mira050_write(mira050, MIRA050_IMAGER_RUN_REG,
-				MIRA050_IMAGER_RUN_STOP);
+	// Raising CMD_HALT_BLOCK to 1 to stop streaming
+	ret = mira050_write(mira050, MIRA050_CMD_HALT_BLOCK_REG,
+				1);
 	if (ret) {
-		dev_err(&client->dev, "Error setting run reg to stop");
+		dev_err(&client->dev, "Error setting CMD_HALT_BLOCK to 1.");
+		return ret;
+	}
+
+	// Setting CMD_HALT_BLOCK to 0 to stop streaming
+	ret = mira050_write(mira050, MIRA050_CMD_HALT_BLOCK_REG,
+				0);
+	if (ret) {
+		dev_err(&client->dev, "Error setting CMD_HALT_BLOCK to 0.");
 		return ret;
 	}
 
@@ -1066,10 +1076,12 @@ static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
          * frame_time = frame length rows * Tline
          * Tline = line length / pixel clock (in MHz)
          */
+	/*
         frame_time = MIRA050_DEFAULT_FRAME_LENGTH *
             MIRA050_DEFAULT_LINE_LENGTH / MIRA050_DEFAULT_PIXEL_CLOCK;
 
         usleep_range(frame_time, frame_time + 1000);
+	*/
 
 	return ret;
 }
@@ -1100,7 +1112,7 @@ static void mira050_set_default_format(struct mira050 *mira050)
 	struct v4l2_mbus_framefmt *fmt;
 
 	fmt = &mira050->fmt;
-	fmt->code = MEDIA_BUS_FMT_SRGGB12_1X12; // MEDIA_BUS_FMT_Y12_1X12;
+	fmt->code = MEDIA_BUS_FMT_SRGGB10_1X10; // MEDIA_BUS_FMT_Y12_1X12;
 	fmt->colorspace = V4L2_COLORSPACE_RAW;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
@@ -1127,7 +1139,7 @@ static int mira050_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_fmt_img->width = supported_modes[0].width;
 	try_fmt_img->height = supported_modes[0].height;
 	try_fmt_img->code = mira050_validate_format_code_or_default(mira050,
-						   MEDIA_BUS_FMT_SRGGB12_1X12);
+						   MEDIA_BUS_FMT_SRGGB10_1X10);
 	try_fmt_img->field = V4L2_FIELD_NONE;
 
 	/* TODO(jalv): Initialize try_fmt for the embedded metadata pad */
