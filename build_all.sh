@@ -6,15 +6,15 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 echo "${PWD}"
 
 # checkout kernel source
-COMMIT=6dafd553901ea01d8871010488121e21d131fea4
+TAG="1.20220331"
 # Check if the unzipped directory of the Linux source exist; Otherwise download it.
-if [[ ! -d $PWD/linux-${COMMIT} ]]
+if [[ ! -d $PWD/linux-${TAG} ]]
 then
-	echo "Downloading Raspberry Pi Linux repo commit ${COMMIT}"
-	wget https://github.com/raspberrypi/linux/archive/${COMMIT}.zip
-	unzip ${COMMIT}.zip
+	echo "Downloading Raspberry Pi Linux repo tag ${TAG}"
+	wget https://github.com/raspberrypi/linux/archive/refs/tags/${TAG}.tar.gz
+	tar -zxf ./${TAG}.tar.gz
 fi
-ln -sf $PWD/linux-${COMMIT} linux
+ln -sf $PWD/linux-${TAG} linux
 
 # apply patches and sources
 echo "Applying patches to Linux source"
