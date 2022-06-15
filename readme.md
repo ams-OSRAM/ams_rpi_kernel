@@ -17,3 +17,6 @@ Tests:
 - Test whether Mira220 driver is loaded. As mentioned above, the line `dtoverlay=mira220` should be added to `/boot/config.txt` on RPI. After reboot, the `dmesg` command should print out logs with keywords `MIRA220`and `MIRA220PMIC`. For a 64 bit kernel - it could be that you need to add `kernel=kernel8.img` to `config.txt`
 - Test whether the power management IC driver module (MIRA220PMIC) is working. The green LED on the Mira220 sensor board should be turned on.
 - To further test the actual driver module (MIRA220), please refer to a separate repo `ams_rpi_software` and follow instructions from there.
+
+Post-installation:
+- If the RPI has other custom driver modules, such as the Quadric Dev Kit driver (`thor`), these driver needs to be re-installed. That is because the Mira220 driver installation script over-writes the kernel image. The reinstallation of `thor` driver requires a specific version of Linux kernel header. The process of getting the Linux kernel header and re-stalling `thor` driver is described in [doc/reinstall_thor_driver.md](doc/reinstall_thor_driver.md).

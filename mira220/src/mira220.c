@@ -1023,7 +1023,8 @@ struct mira220 {
 
 	/* Streaming on/off */
 	bool streaming;
-
+	/* Whether regulator is enabled */
+	bool regulator_enabled;
 };
 
 static inline struct mira220 *to_mira220(struct v4l2_subdev *_sd)
@@ -1220,11 +1221,20 @@ static int mira220_write_stop_streaming_regs(struct mira220* mira220) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira220->sd);
 	int ret = 0;
 	u32 frame_time;
+	int try_cnt;
 
-	ret = mira220_write(mira220, MIRA220_IMAGER_STATE_REG,
-				MIRA220_IMAGER_STATE_STOP_AT_ROW);
+	for (try_cnt = 0; try_cnt < 5; try_cnt++) {
+		ret = mira220_write(mira220, MIRA220_IMAGER_STATE_REG,
+					MIRA220_IMAGER_STATE_STOP_AT_ROW);
+		if (ret) {
+			dev_err(&client->dev, "Error setting stop-at-row imager state at try %d", try_cnt);
+			usleep_range(1000, 1100);
+		} else {
+			break;
+		}
+	}
 	if (ret) {
-		dev_err(&client->dev, "Error setting stop-at-row imager state");
+		dev_err(&client->dev, "Error setting stop-at-row imager state after multiple attempts. Exiting.");
 		return ret;
 	}
 
@@ -1808,12 +1818,28 @@ static int mira220_power_on(struct device *dev)
 	struct mira220 *mira220 = to_mira220(sd);
 	int ret = -EINVAL;
 
+	printk(KERN_INFO "[MIRA220]: Entering power on function.\n");
+
+	/* Pull reset to low if it is high */
+	if (mira220->regulator_enabled) {
+		ret = regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
+		if (ret) {
+			dev_err(&client->dev, "%s: failed to disable regulators\n",
+				__func__);
+			return ret;
+		}
+		usleep_range(MIRA220_XCLR_MIN_DELAY_US,
+			     MIRA220_XCLR_MIN_DELAY_US + MIRA220_XCLR_DELAY_RANGE_US);
+		mira220->regulator_enabled = false;
+	}
+
 	ret = regulator_bulk_enable(MIRA220_NUM_SUPPLIES, mira220->supplies);
 	if (ret) {
 		dev_err(&client->dev, "%s: failed to enable regulators\n",
 			__func__);
 		return ret;
 	}
+	mira220->regulator_enabled = true;
 
 	ret = clk_prepare_enable(mira220->xclk);
 	if (ret) {
@@ -1829,6 +1855,7 @@ static int mira220_power_on(struct device *dev)
 
 reg_off:
 	ret = regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
+	mira220->regulator_enabled = false;
 	return ret;
 }
 
@@ -1838,7 +1865,10 @@ static int mira220_power_off(struct device *dev)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mira220 *mira220 = to_mira220(sd);
 
-	regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
+	printk(KERN_INFO "[MIRA220]: Entering power off function.\n");
+
+	// regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
+	// mira220->regulator_enabled = false;
 	clk_disable_unprepare(mira220->xclk);
 
 	return 0;
@@ -2187,8 +2217,6 @@ static int mira220_probe(struct i2c_client *client)
 	// mira220->reset_gpio = devm_gpiod_get_optional(dev, "reset",
 	//					     GPIOD_OUT_HIGH);
 
-
-	printk(KERN_INFO "[MIRA220]: Entering power on function.\n");
 
 	/*
 	 * The sensor must be powered for mira220_identify_module()

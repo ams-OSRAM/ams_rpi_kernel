@@ -1,3 +1,8 @@
+# Version v0.1.3
+
+Bug fixes:
+- Increase reset timing to avoid instable reset.
+
 # Version v0.1.2
 
 New features:
