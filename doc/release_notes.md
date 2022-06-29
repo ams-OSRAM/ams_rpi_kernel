@@ -1,3 +1,8 @@
+# Version v0.1.4
+
+New features:
+- Add Mira050 support. Reduce Mira220 power consumption by keeping reset signal high most of the time.
+
 # Version v0.1.3
 
 Bug fixes:
