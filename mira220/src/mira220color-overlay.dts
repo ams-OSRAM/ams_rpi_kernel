@@ -7,7 +7,7 @@
 #include "mira220_mono_color-overlay.dtsi"
 
 &mira220 {
-        compatible = "ams,mira220";
-	reg-name = "mira220";
+        compatible = "ams,mira220color";
+	reg-name = "mira220color";
 };
 

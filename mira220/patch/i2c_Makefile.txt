@@ -1,2 +1,3 @@
 obj-$(CONFIG_VIDEO_MIRA220)	+= mira220.o
+obj-$(CONFIG_VIDEO_MIRA220COLOR)	+= mira220color.o
 obj-$(CONFIG_VIDEO_MIRA220PMIC)	+= mira220pmic.o
