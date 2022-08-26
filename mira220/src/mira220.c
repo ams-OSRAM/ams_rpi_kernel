@@ -7,7 +7,7 @@
  * Copyright (C) 2019, Raspberry Pi (Trading) Ltd
  */
 
-#include "mira220.h"
+#include "mira220.inl"
 
 static const struct of_device_id mira220_dt_ids[] = {
 	{ .compatible = "ams,mira220" },

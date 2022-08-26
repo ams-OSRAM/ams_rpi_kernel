@@ -7,8 +7,8 @@
  * Copyright (C) 2019, Raspberry Pi (Trading) Ltd
  */
 
-#ifndef __MIRA220_H__
-#define __MIRA220_H__
+#ifndef __MIRA220_INL__
+#define __MIRA220_INL__
 
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -2318,5 +2318,5 @@ static const struct dev_pm_ops mira220_pm_ops = {
 	SET_RUNTIME_PM_OPS(mira220_power_off, mira220_power_on, NULL)
 };
 
-#endif // __MIRA220_H__
+#endif // __MIRA220_INL__
 
