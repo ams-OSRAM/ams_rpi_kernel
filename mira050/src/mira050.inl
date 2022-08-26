@@ -1,0 +1,2258 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * A V4L2 driver for ams MIRA050 cameras.
+ * Copyright (C) 2022, ams-OSRAM
+ *
+ * Based on Sony IMX219 camera driver
+ * Copyright (C) 2019, Raspberry Pi (Trading) Ltd
+ */
+
+#ifndef __MIRA050_INL__
+#define __MIRA050_INL__
+
+#include <linux/clk.h>
+#include <linux/delay.h>
+#include <linux/gpio/consumer.h>
+#include <linux/i2c.h>
+#include <linux/module.h>
+#include <linux/pm_runtime.h>
+#include <linux/regulator/consumer.h>
+#include <media/v4l2-ctrls.h>
+#include <media/v4l2-device.h>
+#include <media/v4l2-event.h>
+#include <media/v4l2-fwnode.h>
+#include <media/v4l2-mediabus.h>
+#include <asm/unaligned.h>
+
+#define MIRA050_NATIVE_WIDTH			576U
+#define MIRA050_NATIVE_HEIGHT			768U
+
+#define MIRA050_PIXEL_ARRAY_LEFT		0U
+#define MIRA050_PIXEL_ARRAY_TOP			0U
+#define MIRA050_PIXEL_ARRAY_WIDTH		576U
+#define MIRA050_PIXEL_ARRAY_HEIGHT		768U
+
+// #define MIRA050_ANALOG_GAIN_REG			0x400A
+#define MIRA050_ANALOG_GAIN_MAX			1
+#define MIRA050_ANALOG_GAIN_MIN			1
+#define MIRA050_ANALOG_GAIN_STEP		1
+#define MIRA050_ANALOG_GAIN_DEFAULT		MIRA050_ANALOG_GAIN_MIN
+
+#define MIRA050_BIT_DEPTH_REG			0x209E
+#define MIRA050_BIT_DEPTH_12_BIT		0x02
+#define MIRA050_BIT_DEPTH_10_BIT		0x04
+#define MIRA050_BIT_DEPTH_8_BIT			0x06
+
+#define MIRA050_CSI_DATA_TYPE_REG		0x208D
+#define MIRA050_CSI_DATA_TYPE_12_BIT	0x04
+#define MIRA050_CSI_DATA_TYPE_10_BIT	0x02
+#define MIRA050_CSI_DATA_TYPE_8_BIT		0x01
+
+#define MIRA050_BANK_SEL_REG			0xE000
+#define MIRA050_RW_CONTEXT_REG			0xE004
+#define MIRA050_CMD_REQ_1_REG			0x000A
+#define MIRA050_CMD_HALT_BLOCK_REG		0x000C
+
+#define MIRA050_NB_OF_FRAMES_LO_REG		0x10F2
+#define MIRA050_NB_OF_FRAMES_HI_REG		0x10F3
+
+#define MIRA050_POWER_MODE_REG			0x0043
+#define MIRA050_POWER_MODE_SLEEP		0x01
+#define MIRA050_POWER_MODE_IDLE			0x02
+#define MIRA050_POWER_MODE_ACTIVE		0x0C
+
+// Exposure time is indicated in us
+#define MIRA050_EXP_TIME_L_REG			0x000E
+#define MIRA050_EXP_TIME_S_REG			0x0012
+
+// VBLANK is indicated in number of rows
+#define MIRA050_VBLANK_LO_REG			0x1012
+#define MIRA050_VBLANK_HI_REG			0x1013
+
+#define MIRA050_EXT_EXP_PW_SEL_REG		0x1001
+#define MIRA050_EXT_EXP_PW_SEL_USE_REG		1
+#define MIRA050_EXT_EXP_PW_SEL_USE_EXT		0
+
+// Exposure delay is indicated in number of rows
+#define MIRA050_EXT_EXP_DELAY_LO_REG		0x10D0
+#define MIRA050_EXT_EXP_DELAY_HI_REG		0x10D1
+
+// Sets the duration of the row length in clock cycles of CLK_IN
+#define MIRA050_ROW_LENGTH_LO_REG		0x102B
+#define MIRA050_ROW_LENGTH_HI_REG		0x102C
+#define MIRA050_ROW_LENGTH_MIN			300
+
+#define MIRA050_VSIZE1_LO_REG			0x1087
+#define MIRA050_VSIZE1_HI_REG			0x1088
+#define MIRA050_VSIZE1_MASK			0x7FF
+
+#define MIRA050_VSTART1_LO_REG			0x107D
+#define MIRA050_VSTART1_HI_REG			0x107E
+#define MIRA050_VSTART1_MASK			0x7FF
+
+// HSIZE units are number of columns / 2
+#define MIRA050_HSIZE_LO_REG			0x2008
+#define MIRA050_HSIZE_HI_REG			0x2009
+#define MIRA050_HSIZE_MASK			0x3FF
+
+// HSTART units are number of columns / 2
+#define MIRA050_HSTART_LO_REG			0x200A
+#define MIRA050_HSTART_HI_REG			0x200B
+#define MIRA050_HSTART_MASK			0x3FF
+
+// MIPI_HSIZE units are number of columns (HSIZE * 2)
+#define MIRA050_MIPI_HSIZE_LO_REG		0x207D
+#define MIRA050_MIPI_HSIZE_HI_REG		0x207E
+#define MIRA050_MIPI_HSIZE_MASK			0xFFFF
+
+#define MIRA050_HFLIP_REG			0x209C
+#define MIRA050_HFLIP_ENABLE_MIRROR		1
+#define MIRA050_HFLIP_DISABLE_MIRROR		0
+
+#define MIRA050_VFLIP_REG			0x1095
+#define MIRA050_VFLIP_ENABLE_FLIP		1
+#define MIRA050_VFLIP_DISABLE_FLIP		0
+
+#define MIRA050_BIT_ORDER_REG			0x2063
+#define MIRA050_BIT_ORDER_NORMAL		0
+#define MIRA050_BIT_ORDER_REVERSED		1
+
+#define MIRA050_BSP_REG				0x4006
+#define MIRA050_BSP_ENABLE			0x08
+#define MIRA050_BSP_DISABLE			0x0F
+
+#define MIRA050_MIPI_SOFT_RESET_REG		0x5004
+#define MIRA050_MIPI_SOFT_RESET_DPHY		0x01
+#define MIRA050_MIPI_SOFT_RESET_NONE		0x00
+
+#define MIRA050_FSYNC_EOF_MAX_CTR_LO_REG	0x2066
+#define MIRA050_FSYNC_EOF_MAX_CTR_HI_REG	0x2067
+
+#define MIRA050_FSYNC_EOF_VEND_ST_LO_REG	0x206E
+#define MIRA050_FSYNC_EOF_VEND_ST_HI_REG	0x206F
+
+#define MIRA050_FSYNC_EOF_HSTART_EMB_ST_LO_REG	0x2076
+#define MIRA050_FSYNC_EOF_HSTART_EMB_ST_HI_REG	0x2077
+
+#define MIRA050_FSYNC_EOF_DSTART_EMB_ST_LO_REG	0x2078
+#define MIRA050_FSYNC_EOF_DSTART_EMB_ST_HI_REG	0x2079
+
+#define MIRA050_FSYNC_EOF_HEND_EMB_ST_LO_REG	0x207A
+#define MIRA050_FSYNC_EOF_HEND_EMB_ST_HI_REG	0x207B
+
+#define MIRA050_GLOB_NUM_CLK_CYCLES		1928
+
+#define MIRA050_SUPPORTED_XCLK_FREQ		24000000
+
+#define MIRA050_MIN_ROW_LENGTH			300
+#define MIRA050_MIN_VBLANK			(11 + MIRA050_GLOB_NUM_CLK_CYCLES \
+						    / MIRA050_MIN_ROW_LENGTH)
+
+// Default exposure is adjusted to 1 ms
+#define MIRA050_DEFAULT_EXPOSURE		1000
+#define MIRA050_LUT_DEL_008			66
+#define MIRA050_GRAN_TG				34
+#define MIRA050_DATA_RATE			1000 // Mbit/s
+#define MIRA050_EXPOSURE_MIN			(int)((151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG * 8 / MIRA050_DATA_RATE)
+#define MIRA050_EXPOSURE_MAX			0xFFFFFFFF
+
+// Power on function timing
+#define MIRA050_XCLR_MIN_DELAY_US		150000
+#define MIRA050_XCLR_DELAY_RANGE_US		3000
+
+/* Chip ID */
+#define MIRA050_REG_CHIP_ID		0x0000
+#define MIRA050_CHIP_ID			0x0054
+
+#define MIRA050_REG_VALUE_08BIT		1
+#define MIRA050_REG_VALUE_16BIT		2
+
+// pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
+// 1.0Gb/s * 2 * 1 / 12 = 178956970
+#define MIRA050_PIXEL_RATE		(178956970)
+/* Should match device tree link freq */
+#define MIRA050_DEFAULT_LINK_FREQ	456000000
+
+// For test pattern with fixed data
+#define MIRA050_TRAINING_WORD_REG		0x0060
+// For test pattern with 2D gradiant
+#define MIRA050_DELTA_TEST_IMG_REG		0x0056
+// For setting test pattern type
+#define MIRA050_TEST_PATTERN_REG		0x0062
+#define	MIRA050_TEST_PATTERN_DISABLE		0x00
+#define	MIRA050_TEST_PATTERN_FIXED_DATA		0x01
+#define	MIRA050_TEST_PATTERN_2D_GRADIENT	0x02
+
+/* Embedded metadata stream structure */
+#define MIRA050_EMBEDDED_LINE_WIDTH 16384
+#define MIRA050_NUM_EMBEDDED_LINES 1
+
+/* From Jetson driver */
+#define MIRA050_DEFAULT_LINE_LENGTH    (0xA80)
+#define MIRA050_DEFAULT_PIXEL_CLOCK    (160)
+#define MIRA050_DEFAULT_FRAME_LENGTH    (0x07C0)
+
+#define MIRA050_PLL_LOCKED_REG			0x207C
+#define MIRA050_CSI2_TX_HS_ACTIVE_REG		0x209A
+
+enum pad_types {
+	IMAGE_PAD,
+	METADATA_PAD,
+	NUM_PADS
+};
+
+struct mira050_reg {
+	u16 address;
+	u8 val;
+};
+
+struct mira050_reg_list {
+	unsigned int num_of_regs;
+	const struct mira050_reg *regs;
+};
+
+/* Mode : resolution and related config&values */
+struct mira050_mode {
+	/* Frame width */
+	unsigned int width;
+	/* Frame height */
+	unsigned int height;
+
+	/* Analog crop rectangle. */
+	struct v4l2_rect crop;
+
+	/* Default register values */
+	struct mira050_reg_list reg_list_pre_soft_reset;
+	struct mira050_reg_list reg_list_post_soft_reset;
+
+	u32 vblank;
+	u32 hblank;
+};
+
+// 576_768_60fps_12b_1lane
+// Taken from Mira050_register_sequence_12b_60fps_576_768_1000Mbit_24M.txt
+static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_pre_soft_reset[] = {
+	// Base Configuration
+	{57344, 0},
+	{484, 0},
+	{485, 19},
+	{482, 23},
+	{483, 136},
+	{486, 0},
+	{487, 202},
+	{364, 1},
+	{363, 1},
+	{520, 1},
+	{521, 240},
+	{522, 3},
+	{523, 77},
+	{524, 2},
+	{525, 16},
+	{526, 3},
+	{527, 1},
+	{528, 0},
+	{529, 19},
+	{530, 0},
+	{531, 3},
+	{532, 3},
+	{533, 239},
+	{534, 3},
+	{535, 243},
+	{536, 3},
+	{537, 244},
+	{538, 1},
+	{539, 241},
+	{540, 3},
+	{541, 36},
+	{542, 0},
+	{543, 2},
+	{544, 1},
+	{545, 242},
+	{546, 3},
+	{547, 47},
+	{548, 0},
+	{549, 33},
+	{550, 3},
+	{551, 240},
+	{552, 3},
+	{553, 241},
+	{554, 3},
+	{555, 242},
+	{556, 3},
+	{557, 245},
+	{558, 3},
+	{559, 246},
+	{560, 0},
+	{561, 193},
+	{562, 0},
+	{563, 2},
+	{564, 1},
+	{565, 242},
+	{566, 3},
+	{567, 107},
+	{568, 3},
+	{569, 255},
+	{570, 3},
+	{571, 49},
+	{572, 1},
+	{573, 240},
+	{574, 3},
+	{575, 135},
+	{576, 0},
+	{577, 10},
+	{578, 0},
+	{579, 11},
+	{580, 1},
+	{581, 249},
+	{582, 3},
+	{583, 13},
+	{584, 0},
+	{585, 7},
+	{586, 3},
+	{587, 239},
+	{588, 3},
+	{589, 243},
+	{590, 3},
+	{591, 244},
+	{592, 3},
+	{593, 0},
+	{594, 0},
+	{595, 7},
+	{596, 0},
+	{597, 12},
+	{598, 1},
+	{599, 241},
+	{600, 3},
+	{601, 67},
+	{602, 1},
+	{603, 248},
+	{604, 3},
+	{605, 16},
+	{606, 0},
+	{607, 7},
+	{608, 3},
+	{609, 240},
+	{610, 3},
+	{611, 241},
+	{612, 3},
+	{613, 242},
+	{614, 3},
+	{615, 245},
+	{616, 3},
+	{617, 246},
+	{618, 3},
+	{619, 0},
+	{620, 2},
+	{621, 135},
+	{622, 0},
+	{623, 1},
+	{624, 3},
+	{625, 255},
+	{626, 3},
+	{627, 0},
+	{628, 3},
+	{629, 255},
+	{630, 2},
+	{631, 135},
+	{632, 3},
+	{633, 2},
+	{634, 3},
+	{635, 15},
+	{636, 3},
+	{637, 247},
+	{638, 0},
+	{639, 22},
+	{640, 0},
+	{641, 51},
+	{642, 0},
+	{643, 4},
+	{644, 0},
+	{645, 17},
+	{646, 3},
+	{647, 9},
+	{648, 0},
+	{649, 2},
+	{650, 0},
+	{651, 32},
+	{652, 0},
+	{653, 181},
+	{654, 0},
+	{655, 229},
+	{656, 0},
+	{657, 18},
+	{658, 0},
+	{659, 181},
+	{660, 0},
+	{661, 229},
+	{662, 0},
+	{663, 0},
+	{664, 0},
+	{665, 18},
+	{666, 0},
+	{667, 18},
+	{668, 0},
+	{669, 32},
+	{670, 0},
+	{671, 181},
+	{672, 0},
+	{673, 229},
+	{674, 0},
+	{675, 0},
+	{676, 0},
+	{677, 18},
+	{678, 0},
+	{679, 18},
+	{680, 0},
+	{681, 32},
+	{682, 0},
+	{683, 71},
+	{684, 0},
+	{685, 39},
+	{686, 0},
+	{687, 181},
+	{688, 0},
+	{689, 229},
+	{690, 0},
+	{691, 0},
+	{692, 0},
+	{693, 4},
+	{694, 0},
+	{695, 67},
+	{696, 0},
+	{697, 1},
+	{698, 3},
+	{699, 2},
+	{700, 0},
+	{701, 8},
+	{702, 3},
+	{703, 255},
+	{704, 2},
+	{705, 135},
+	{706, 3},
+	{707, 137},
+	{708, 3},
+	{709, 247},
+	{710, 0},
+	{711, 119},
+	{712, 0},
+	{713, 23},
+	{714, 0},
+	{715, 8},
+	{716, 3},
+	{717, 255},
+	{718, 0},
+	{719, 56},
+	{720, 0},
+	{721, 23},
+	{722, 0},
+	{723, 8},
+	{724, 3},
+	{725, 255},
+	{726, 3},
+	{727, 255},
+	{728, 3},
+	{729, 255},
+	{730, 3},
+	{731, 255},
+	{732, 3},
+	{733, 255},
+	{734, 3},
+	{735, 255},
+	{736, 3},
+	{737, 255},
+	{738, 3},
+	{739, 255},
+	{740, 3},
+	{741, 255},
+	{742, 3},
+	{743, 255},
+	{744, 3},
+	{745, 255},
+	{746, 3},
+	{747, 255},
+	{748, 3},
+	{749, 255},
+	{750, 3},
+	{751, 255},
+	{752, 3},
+	{753, 255},
+	{754, 3},
+	{755, 255},
+	{756, 3},
+	{757, 255},
+	{758, 3},
+	{759, 255},
+	{760, 3},
+	{761, 255},
+	{762, 3},
+	{763, 255},
+	{764, 3},
+	{765, 255},
+	{766, 3},
+	{767, 255},
+	{768, 3},
+	{769, 255},
+	{770, 3},
+	{771, 255},
+	{489, 0},
+	{488, 25},
+	{490, 53},
+	{491, 55},
+	{492, 92},
+	{493, 99},
+	{504, 15},
+	{92, 0},
+	{93, 0},
+	{474, 1},
+	{476, 1},
+	{478, 1},
+	{393, 1},
+	{439, 1},
+	{449, 14},
+	{450, 246},
+	{451, 255},
+	{457, 7},
+	{440, 1},
+	{442, 51},
+	{447, 60},
+	{448, 92},
+	{113, 1},
+	{436, 1},
+	{437, 1},
+	{497, 1},
+	{500, 1},
+	{501, 1},
+	{788, 1},
+	{789, 1},
+	{790, 1},
+	{519, 0},
+	{16903, 2},
+	{8711, 2},
+	{8349, 0},
+	{99, 1},
+	{503, 15},
+	{233, 3},
+	{234, 40},
+	{777, 7},
+	{778, 4},
+	{779, 13},
+	{780, 7},
+	{782, 21},
+	{781, 10},
+	{784, 13},
+	{464, 31},
+	{465, 15},
+	{22, 0},
+	{23, 5},
+	{232, 3},
+	{57536, 0},
+	{57537, 32},
+	{57538, 0},
+	{57539, 32},
+	{362, 2},
+	{360, 44},
+	// PLL
+	{57344, 0},
+	{8311, 0},
+	{8310, 147},
+	{206, 1},
+	{112, 6},
+	{365, 34},
+	{374, 66},
+	{8390, 0},
+	{8391, 0},
+	{8392, 1},
+	{8393, 0},
+	{8394, 0},
+	{8395, 1},
+	{8309, 0},
+	// Low Power State
+	{57344, 0},
+	{30, 1},
+	// MIPI
+	{57344, 0},
+	{8318, 0},
+	{8319, 0},
+	{8320, 0},
+	{8321, 3},
+	{8322, 0},
+	{8323, 2},
+	{144, 0},
+	{8343, 0},
+	// Sensor Control Mode
+	{57344, 0},
+	{17, 3},
+	{285, 0},
+	// Time Bases
+	{57344, 0},
+	{18, 0},
+	{19, 24},
+	{346, 0},
+	{347, 70},
+	{348, 0},
+	{349, 70},
+	{350, 0},
+	{351, 70},
+	{354, 0},
+	{355, 5},
+	{356, 4},
+	{357, 76},
+	{358, 4},
+	{359, 76},
+	// Analog Gain
+	{57344, 0},
+	{443, 200},
+	{444, 192},
+	{208, 0},
+	{496, 8},
+	{499, 2},
+	{366, 206},
+	{370, 0},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 206},
+	{372, 0},
+	{373, 32},
+	{395, 3},
+	{396, 82},
+	{397, 2},
+	{398, 86},
+	{399, 11},
+	{400, 207},
+	{494, 21},
+	{495, 106},
+	{418, 5},
+	{419, 221},
+	{799, 5},
+	{800, 230},
+	{422, 6},
+	{423, 116},
+	{420, 11},
+	{421, 70},
+	{801, 11},
+	{802, 79},
+	{424, 11},
+	{425, 221},
+	{416, 0},
+	{417, 177},
+	{434, 0},
+	{435, 201},
+	{432, 0},
+	{433, 196},
+	{428, 0},
+	{429, 207},
+	// Black Level
+	{57344, 0},
+	{403, 6},
+	{404, 144},
+};
+
+static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset[] = {
+	// Release Soft Reset
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	// Horizontal ROI
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 12},
+	{57390, 2},
+	{57391, 75},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 70},
+	{52, 1},
+	{53, 32},
+	{57348, 1},
+	{57388, 0},
+	{57389, 0},
+	{57390, 2},
+	{57391, 87},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 70},
+	{52, 1},
+	{53, 44},
+	// Vertical ROI
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 1},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 1},
+	{43, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 3},
+	{37, 0},
+	{38, 0},
+	{39, 24},
+	{40, 0},
+	{41, 0},
+	{42, 0},
+	{43, 0},
+	{44, 0},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	// Frame and Exposure Control
+	{57348, 0},
+	{57344, 1},
+	{14, 0},
+	{15, 0},
+	{16, 19},
+	{17, 136},
+	{18, 0},
+	{19, 0},
+	{20, 0},
+	{21, 0},
+	{57348, 1},
+	{14, 0},
+	{15, 0},
+	{16, 3},
+	{17, 232},
+	{18, 0},
+	{19, 0},
+	{20, 0},
+	{21, 0},
+	{57348, 0},
+	{50, 9},
+	{51, 122},
+	{57348, 1},
+	{50, 9},
+	{51, 122},
+	{57348, 0},
+	{7, 1},
+	{8, 0},
+	{9, 0},
+	{10, 65},
+	{11, 26},
+	{57348, 1},
+	{7, 1},
+	{8, 0},
+	{9, 0},
+	{10, 65},
+	{11, 26},
+	// Digital Gain
+	{57348, 0},
+	{57344, 1},
+	{36, 15},
+	{57348, 1},
+	{36, 15},
+	// Defect Pixel Correction
+	{57344, 0},
+	{87, 0},
+	{88, 0},
+	{89, 2},
+	{90, 2},
+	{91, 0},
+	// Context Switching
+	{57344, 0},
+	{57352, 0},
+	{6, 1},
+	{57347, 0},
+	{6, 0},
+	{57352, 0},
+	// Event Detection
+	{57348, 0},
+	{57344, 1},
+	{49, 0},
+	{57348, 1},
+	{49, 0},
+	{57344, 0},
+	{312, 0},
+	{57349, 0},
+	{313, 0},
+	{314, 0},
+	{315, 150},
+	{316, 0},
+	{317, 0},
+	{318, 160},
+	{319, 6},
+	{320, 1},
+	{321, 20},
+	{322, 1},
+	{323, 0},
+	{324, 0},
+	{325, 0},
+	{326, 0},
+	{327, 0},
+	{328, 0},
+	// Image Statistics
+	{57348, 0},
+	{57344, 1},
+	{38, 0},
+	{57348, 1},
+	{38, 0},
+	{57344, 0},
+	{361, 18},
+	// Illumination Trigger
+	{57348, 0},
+	{57344, 1},
+	{28, 0},
+	{25, 0},
+	{26, 7},
+	{27, 83},
+	{22, 8},
+	{23, 0},
+	{24, 0},
+	{57348, 1},
+	{28, 0},
+	{25, 0},
+	{26, 7},
+	{27, 83},
+	{22, 8},
+	{23, 0},
+	{24, 0},
+	// Synchronization Trigger
+	{57348, 0},
+	{57344, 1},
+	{29, 0},
+	{57348, 1},
+	{29, 0},
+	{57344, 0},
+	{26, 0},
+	{27, 0},
+	{28, 0},
+	{29, 0},
+};
+
+static const char * const mira050_test_pattern_menu[] = {
+	"Disabled",
+	"Fixed Data",
+	"2D Gradient",
+};
+
+static const int mira050_test_pattern_val[] = {
+	MIRA050_TEST_PATTERN_DISABLE,
+	MIRA050_TEST_PATTERN_FIXED_DATA,
+	MIRA050_TEST_PATTERN_2D_GRADIENT,
+};
+
+
+/* regulator supplies */
+static const char * const mira050_supply_name[] = {
+	// TODO(jalv): Check supply names
+	/* Supplies can be enabled in any order */
+	"VANA",  /* Analog (2.8V) supply */
+	"VDIG",  /* Digital Core (1.8V) supply */
+	"VDDL",  /* IF (1.2V) supply */
+};
+
+#define MIRA050_NUM_SUPPLIES ARRAY_SIZE(mira050_supply_name)
+
+/*
+ * The supported formats. All flip/mirror combinations have the same byte order because the sensor
+ * is monochrome
+ */
+static const u32 codes[] = {
+	//MEDIA_BUS_FMT_Y8_1X8,
+	//MEDIA_BUS_FMT_Y10_1X10,
+	//MEDIA_BUS_FMT_Y12_1X12,
+	MEDIA_BUS_FMT_SGRBG8_1X8,
+	MEDIA_BUS_FMT_SGRBG10_1X10,
+	MEDIA_BUS_FMT_SGRBG12_1X12,
+};
+
+/* Mode configs */
+static const struct mira050_mode supported_modes[] = {
+	{
+		/* 2 MPx 30fps mode */
+		.width = 576,
+		.height = 768,
+		.crop = {
+			.left = MIRA050_PIXEL_ARRAY_LEFT,
+			.top = MIRA050_PIXEL_ARRAY_TOP,
+			.width = 576,
+			.height = 768
+		},
+		.reg_list_pre_soft_reset = {
+			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_pre_soft_reset),
+			.regs = full_576_768_60fps_12b_1lane_reg_pre_soft_reset,
+		},
+		.reg_list_post_soft_reset = {
+			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_post_soft_reset),
+			.regs = full_576_768_60fps_12b_1lane_reg_post_soft_reset,
+		},
+		.vblank = 2866,
+		.hblank = 0, // TODO
+	},
+};
+
+struct mira050 {
+	struct v4l2_subdev sd;
+	struct media_pad pad[NUM_PADS];
+
+	struct v4l2_mbus_framefmt fmt;
+
+	struct clk *xclk; /* system clock to MIRA050 */
+	u32 xclk_freq;
+
+	//struct gpio_desc *reset_gpio;
+	struct regulator_bulk_data supplies[MIRA050_NUM_SUPPLIES];
+
+	struct v4l2_ctrl_handler ctrl_handler;
+	struct v4l2_ctrl *pixel_rate;
+	struct v4l2_ctrl *vflip;
+	struct v4l2_ctrl *hflip;
+	struct v4l2_ctrl *vblank;
+	struct v4l2_ctrl *hblank;
+	struct v4l2_ctrl *exposure;
+	struct v4l2_ctrl *gain;
+
+	/* Current mode */
+	const struct mira050_mode *mode;
+
+	/*
+	 * Mutex for serialized access:
+	 * Protect sensor module set pad format and start/stop streaming safely.
+	 */
+	struct mutex mutex;
+
+	/* Streaming on/off */
+	bool streaming;
+
+};
+
+static inline struct mira050 *to_mira050(struct v4l2_subdev *_sd)
+{
+	return container_of(_sd, struct mira050, sd);
+}
+
+static int mira050_read(struct mira050 *mira050, u16 reg, u8 *val)
+{
+	int ret;
+	unsigned char data_w[2] = { reg >> 8, reg & 0xff };
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+
+	ret = i2c_master_send(client, data_w, 2);
+	/*
+	 * A negative return code, or sending the wrong number of bytes, both
+	 * count as an error.
+	 */
+	if (ret != 2) {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+			__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+		return ret;
+	}
+
+	ret = i2c_master_recv(client, val, 1);
+	/*
+	 * The only return value indicating success is 1. Anything else, even
+	 * a non-negative value, indicates something went wrong.
+	 */
+	if (ret == 1) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+static int mira050_write(struct mira050 *mira050, u16 reg, u8 val)
+{
+	int ret;
+	unsigned char data[3] = { reg >> 8, reg & 0xff, val};
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+
+	ret = i2c_master_send(client, data, 3);
+	
+	
+	/*
+	 * Writing the wrong number of bytes also needs to be flagged as an
+	 * error. Success needs to produce a 0 return code.
+	 */
+	if (ret == 3) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	/*
+	 * The code below is for debug purpose.
+	 * It reads back the written values.
+	 * Some registers have different read and write addresses.
+	 * These registers typically have WR addr 0xE... but RD addr 0x4...
+	 */
+	/*
+	{
+		usleep_range(50, 300);
+		u8 ret_val;
+		u16 ret_reg;
+		if (((reg >>12) & 0x000F) == 0x000E) {
+			ret_reg = ((reg & 0x0FFF) | 0x4000);
+		} else {
+			ret_reg = reg;
+		}
+		ret = mira050_read(mira050, ret_reg, &ret_val);
+		printk(KERN_INFO "[MIRA050]: Write reg 0x%4.4x, Read ret_reg 0x%4.4x, val = 0x%x.\n",
+				reg, ret_reg, ret_val);
+		if (val != ret_val) {
+			printk(KERN_INFO "[MIRA050]: WARNING Write reg 0x%4.4x, val = 0x%x, read ret_reg = 0x%4.4x, ret_val = 0x%x.\n",
+				reg, val, ret_reg, ret_val);
+		}
+	}
+	*/
+
+	return ret;
+}
+
+/*
+ * Mira050 is big-endian: MSB of val goes to lower reg addr
+ * Mira220 is little-endian: LSB of val goes to lower reg addr
+ */
+static int mira050_write32(struct mira050 *mira050, u16 reg, u32 val)
+{
+       int ret;
+       unsigned char data[6] = { reg >> 8, reg & 0xff, (val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
+       struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+
+       ret = i2c_master_send(client, data, 6);
+       /*
+        * Writing the wrong number of bytes also needs to be flagged as an
+        * error. Success needs to produce a 0 return code.
+        */
+       if (ret == 6) {
+               ret = 0;
+       } else {
+               dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+                               __func__, reg);
+               if (ret >= 0)
+                       ret = -EINVAL;
+       }
+
+       return ret;
+}
+
+/* Write a list of registers */
+static int mira050_write_regs(struct mira050 *mira050,
+			     const struct mira050_reg *regs, u32 len)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	unsigned int i;
+	int ret;
+
+	for (i = 0; i < len; i++) {
+		ret = mira050_write(mira050, regs[i].address, regs[i].val);
+		if (ret) {
+			dev_err_ratelimited(&client->dev,
+					    "Failed to write reg 0x%4.4x. error = %d\n",
+					    regs[i].address, ret);
+
+			return ret;
+		} else {
+			// Debug code below
+			// u8 val;
+			// ret = mira050_read(mira050, regs[i].address, &val);
+			// printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
+			// 		regs[i].address, val);
+		}
+	}
+
+	return 0;
+}
+
+// Returns the maximum exposure time in clock cycles (reg value)
+static u32 mira050_calculate_max_exposure_time(u32 row_length, u32 vsize,
+					       u32 vblank) {
+  return row_length * (vsize + vblank) - MIRA050_GLOB_NUM_CLK_CYCLES;
+}
+
+static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	u32 ret = 0;
+
+	//if ((gain < MIRA050_ANALOG_GAIN_MIN) || (gain > MIRA050_ANALOG_GAIN_MAX)) {
+	//	return -EINVAL;
+	//}
+
+	// TODO: There is no easy way to change analog gain by a single value.
+	// ret = mira050_write(mira050, MIRA050_ANALOG_GAIN_REG, reg_value);
+	dev_err_ratelimited(&client->dev, "Analog gain is fixed to 1. Ignore analog gain of %d",
+			gain);
+	return ret;
+}
+
+static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	const u32 min_exposure = MIRA050_EXPOSURE_MIN;
+	u32 ret = 0;
+
+	if (exposure < min_exposure) {
+		exposure = min_exposure;
+	}
+
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
+	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
+	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
+	if (ret) {
+		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", exposure);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int mira050_write_start_streaming_regs(struct mira050* mira050) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	int ret = 0;
+
+	// Set conetxt bank 0 or 1
+	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+	if (ret) {
+		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
+		return ret;
+	}
+
+	// Set context bank 1A or bank 1B
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
+	if (ret) {
+		dev_err(&client->dev, "Error setting RW_CONTEXT.");
+		return ret;
+	}
+
+	// Raising CMD_REQ_1 to 1 for REQ_EXP
+	ret = mira050_write(mira050, MIRA050_CMD_REQ_1_REG,
+				1);
+	if (ret) {
+		dev_err(&client->dev, "Error setting CMD_REQ_1 to 1 for REQ_EXP.");
+		return ret;
+	}
+	
+	usleep_range(10, 20);
+
+	// Setting CMD_REQ_1 tp 0 for REQ_EXP
+	ret = mira050_write(mira050, MIRA050_CMD_REQ_1_REG,
+				0);
+	if (ret) {
+		dev_err(&client->dev, "Error setting CMD_REQ_1 to 0 for REQ_EXP.");
+		return ret;
+	}
+	usleep_range(10, 20);
+
+	return ret;
+}
+
+static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	int ret = 0;
+
+	// Set conetxt bank 0 or 1
+	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+	if (ret) {
+		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
+		return ret;
+	}
+
+	// Raising CMD_HALT_BLOCK to 1 to stop streaming
+	ret = mira050_write(mira050, MIRA050_CMD_HALT_BLOCK_REG,
+				1);
+	if (ret) {
+		dev_err(&client->dev, "Error setting CMD_HALT_BLOCK to 1.");
+		return ret;
+	}
+
+	usleep_range(10, 20);
+
+	// Setting CMD_HALT_BLOCK to 0 to stop streaming
+	ret = mira050_write(mira050, MIRA050_CMD_HALT_BLOCK_REG,
+				0);
+	if (ret) {
+		dev_err(&client->dev, "Error setting CMD_HALT_BLOCK to 0.");
+		return ret;
+	}
+	usleep_range(10, 20);
+
+        /*
+         * Wait for one frame to make sure sensor is set to
+         * software standby in V-blank
+         *
+         * frame_time = frame length rows * Tline
+         * Tline = line length / pixel clock (in MHz)
+         */
+	/*
+	u32 frame_time;
+        frame_time = MIRA050_DEFAULT_FRAME_LENGTH *
+            MIRA050_DEFAULT_LINE_LENGTH / MIRA050_DEFAULT_PIXEL_CLOCK;
+
+        usleep_range(frame_time, frame_time + 1000);
+	*/
+
+	return ret;
+}
+
+// Gets the format code if supported. Otherwise returns the default format code `codes[0]`
+static u32 mira050_validate_format_code_or_default(struct mira050 *mira050, u32 code)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	unsigned int i;
+
+	lockdep_assert_held(&mira050->mutex);
+
+	for (i = 0; i < ARRAY_SIZE(codes); i++)
+		if (codes[i] == code)
+			break;
+
+	if (i >= ARRAY_SIZE(codes)) {
+		dev_err_ratelimited(&client->dev, "Could not set requested format code %u", code);
+		dev_err_ratelimited(&client->dev, "Using default format %u", codes[0]);
+		i = 0;
+	}
+
+	return codes[i];
+}
+
+static void mira050_set_default_format(struct mira050 *mira050)
+{
+	struct v4l2_mbus_framefmt *fmt;
+
+	fmt = &mira050->fmt;
+	fmt->code = MEDIA_BUS_FMT_SGRBG12_1X12; // MEDIA_BUS_FMT_Y12_1X12;
+	fmt->colorspace = V4L2_COLORSPACE_RAW;
+	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
+	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
+							  fmt->colorspace,
+							  fmt->ycbcr_enc);
+	fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
+	fmt->width = supported_modes[0].width;
+	fmt->height = supported_modes[0].height;
+	fmt->field = V4L2_FIELD_NONE;
+}
+
+static int mira050_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct mira050 *mira050 = to_mira050(sd);
+	struct v4l2_mbus_framefmt *try_fmt_img =
+		v4l2_subdev_get_try_format(sd, fh->state, IMAGE_PAD);
+	struct v4l2_mbus_framefmt *try_fmt_meta =
+		v4l2_subdev_get_try_format(sd, fh->state, METADATA_PAD);
+	struct v4l2_rect *try_crop;
+
+	mutex_lock(&mira050->mutex);
+
+	/* Initialize try_fmt for the image pad */
+	try_fmt_img->width = supported_modes[0].width;
+	try_fmt_img->height = supported_modes[0].height;
+	try_fmt_img->code = mira050_validate_format_code_or_default(mira050,
+						   MEDIA_BUS_FMT_SGRBG12_1X12);
+	try_fmt_img->field = V4L2_FIELD_NONE;
+
+	/* TODO(jalv): Initialize try_fmt for the embedded metadata pad */
+	try_fmt_meta->width = MIRA050_EMBEDDED_LINE_WIDTH;
+	try_fmt_meta->height = MIRA050_NUM_EMBEDDED_LINES;
+	try_fmt_meta->code = MEDIA_BUS_FMT_SENSOR_DATA;
+	try_fmt_meta->field = V4L2_FIELD_NONE;
+
+
+
+	/* Initialize try_crop rectangle. */
+	try_crop = v4l2_subdev_get_try_crop(sd, fh->state, 0);
+	try_crop->top = MIRA050_PIXEL_ARRAY_TOP;
+	try_crop->left = MIRA050_PIXEL_ARRAY_LEFT;
+	try_crop->width = MIRA050_PIXEL_ARRAY_WIDTH;
+	try_crop->height = MIRA050_PIXEL_ARRAY_HEIGHT;
+
+	mutex_unlock(&mira050->mutex);
+
+	return 0;
+}
+
+static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mira050 *mira050 =
+		container_of(ctrl->handler, struct mira050, ctrl_handler);
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	int ret = 0;
+
+	if (ctrl->id == V4L2_CID_VBLANK) {
+		int exposure_max, exposure_def;
+
+		/* Update max exposure while meeting expected vblanking */
+		exposure_max = mira050->mode->height + ctrl->val - 4;
+		exposure_def = (exposure_max < MIRA050_DEFAULT_EXPOSURE) ?
+			exposure_max : MIRA050_DEFAULT_EXPOSURE;
+		__v4l2_ctrl_modify_range(mira050->exposure,
+					 mira050->exposure->minimum,
+					 exposure_max, mira050->exposure->step,
+					 exposure_def);
+	}
+
+
+	/*
+	 * Applying V4L2 control value only happens
+	 * when power is up for streaming
+	 */
+	if (pm_runtime_get_if_in_use(&client->dev) == 0)
+		return 0;
+
+	switch (ctrl->id) {
+	case V4L2_CID_ANALOGUE_GAIN:
+		ret = mira050_write_analog_gain_reg(mira050, ctrl->val);
+		break;
+	case V4L2_CID_EXPOSURE:
+		ret = mira050_write_exposure_reg(mira050, ctrl->val);
+		break;
+	case V4L2_CID_TEST_PATTERN:
+		ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+		// Fixed data is hard coded to 0xAB.
+		ret = mira050_write(mira050, MIRA050_TRAINING_WORD_REG, 0xAB);
+		// Gradient is hard coded to 45 degree.
+		ret = mira050_write(mira050, MIRA050_DELTA_TEST_IMG_REG, 0x01);
+		ret = mira050_write(mira050, MIRA050_TEST_PATTERN_REG,
+				        mira050_test_pattern_val[ctrl->val]);
+		break;
+	case V4L2_CID_HFLIP:
+		// TODO: HFLIP requires multiple register writes
+		//ret = mira050_write(mira050, MIRA050_HFLIP_REG,
+		//		        ctrl->val);
+		break;
+	case V4L2_CID_VFLIP:
+		// TODO: VFLIP seems not supported in Mira050
+		//ret = mira050_write(mira050, MIRA050_VFLIP_REG,
+		//		        ctrl->val);
+		break;
+	case V4L2_CID_VBLANK:
+		// TODO: check whether blanking control is supported in Mira050
+		//ret = mira050_write16(mira050, MIRA050_VBLANK_LO_REG,
+		//		        mira050->mode->height + ctrl->val);
+		break;
+	default:
+		dev_info(&client->dev,
+			 "ctrl(id:0x%x,val:0x%x) is not handled\n",
+			 ctrl->id, ctrl->val);
+		ret = -EINVAL;
+		break;
+	}
+
+	pm_runtime_put(&client->dev);
+
+	// TODO: FIXIT
+	return ret;
+}
+
+static const struct v4l2_ctrl_ops mira050_ctrl_ops = {
+	.s_ctrl = mira050_set_ctrl,
+};
+
+// This function should enumerate all the media bus formats for the requested pads. If the requested
+// format index is beyond the number of avaialble formats it shall return -EINVAL;
+static int mira050_enum_mbus_code(struct v4l2_subdev *sd,
+				 struct v4l2_subdev_state *sd_state,
+				 struct v4l2_subdev_mbus_code_enum *code)
+{
+	struct mira050 *mira050 = to_mira050(sd);
+
+	if (code->pad >= NUM_PADS)
+		return -EINVAL;
+
+	if (code->pad == IMAGE_PAD) {
+		if (code->index >= ARRAY_SIZE(codes))
+			return -EINVAL;
+
+		code->code = mira050_validate_format_code_or_default(mira050,
+						    codes[code->index]);
+	} else {
+		if (code->index > 0)
+			return -EINVAL;
+
+		code->code = MEDIA_BUS_FMT_SENSOR_DATA;
+	}
+
+	return 0;
+}
+
+static int mira050_enum_frame_size(struct v4l2_subdev *sd,
+				  struct v4l2_subdev_state *sd_state,
+				  struct v4l2_subdev_frame_size_enum *fse)
+{
+	struct mira050 *mira050 = to_mira050(sd);
+
+	if (fse->pad >= NUM_PADS)
+		return -EINVAL;
+
+	if (fse->pad == IMAGE_PAD) {
+		if (fse->index >= ARRAY_SIZE(supported_modes))
+			return -EINVAL;
+
+		if (fse->code != mira050_validate_format_code_or_default(mira050, fse->code))
+			return -EINVAL;
+
+		fse->min_width = supported_modes[fse->index].width;
+		fse->max_width = fse->min_width;
+		fse->min_height = supported_modes[fse->index].height;
+		fse->max_height = fse->min_height;
+	} else {
+		if (fse->code != MEDIA_BUS_FMT_SENSOR_DATA || fse->index > 0)
+			return -EINVAL;
+
+		fse->min_width = MIRA050_EMBEDDED_LINE_WIDTH;
+		fse->max_width = fse->min_width;
+		fse->min_height = MIRA050_NUM_EMBEDDED_LINES;
+		fse->max_height = fse->min_height;
+	}
+
+	return 0;
+}
+
+static void mira050_reset_colorspace(struct v4l2_mbus_framefmt *fmt)
+{
+	fmt->colorspace = V4L2_COLORSPACE_RAW;
+	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
+	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
+							  fmt->colorspace,
+							  fmt->ycbcr_enc);
+	fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
+}
+
+static void mira050_update_image_pad_format(struct mira050 *mira050,
+					   const struct mira050_mode *mode,
+					   struct v4l2_subdev_format *fmt)
+{
+	fmt->format.width = mode->width;
+	fmt->format.height = mode->height;
+	fmt->format.field = V4L2_FIELD_NONE;
+	mira050_reset_colorspace(&fmt->format);
+}
+
+static void mira050_update_metadata_pad_format(struct v4l2_subdev_format *fmt)
+{
+	fmt->format.width = MIRA050_EMBEDDED_LINE_WIDTH;
+	fmt->format.height = MIRA050_NUM_EMBEDDED_LINES;
+	fmt->format.code = MEDIA_BUS_FMT_SENSOR_DATA;
+	fmt->format.field = V4L2_FIELD_NONE;
+
+}
+
+static int __mira050_get_pad_format(struct mira050 *mira050,
+				   struct v4l2_subdev_state *sd_state,
+				   struct v4l2_subdev_format *fmt)
+{
+	if (fmt->pad >= NUM_PADS)
+		return -EINVAL;
+
+	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+		struct v4l2_mbus_framefmt *try_fmt =
+			v4l2_subdev_get_try_format(&mira050->sd, sd_state, fmt->pad);
+
+		try_fmt->code = fmt->pad == IMAGE_PAD ?
+				mira050_validate_format_code_or_default(mira050, try_fmt->code) :
+				MEDIA_BUS_FMT_SENSOR_DATA;
+		fmt->format = *try_fmt;
+	} else {
+		if (fmt->pad == IMAGE_PAD) {
+			mira050_update_image_pad_format(mira050, mira050->mode,
+						       fmt);
+			fmt->format.code = mira050_validate_format_code_or_default(mira050,
+							      mira050->fmt.code);
+		} else {
+			mira050_update_metadata_pad_format(fmt);
+		}
+	}
+
+	return 0;
+}
+
+static int mira050_get_pad_format(struct v4l2_subdev *sd,
+				 struct v4l2_subdev_state *sd_state,
+				 struct v4l2_subdev_format *fmt)
+{
+	struct mira050 *mira050 = to_mira050(sd);
+	int ret;
+
+	mutex_lock(&mira050->mutex);
+	ret = __mira050_get_pad_format(mira050, sd_state, fmt);
+	mutex_unlock(&mira050->mutex);
+
+	return ret;
+}
+
+static int mira050_set_pad_format(struct v4l2_subdev *sd,
+				 struct v4l2_subdev_state *sd_state,
+				 struct v4l2_subdev_format *fmt)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct mira050 *mira050 = to_mira050(sd);
+	const struct mira050_mode *mode;
+	struct v4l2_mbus_framefmt *framefmt;
+	u32 max_exposure = 0, default_exp = 0;
+	int rc = 0;
+
+	if (fmt->pad >= NUM_PADS)
+		return -EINVAL;
+
+	mutex_lock(&mira050->mutex);
+
+	if (fmt->pad == IMAGE_PAD) {
+		/* Validate format or use default */
+		fmt->format.code = mira050_validate_format_code_or_default(mira050,
+									  fmt->format.code);
+
+		mode = v4l2_find_nearest_size(supported_modes,
+					      ARRAY_SIZE(supported_modes),
+					      width, height,
+					      fmt->format.width,
+					      fmt->format.height);
+		mira050_update_image_pad_format(mira050, mode, fmt);
+		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+			framefmt = v4l2_subdev_get_try_format(sd, sd_state,
+							      fmt->pad);
+			*framefmt = fmt->format;
+		} else if (mira050->mode != mode ||
+			mira050->fmt.code != fmt->format.code) {
+			mira050->fmt = fmt->format;
+			mira050->mode = mode;
+
+			// Update controls based on new mode (range and current value).
+			max_exposure = mira050_calculate_max_exposure_time(MIRA050_MIN_ROW_LENGTH,
+									   mira050->mode->height,
+									   mira050->mode->vblank);
+			default_exp = MIRA050_DEFAULT_EXPOSURE > max_exposure ? max_exposure : MIRA050_DEFAULT_EXPOSURE;
+			rc = v4l2_ctrl_modify_range(mira050->exposure,
+							     MIRA050_EXPOSURE_MIN,
+							     max_exposure, 1,
+							     default_exp);
+			if (rc) {
+				dev_err(&client->dev, "Error setting exposure range");
+			}
+
+			// Set the current vblank value
+			rc = v4l2_ctrl_s_ctrl(mira050->vblank, mira050->mode->vblank);
+			if (rc) {
+				dev_err(&client->dev, "Error setting vblank value to %u",
+					mira050->mode->vblank);
+			}
+		}
+	} else {
+		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+			framefmt = v4l2_subdev_get_try_format(sd, sd_state,
+							      fmt->pad);
+			*framefmt = fmt->format;
+		} else {
+			/* Only one embedded data mode is supported */
+			mira050_update_metadata_pad_format(fmt);
+		}
+	}
+
+	mutex_unlock(&mira050->mutex);
+
+	return 0;
+}
+
+static int mira050_set_framefmt(struct mira050 *mira050)
+{
+	// TODO: There is no easy way to change frame format
+	switch (mira050->fmt.code) {
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG, MIRA050_BIT_DEPTH_8_BIT);
+		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
+		//	MIRA050_CSI_DATA_TYPE_8_BIT);
+		return 0;
+	case MEDIA_BUS_FMT_SGRBG10_1X10:
+		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG,MIRA050_BIT_DEPTH_10_BIT);
+		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
+		//	MIRA050_CSI_DATA_TYPE_10_BIT);
+		return 0;
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG, MIRA050_BIT_DEPTH_12_BIT);
+		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
+		//	MIRA050_CSI_DATA_TYPE_12_BIT);
+		return 0;
+	default:
+		printk(KERN_ERR "Unknown format requested %d", mira050->fmt.code);
+	}
+
+	return -EINVAL;
+}
+
+static const struct v4l2_rect *
+__mira050_get_pad_crop(struct mira050 *mira050, struct v4l2_subdev_state *sd_state,
+		      unsigned int pad, enum v4l2_subdev_format_whence which)
+{
+	switch (which) {
+	case V4L2_SUBDEV_FORMAT_TRY:
+		return v4l2_subdev_get_try_crop(&mira050->sd, sd_state, pad);
+	case V4L2_SUBDEV_FORMAT_ACTIVE:
+		return &mira050->mode->crop;
+	}
+
+	return NULL;
+}
+
+static int mira050_get_selection(struct v4l2_subdev *sd,
+				struct v4l2_subdev_state *sd_state,
+				struct v4l2_subdev_selection *sel)
+{
+	switch (sel->target) {
+	case V4L2_SEL_TGT_CROP: {
+		struct mira050 *mira050 = to_mira050(sd);
+
+		mutex_lock(&mira050->mutex);
+		sel->r = *__mira050_get_pad_crop(mira050, sd_state, sel->pad,
+						sel->which);
+		mutex_unlock(&mira050->mutex);
+
+		return 0;
+	}
+
+	case V4L2_SEL_TGT_NATIVE_SIZE:
+		sel->r.top = 0;
+		sel->r.left = 0;
+		sel->r.width = MIRA050_NATIVE_WIDTH;
+		sel->r.height = MIRA050_NATIVE_HEIGHT;
+
+		return 0;
+
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+		sel->r.top = MIRA050_PIXEL_ARRAY_TOP;
+		sel->r.left = MIRA050_PIXEL_ARRAY_LEFT;
+		sel->r.width = MIRA050_PIXEL_ARRAY_WIDTH;
+		sel->r.height = MIRA050_PIXEL_ARRAY_HEIGHT;
+
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
+static int mira050_start_streaming(struct mira050 *mira050)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	const struct mira050_reg_list *reg_list;
+	int ret;
+
+	printk(KERN_INFO "[MIRA050]: Entering start streaming function.\n");
+
+	ret = pm_runtime_get_sync(&client->dev);
+
+	if (ret < 0) {
+		printk(KERN_INFO "[MIRA050]: get_sync failed, but continue.\n");
+		pm_runtime_put_noidle(&client->dev);
+		return ret;
+	}
+
+	/* Apply pre soft reset default values of current mode */
+	reg_list = &mira050->mode->reg_list_pre_soft_reset;
+	printk(KERN_INFO "[MIRA050]: Write %d regs.\n", reg_list->num_of_regs);
+	ret = mira050_write_regs(mira050, reg_list->regs, reg_list->num_of_regs);
+	if (ret) {
+		dev_err(&client->dev, "%s failed to set mode\n", __func__);
+		goto err_rpm_put;
+	}
+
+	usleep_range(10, 50);
+
+	/* Apply post soft reset default values of current mode */
+	reg_list = &mira050->mode->reg_list_post_soft_reset;
+	printk(KERN_INFO "[MIRA050]: Write %d regs.\n", reg_list->num_of_regs);
+	ret = mira050_write_regs(mira050, reg_list->regs, reg_list->num_of_regs);
+	if (ret) {
+		dev_err(&client->dev, "%s failed to set mode\n", __func__);
+		goto err_rpm_put;
+	}
+
+	ret = mira050_set_framefmt(mira050);
+	if (ret) {
+		dev_err(&client->dev, "%s failed to set frame format: %d\n",
+			__func__, ret);
+		goto err_rpm_put;
+	}
+
+	printk(KERN_INFO "[MIRA050]: Entering v4l2 ctrl handler setup function.\n");
+
+	/* Apply customized values from user */
+	ret =  __v4l2_ctrl_handler_setup(mira050->sd.ctrl_handler);
+	printk(KERN_INFO "[MIRA050]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
+	if (ret)
+		goto err_rpm_put;
+
+	printk(KERN_INFO "[MIRA050]: Writing start streaming regs.\n");
+
+	ret = mira050_write_start_streaming_regs(mira050);
+	if (ret) {
+		dev_err(&client->dev, "Could not write stream-on sequence");
+		goto err_rpm_put;
+	}
+
+	/* vflip and hflip cannot change during streaming */
+	printk(KERN_INFO "[MIRA050]: Entering v4l2 ctrl grab vflip grab vflip.\n");
+	__v4l2_ctrl_grab(mira050->vflip, true);
+	printk(KERN_INFO "[MIRA050]: Entering v4l2 ctrl grab vflip grab hflip.\n");
+	__v4l2_ctrl_grab(mira050->hflip, true);
+
+	return 0;
+
+err_rpm_put:
+	pm_runtime_put(&client->dev);
+	return ret;
+}
+
+static void mira050_stop_streaming(struct mira050 *mira050)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	int ret = 0;
+
+	ret = mira050_write_stop_streaming_regs(mira050);
+	if (ret) {
+		dev_err(&client->dev, "Could not write the stream-off sequence");
+	}
+
+	/* Unlock controls for vflip and hflip */
+	__v4l2_ctrl_grab(mira050->vflip, false);
+	__v4l2_ctrl_grab(mira050->hflip, false);
+
+	pm_runtime_put(&client->dev);
+}
+
+static int mira050_set_stream(struct v4l2_subdev *sd, int enable)
+{
+	struct mira050 *mira050 = to_mira050(sd);
+	int ret = 0;
+
+	mutex_lock(&mira050->mutex);
+	if (mira050->streaming == enable) {
+		mutex_unlock(&mira050->mutex);
+		return 0;
+	}
+
+	printk(KERN_INFO "[MIRA050]: Entering mira050_set_stream enable: %d.\n", enable);
+
+	if (enable) {
+		/*
+		 * Apply default & customized values
+		 * and then start streaming.
+		 */
+		ret = mira050_start_streaming(mira050);
+		if (ret)
+			goto err_unlock;
+	} else {
+		mira050_stop_streaming(mira050);
+	}
+
+	mira050->streaming = enable;
+
+	mutex_unlock(&mira050->mutex);
+
+	printk(KERN_INFO "[MIRA050]: Returning mira050_set_stream with ret: %d.\n", ret);
+
+	return ret;
+
+err_unlock:
+	mutex_unlock(&mira050->mutex);
+
+	return ret;
+}
+
+/* Power/clock management functions */
+static int mira050_power_on(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira050 *mira050 = to_mira050(sd);
+	int ret = -EINVAL;
+
+	printk(KERN_INFO "[MIRA050]: Entering power on function.\n");
+
+	ret = regulator_bulk_enable(MIRA050_NUM_SUPPLIES, mira050->supplies);
+	if (ret) {
+		dev_err(&client->dev, "%s: failed to enable regulators\n",
+			__func__);
+		return ret;
+	}
+
+	ret = clk_prepare_enable(mira050->xclk);
+	if (ret) {
+		dev_err(&client->dev, "%s: failed to enable clock\n",
+			__func__);
+		goto reg_off;
+	}
+
+	usleep_range(MIRA050_XCLR_MIN_DELAY_US,
+		     MIRA050_XCLR_MIN_DELAY_US + MIRA050_XCLR_DELAY_RANGE_US);
+
+	return 0;
+
+reg_off:
+	ret = regulator_bulk_disable(MIRA050_NUM_SUPPLIES, mira050->supplies);
+	return ret;
+}
+
+static int mira050_power_off(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira050 *mira050 = to_mira050(sd);
+
+	regulator_bulk_disable(MIRA050_NUM_SUPPLIES, mira050->supplies);
+	clk_disable_unprepare(mira050->xclk);
+
+	return 0;
+}
+
+static int __maybe_unused mira050_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira050 *mira050 = to_mira050(sd);
+
+	if (mira050->streaming)
+		mira050_stop_streaming(mira050);
+
+	return 0;
+}
+
+static int __maybe_unused mira050_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira050 *mira050 = to_mira050(sd);
+	int ret;
+
+	if (mira050->streaming) {
+		ret = mira050_start_streaming(mira050);
+		if (ret)
+			goto error;
+	}
+
+	return 0;
+
+error:
+	mira050_stop_streaming(mira050);
+	mira050->streaming = false;
+
+	return ret;
+}
+
+static int mira050_get_regulators(struct mira050 *mira050)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	unsigned int i;
+
+	for (i = 0; i < MIRA050_NUM_SUPPLIES; i++)
+		mira050->supplies[i].supply = mira050_supply_name[i];
+
+	return devm_regulator_bulk_get(&client->dev,
+				       MIRA050_NUM_SUPPLIES,
+				       mira050->supplies);
+}
+
+/* Verify chip ID */
+static int mira050_identify_module(struct mira050 *mira050)
+{
+	int ret;
+	u8 val;
+
+	ret = mira050_read(mira050, 0x25, &val);
+	printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
+		      0x25, val);
+	ret = mira050_read(mira050, 0x3, &val);
+	printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
+		      0x3, val);
+	ret = mira050_read(mira050, 0x4, &val);
+	printk(KERN_INFO "[MIRA050]: Read reg 0x%4.4x, val = 0x%x.\n",
+		      0x4, val);
+
+	return 0;
+}
+
+static const struct v4l2_subdev_core_ops mira050_core_ops = {
+	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
+	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
+};
+
+static const struct v4l2_subdev_video_ops mira050_video_ops = {
+	.s_stream = mira050_set_stream,
+};
+
+static const struct v4l2_subdev_pad_ops mira050_pad_ops = {
+	.enum_mbus_code = mira050_enum_mbus_code,
+	.get_fmt = mira050_get_pad_format,
+	.set_fmt = mira050_set_pad_format,
+	.get_selection = mira050_get_selection,
+	.enum_frame_size = mira050_enum_frame_size,
+};
+
+static const struct v4l2_subdev_ops mira050_subdev_ops = {
+	.core = &mira050_core_ops,
+	.video = &mira050_video_ops,
+	.pad = &mira050_pad_ops,
+};
+
+static const struct v4l2_subdev_internal_ops mira050_internal_ops = {
+	.open = mira050_open,
+};
+
+/* Initialize control handlers */
+static int mira050_init_controls(struct mira050 *mira050)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	struct v4l2_ctrl_handler *ctrl_hdlr;
+	struct v4l2_fwnode_device_properties props;
+	int ret;
+
+	ctrl_hdlr = &mira050->ctrl_handler;
+	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 11);
+	if (ret)
+		return ret;
+
+	mutex_init(&mira050->mutex);
+	ctrl_hdlr->lock = &mira050->mutex;
+
+	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_PIXEL_RATE %X.\n", __func__, V4L2_CID_PIXEL_RATE);
+
+	/* By default, PIXEL_RATE is read only */
+	mira050->pixel_rate = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
+					        V4L2_CID_PIXEL_RATE,
+					        MIRA050_PIXEL_RATE,
+					        MIRA050_PIXEL_RATE, 1,
+					        MIRA050_PIXEL_RATE);
+
+	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_VBLANK %X.\n", __func__, V4L2_CID_VBLANK);
+
+	mira050->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
+					   V4L2_CID_VBLANK, MIRA050_MIN_VBLANK,
+					   0xFFFF, 1,
+					   mira050->mode->vblank);
+
+	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
+
+	mira050->hblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
+					   V4L2_CID_HBLANK, 0x0000,
+					   0xFFFF, 1,
+					   mira050->mode->hblank);
+	if (mira050->hblank)
+		mira050->hblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+
+
+	// Make the vblank control read only. This could be changed to allow changing framerate in
+	// runtime, but would require adapting other settings
+	// mira050->vblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+
+	// Exposure is indicated in number of lines here
+	// Max is determined by vblank + vsize and Tglob.
+	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_EXPOSURE %X.\n", __func__, V4L2_CID_EXPOSURE);
+
+	mira050->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
+					     V4L2_CID_EXPOSURE,
+					     MIRA050_EXPOSURE_MIN, MIRA050_EXPOSURE_MAX,
+					     1,
+					     MIRA050_DEFAULT_EXPOSURE);
+
+	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_ANALOGUE_GAIN %X.\n", __func__, V4L2_CID_ANALOGUE_GAIN);
+
+	mira050->gain = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops, V4L2_CID_ANALOGUE_GAIN,
+			  MIRA050_ANALOG_GAIN_MIN, MIRA050_ANALOG_GAIN_MAX,
+			  MIRA050_ANALOG_GAIN_STEP, MIRA050_ANALOG_GAIN_DEFAULT);
+
+	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_HFLIP %X.\n", __func__, V4L2_CID_HFLIP);
+
+	mira050->hflip = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
+					  V4L2_CID_HFLIP, 0, 0, 1, 0);
+	if (mira050->hflip)
+		mira050->hflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
+
+	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_VFLIP %X.\n", __func__, V4L2_CID_VFLIP);
+
+	mira050->vflip = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
+					  V4L2_CID_VFLIP, 0, 0, 1, 0);
+	if (mira050->vflip)
+		mira050->vflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
+
+	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_TEST_PATTERN %X.\n", __func__, V4L2_CID_TEST_PATTERN);
+	v4l2_ctrl_new_std_menu_items(ctrl_hdlr, &mira050_ctrl_ops,
+				     V4L2_CID_TEST_PATTERN,
+				     ARRAY_SIZE(mira050_test_pattern_menu) - 1,
+				     0, 0, mira050_test_pattern_menu);
+
+	if (ctrl_hdlr->error) {
+		ret = ctrl_hdlr->error;
+		dev_err(&client->dev, "%s control init failed (%d)\n",
+			__func__, ret);
+		goto error;
+	}
+
+	ret = v4l2_fwnode_device_parse(&client->dev, &props);
+	if (ret)
+		goto error;
+
+	ret = v4l2_ctrl_new_fwnode_properties(ctrl_hdlr, &mira050_ctrl_ops,
+					      &props);
+	if (ret)
+		goto error;
+
+	mira050->sd.ctrl_handler = ctrl_hdlr;
+
+	return 0;
+
+error:
+	v4l2_ctrl_handler_free(ctrl_hdlr);
+	mutex_destroy(&mira050->mutex);
+
+	return ret;
+}
+
+static void mira050_free_controls(struct mira050 *mira050)
+{
+	v4l2_ctrl_handler_free(mira050->sd.ctrl_handler);
+	mutex_destroy(&mira050->mutex);
+}
+
+static int mira050_check_hwcfg(struct device *dev)
+{
+	struct fwnode_handle *endpoint;
+	struct v4l2_fwnode_endpoint ep_cfg = {
+		.bus_type = V4L2_MBUS_CSI2_DPHY
+	};
+	int ret = -EINVAL;
+
+	endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
+	if (!endpoint) {
+		dev_err(dev, "endpoint node not found\n");
+		return -EINVAL;
+	}
+
+	if (v4l2_fwnode_endpoint_alloc_parse(endpoint, &ep_cfg)) {
+		dev_err(dev, "could not parse endpoint\n");
+		goto error_out;
+	}
+
+	/* Check the number of MIPI CSI2 data lanes */
+	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 1) {
+		dev_err(dev, "only 1 data lanes are currently supported\n");
+		goto error_out;
+	}
+
+	/* Check the link frequency set in device tree */
+	if (!ep_cfg.nr_of_link_frequencies) {
+		dev_err(dev, "link-frequency property not found in DT\n");
+		goto error_out;
+	}
+
+	if (ep_cfg.nr_of_link_frequencies != 1 ||
+	    ep_cfg.link_frequencies[0] != MIRA050_DEFAULT_LINK_FREQ) {
+		dev_err(dev, "Link frequency not supported: %lld\n",
+			ep_cfg.link_frequencies[0]);
+		goto error_out;
+	}
+
+
+	// TODO(jalv): Check device tree configuration and make sure it is supported by the driver
+	ret = 0;
+
+error_out:
+	v4l2_fwnode_endpoint_free(&ep_cfg);
+	fwnode_handle_put(endpoint);
+
+	return ret;
+}
+
+static int mira050_probe(struct i2c_client *client)
+{
+	struct device *dev = &client->dev;
+	struct mira050 *mira050;
+	int ret;
+
+	printk(KERN_INFO "[MIRA050]: probing v4l2 sensor.\n");
+	printk(KERN_INFO "[MIRA050]: Driver Version 0.0.\n");
+
+	dev_err(dev, "[MIRA050] name: %s.\n", client->name);
+	dev_err(dev, "[MIRA050] Sleep for 1 second to let PMIC driver complete init.\n");
+	usleep_range(1000000, 1000000+100);
+
+	mira050 = devm_kzalloc(&client->dev, sizeof(*mira050), GFP_KERNEL);
+	if (!mira050)
+		return -ENOMEM;
+
+	v4l2_i2c_subdev_init(&mira050->sd, client, &mira050_subdev_ops);
+
+	/* Check the hardware configuration in device tree */
+	if (mira050_check_hwcfg(dev))
+		return -EINVAL;
+
+	// TODO(jalv): Get GPIO's, regulators and clocks from dts
+
+	/* Get system clock (xclk) */
+	mira050->xclk = devm_clk_get(dev, NULL);
+	if (IS_ERR(mira050->xclk)) {
+		dev_err(dev, "failed to get xclk\n");
+		return PTR_ERR(mira050->xclk);
+	}
+
+	mira050->xclk_freq = clk_get_rate(mira050->xclk);
+	if (mira050->xclk_freq != MIRA050_SUPPORTED_XCLK_FREQ) {
+		dev_err(dev, "xclk frequency not supported: %d Hz\n",
+			mira050->xclk_freq);
+		return -EINVAL;
+	}
+
+	ret = mira050_get_regulators(mira050);
+	if (ret) {
+		dev_err(dev, "failed to get regulators\n");
+		return ret;
+	}
+
+	/*
+	 * The sensor must be powered for mira050_identify_module()
+	 * to be able to read the CHIP_ID register
+	 */
+	ret = mira050_power_on(dev);
+	if (ret)
+		return ret;
+
+	printk(KERN_INFO "[MIRA050]: Entering identify function.\n");
+
+	ret = mira050_identify_module(mira050);
+	if (ret)
+		goto error_power_off;
+
+	printk(KERN_INFO "[MIRA050]: Setting support function.\n");
+
+	/* Set default mode to max resolution */
+	mira050->mode = &supported_modes[0];
+
+	printk(KERN_INFO "[MIRA050]: Entering init controls function.\n");
+
+	ret = mira050_init_controls(mira050);
+	if (ret)
+		goto error_power_off;
+
+	/* Initialize subdev */
+	mira050->sd.internal_ops = &mira050_internal_ops;
+	mira050->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |
+			    V4L2_SUBDEV_FL_HAS_EVENTS;
+	mira050->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+
+	/* Initialize source pads */
+	mira050->pad[IMAGE_PAD].flags = MEDIA_PAD_FL_SOURCE;
+	mira050->pad[METADATA_PAD].flags = MEDIA_PAD_FL_SOURCE;
+
+	printk(KERN_INFO "[MIRA050]: Entering set default format function.\n");
+
+	/* Initialize default format */
+	mira050_set_default_format(mira050);
+
+	printk(KERN_INFO "[MIRA050]: Entering pads init function.\n");
+
+	ret = media_entity_pads_init(&mira050->sd.entity, NUM_PADS, mira050->pad);
+	if (ret) {
+		dev_err(dev, "failed to init entity pads: %d\n", ret);
+		goto error_handler_free;
+	}
+
+	printk(KERN_INFO "[MIRA050]: Entering subdev sensor common function.\n");
+
+	ret = v4l2_async_register_subdev_sensor(&mira050->sd);
+	if (ret < 0) {
+		dev_err(dev, "failed to register sensor sub-device: %d\n", ret);
+		goto error_media_entity;
+	}
+
+	/* For debug purpose */
+	// mira050_start_streaming(mira050);
+
+	/* Enable runtime PM and turn off the device */
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+	pm_runtime_idle(dev);
+
+	return 0;
+
+error_media_entity:
+	media_entity_cleanup(&mira050->sd.entity);
+
+error_handler_free:
+	mira050_free_controls(mira050);
+
+error_power_off:
+	mira050_power_off(dev);
+
+	return ret;
+}
+
+static int mira050_remove(struct i2c_client *client)
+{
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira050 *mira050 = to_mira050(sd);
+
+	v4l2_async_unregister_subdev(sd);
+	media_entity_cleanup(&sd->entity);
+	mira050_free_controls(mira050);
+
+	pm_runtime_disable(&client->dev);
+	if (!pm_runtime_status_suspended(&client->dev))
+		mira050_power_off(&client->dev);
+	pm_runtime_set_suspended(&client->dev);
+
+	return 0;
+}
+
+static const struct dev_pm_ops mira050_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(mira050_suspend, mira050_resume)
+	SET_RUNTIME_PM_OPS(mira050_power_off, mira050_power_on, NULL)
+};
+
+#endif // __MIRA050_INL__

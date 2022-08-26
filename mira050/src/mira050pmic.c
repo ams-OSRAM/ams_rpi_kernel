@@ -437,7 +437,7 @@ static const struct of_device_id mira050pmic_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, mira050pmic_dt_ids);
 
 static const struct i2c_device_id mira050pmic_ids[] = {
-	{ "pmic", 0 },
+	{ "mira050pmic", 0 },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, mira050pmic_ids);

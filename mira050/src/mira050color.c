@@ -10,20 +10,20 @@
 #include "mira050.inl"
 
 static const struct of_device_id mira050_dt_ids[] = {
-	{ .compatible = "ams,mira050" },
+	{ .compatible = "ams,mira050color" },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, mira050_dt_ids);
 
 static const struct i2c_device_id mira050_ids[] = {
-	{ "mira050", 0 },
+	{ "mira050color", 1 },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, mira050_ids);
 
 static struct i2c_driver mira050_i2c_driver = {
 	.driver = {
-		.name = "mira050",
+		.name = "mira050color",
 		.of_match_table	= mira050_dt_ids,
 		.pm = &mira050_pm_ops,
 	},

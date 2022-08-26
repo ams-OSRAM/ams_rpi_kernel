@@ -1,2 +1,3 @@
 obj-$(CONFIG_VIDEO_MIRA050)	+= mira050.o
+obj-$(CONFIG_VIDEO_MIRA050COLOR)	+= mira050color.o
 obj-$(CONFIG_VIDEO_MIRA050PMIC)	+= mira050pmic.o

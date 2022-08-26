@@ -1,1 +1,2 @@
         mira050.dtbo \
+        mira050color.dtbo \
