@@ -161,7 +161,7 @@
 #define MIRA220_EXPOSURE_MIN			0
 
 // Power on function timing
-#define MIRA220_XCLR_MIN_DELAY_US		40000
+#define MIRA220_XCLR_MIN_DELAY_US		100000
 #define MIRA220_XCLR_DELAY_RANGE_US		30
 
 /* Chip ID */
