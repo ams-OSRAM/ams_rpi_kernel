@@ -1,3 +1,12 @@
+# Version v0.1.5
+
+New features:
+- Support mira220color and mira050color.
+- Mira220 driver supports two modes: (1) 640x480 120fps; (2) 1600x1400 30fps. BPP:8/10/12.
+
+Bug fixes:
+- Fix Mira220 bring up problem by increasing reset time.
+
 # Version v0.1.4
 
 New features:
