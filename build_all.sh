@@ -5,8 +5,10 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 echo "${PWD}"
 
-# checkout kernel source
-TAG="1.20220331"
+# Latest kernel version is raspios_arm64-2022-09-07
+TAG="1.20220830"
+# Previous kernel version is raspios_arm64-2022-04-07
+# TAG="1.20220331"
 # Check if the unzipped directory of the Linux source exist; Otherwise download it.
 if [[ ! -d $PWD/linux-${TAG} ]]
 then
