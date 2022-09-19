@@ -29,10 +29,14 @@ TARGET_FILE=$LINUX_PATH/arch/arm64/configs/bcm2711_defconfig
 INSERT_BEFORE="CONFIG_VIDEO_IMX219=m"
 INSERT_IF_NOT_EXIST="CONFIG_VIDEO_MIRA220=m"
 insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist "$INSERT_FILE" "$TARGET_FILE" "$INSERT_BEFORE" "$INSERT_IF_NOT_EXIST" 
+# Replace v8 with v8+ for 64bit kernel
+sed -i 's/CONFIG_LOCALVERSION="-v8"/CONFIG_LOCALVERSION="-v8+"/g' $TARGET_FILE
 
 # 64bit OS legacy for RPI 3 and 3B. Unused, but patched anyway.
 TARGET_FILE=$LINUX_PATH/arch/arm64/configs/bcmrpi3_defconfig
 insert_file_A_into_file_B_before_pattern_C_if_pattern_D_does_not_exist "$INSERT_FILE" "$TARGET_FILE" "$INSERT_BEFORE" "$INSERT_IF_NOT_EXIST" 
+# Replace v8 with v8+ for 64bit kernel
+sed -i 's/CONFIG_LOCALVERSION="-v8"/CONFIG_LOCALVERSION="-v8+"/g' $TARGET_FILE
 
 # 32bit OS RPI 4B
 TARGET_FILE=$LINUX_PATH/arch/arm/configs/bcm2711_defconfig
