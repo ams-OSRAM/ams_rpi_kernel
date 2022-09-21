@@ -1,1 +1,1 @@
-obj-m  := mira220.o mira220color.o mira220pmic.o
+obj-m  := mira220.o mira220color.o

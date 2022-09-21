@@ -1838,6 +1838,9 @@ struct mira220 {
 	bool streaming;
 	/* Whether regulator is enabled */
 	bool regulator_enabled;
+
+	/* pmic */
+	struct i2c_client *pmic_client;
 };
 
 static inline struct mira220 *to_mira220(struct v4l2_subdev *_sd)
@@ -2997,6 +3000,161 @@ error_out:
 	return ret;
 }
 
+static int mira220pmic_read(struct i2c_client *client, u8 reg, u8 *val)
+{
+	int ret;
+	unsigned char data_w[1] = { reg & 0xff };
+
+	ret = i2c_master_send(client, data_w, 1);
+	/*
+	 * A negative return code, or sending the wrong number of bytes, both
+	 * count as an error.
+	 */
+	if (ret != 1) {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+			__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+		return ret;
+	}
+
+	ret = i2c_master_recv(client, val, 1);
+	/*
+	 * The only return value indicating success is 1. Anything else, even
+	 * a non-negative value, indicates something went wrong.
+	 */
+	if (ret == 1) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+
+static int mira220pmic_write(struct i2c_client *client, u8 reg, u8 val)
+{
+	int ret;
+	unsigned char data[2] = { reg & 0xff, val};
+
+	ret = i2c_master_send(client, data, 2);
+	/*
+	 * Writing the wrong number of bytes also needs to be flagged as an
+	 * error. Success needs to produce a 0 return code.
+	 */
+	if (ret == 2) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+static int mira220pmic_init_controls(struct i2c_client *client)
+{
+	int ret;
+	u8 val;
+
+	ret = mira220pmic_write(client, 0x62, 0x00);
+	ret = mira220pmic_write(client, 0x61, 0x00);
+
+	ret = mira220pmic_read(client, 0x61, &val);
+	dev_err(&client->dev, "Read 0x61 with val %x\n", val);
+
+
+	usleep_range(100, 110);
+
+	ret = mira220pmic_write(client, 0x05, 0x00);
+	ret = mira220pmic_write(client, 0x0e, 0x00);
+	ret = mira220pmic_write(client, 0x11, 0x00);
+	ret = mira220pmic_write(client, 0x14, 0x00);
+	ret = mira220pmic_write(client, 0x17, 0x00);
+	ret = mira220pmic_write(client, 0x1a, 0x00);
+	ret = mira220pmic_write(client, 0x1c, 0x00);
+	ret = mira220pmic_write(client, 0x1d, 0x00);
+	ret = mira220pmic_write(client, 0x1e, 0x00);
+	ret = mira220pmic_write(client, 0x1f, 0x00);
+
+	ret = mira220pmic_write(client, 0x24, 0x48);
+	ret = mira220pmic_write(client, 0x20, 0x00);
+	ret = mira220pmic_write(client, 0x21, 0x00);
+	ret = mira220pmic_write(client, 0x1a, 0x00);
+	ret = mira220pmic_write(client, 0x01, 0x00);
+	ret = mira220pmic_write(client, 0x08, 0x00);
+	ret = mira220pmic_write(client, 0x02, 0x00);
+	ret = mira220pmic_write(client, 0x0b, 0x00);
+	ret = mira220pmic_write(client, 0x14, 0x00);
+	ret = mira220pmic_write(client, 0x17, 0x00);
+	ret = mira220pmic_write(client, 0x1c, 0x00);
+	ret = mira220pmic_write(client, 0x1d, 0x00);
+	ret = mira220pmic_write(client, 0x1f, 0x00);
+
+	usleep_range(50, 60);
+
+	ret = mira220pmic_write(client, 0x62, 0x0d);
+
+	usleep_range(50, 60);
+	usleep_range(50000, 50000+100);
+
+	ret = mira220pmic_write(client, 0x27, 0xff);
+	ret = mira220pmic_write(client, 0x28, 0xff);
+	ret = mira220pmic_write(client, 0x29, 0xff);
+	ret = mira220pmic_write(client, 0x2a, 0xff);
+	ret = mira220pmic_write(client, 0x2b, 0xff);
+
+	ret = mira220pmic_write(client, 0x41, 0x04);
+	usleep_range(50, 60);
+
+	ret = mira220pmic_read(client, 0x20, &val);
+	dev_err(&client->dev, "Read 0x20 with val %x\n", val);
+
+	// PCB V2.0 or above, enable LDO9=2.50V for VDD25
+	ret = mira220pmic_write(client, 0x20, 0xb2);
+	// For PCB V1.0, VDD28 on 2.85V for older PCBs
+	// ret = mira220pmic_write(client, 0x20, 0xb9);
+
+	ret = mira220pmic_read(client, 0x20, &val);
+	dev_err(&client->dev, "Read 0x20 with val %x\n", val);
+
+	usleep_range(700, 710);
+
+	ret = mira220pmic_write(client, 0x12, 0x16);
+	ret = mira220pmic_write(client, 0x10, 0x16);
+	ret = mira220pmic_write(client, 0x11, 0x96);
+	ret = mira220pmic_write(client, 0x1e, 0x96);
+	ret = mira220pmic_write(client, 0x21, 0x96);
+	usleep_range(50, 60);
+
+	ret = mira220pmic_write(client, 0x00, 0x04);
+	ret = mira220pmic_write(client, 0x04, 0x34);
+	ret = mira220pmic_write(client, 0x06, 0xbf);
+	ret = mira220pmic_write(client, 0x05, 0xb4);
+	ret = mira220pmic_write(client, 0x03, 0x00);
+	ret = mira220pmic_write(client, 0x0d, 0x34);
+	ret = mira220pmic_write(client, 0x0f, 0xbf);
+	ret = mira220pmic_write(client, 0x0e, 0xb4);
+	usleep_range(50, 60);
+
+	ret = mira220pmic_write(client, 0x42, 0x05);
+	usleep_range(50, 60);
+
+	ret = mira220pmic_write(client, 0x45, 0x40);
+	ret = mira220pmic_write(client, 0x57, 0x02);
+	ret = mira220pmic_write(client, 0x5d, 0x10);
+	ret = mira220pmic_write(client, 0x61, 0x10);
+
+	return 0;
+}
+
+
 static int mira220_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
@@ -3007,8 +3165,6 @@ static int mira220_probe(struct i2c_client *client)
 	printk(KERN_INFO "[MIRA220]: Driver Version 0.0.\n");
 
 	dev_err(dev, "[MIRA220] name: %s.\n", client->name);
-	dev_err(dev, "[MIRA220] Sleep for 1 second to let PMIC driver complete init.\n");
-	usleep_range(1000000, 1000000+100);
 
 	mira220 = devm_kzalloc(&client->dev, sizeof(*mira220), GFP_KERNEL);
 	if (!mira220)
@@ -3046,6 +3202,18 @@ static int mira220_probe(struct i2c_client *client)
 	// mira220->reset_gpio = devm_gpiod_get_optional(dev, "reset",
 	//					     GPIOD_OUT_HIGH);
 
+#define MIRA220PMIC_I2C_ADDR 0x2D
+	{
+		printk(KERN_INFO "[MIRA220]: Init PMIC.\n");
+		mira220->pmic_client = i2c_new_dummy_device(client->adapter,
+				MIRA220PMIC_I2C_ADDR);
+		if (IS_ERR(mira220->pmic_client))
+			return PTR_ERR(mira220->pmic_client);
+		mira220pmic_init_controls(mira220->pmic_client);
+	}
+
+	dev_err(dev, "[MIRA220] Sleep for 1 second to let PMIC driver complete init.\n");
+	usleep_range(1000000, 1000000+100);
 
 	/*
 	 * The sensor must be powered for mira220_identify_module()
@@ -3119,6 +3287,8 @@ error_handler_free:
 error_power_off:
 	mira220_power_off(dev);
 
+	i2c_unregister_device(mira220->pmic_client);
+
 	return ret;
 }
 
@@ -3126,6 +3296,8 @@ static int mira220_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mira220 *mira220 = to_mira220(sd);
+
+	i2c_unregister_device(mira220->pmic_client);
 
 	v4l2_async_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
