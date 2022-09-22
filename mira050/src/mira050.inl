@@ -967,6 +967,10 @@ struct mira050 {
 	/* Streaming on/off */
 	bool streaming;
 
+	/* pmic and uC */
+	struct i2c_client *pmic_client;
+	struct i2c_client *uc_client;
+
 };
 
 static inline struct mira050 *to_mira050(struct v4l2_subdev *_sd)
@@ -2110,6 +2114,230 @@ error_out:
 	return ret;
 }
 
+static int mira050pmic_read(struct i2c_client *client, u8 reg, u8 *val)
+{
+	int ret;
+	unsigned char data_w[1] = { reg & 0xff };
+
+	ret = i2c_master_send(client, data_w, 1);
+	/*
+	 * A negative return code, or sending the wrong number of bytes, both
+	 * count as an error.
+	 */
+	if (ret != 1) {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+			__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+		return ret;
+	}
+
+	ret = i2c_master_recv(client, val, 1);
+	/*
+	 * The only return value indicating success is 1. Anything else, even
+	 * a non-negative value, indicates something went wrong.
+	 */
+	if (ret == 1) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+static int mira050pmic_write(struct i2c_client *client, u8 reg, u8 val)
+{
+	int ret;
+	unsigned char data[2] = { reg & 0xff, val};
+
+	ret = i2c_master_send(client, data, 2);
+	/*
+	 * Writing the wrong number of bytes also needs to be flagged as an
+	 * error. Success needs to produce a 0 return code.
+	 */
+	if (ret == 2) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+
+static int mira050pmic_init_controls(struct i2c_client *pmic_client, struct i2c_client *uc_client)
+{
+	int ret;
+	u8 val;
+
+	// uC, set atb and jtag high
+        // according to old uC fw (svn rev41)
+        // 12[3] ldo en
+        // 11[4,5] atpg jtag
+        // 11/12 i/o direction, 15/16 output high/low
+        // uC, set atb and jtag high
+        // WARNING this only works on interposer v2 if R307 is not populated. otherwise, invert the bit for ldo
+	ret = mira050pmic_write(uc_client, 12, 0xF7);
+	ret = mira050pmic_write(uc_client, 16, 0xFF); // ldo en:1
+	ret = mira050pmic_write(uc_client, 11, 0XCF);
+	ret = mira050pmic_write(uc_client, 15, 0xFF);
+	ret = mira050pmic_write(uc_client, 6, 1); // write
+
+	// Disable master switch //
+	ret = mira050pmic_write(pmic_client, 0x62, 0x00);
+
+	// Set all voltages to 0
+
+	// DCDC1=0V
+	ret = mira050pmic_write(pmic_client, 0x05, 0x00);
+	// DCDC4=0V
+	ret = mira050pmic_write(pmic_client, 0x0E, 0x0);
+	// LDO1=0V VDDLO_PLL
+	ret = mira050pmic_write(pmic_client, 0x11, 0x0);
+	// LDO2=0.0V
+	ret = mira050pmic_write(pmic_client, 0x14, 0x00);
+	// LDO3=0.0V
+	ret = mira050pmic_write(pmic_client, 0x17, 0x00);
+	// LDO4=0V
+	ret = mira050pmic_write(pmic_client, 0x1A, 0x00);
+	// LDO5=0.0V
+	ret = mira050pmic_write(pmic_client, 0x1C, 0x00);
+	// LDO6=0.0V
+	ret = mira050pmic_write(pmic_client, 0x1D, 0x00);
+	// LDO7=0V
+	ret = mira050pmic_write(pmic_client, 0x1E, 0x0);
+	// LDO8=0.0V
+	ret = mira050pmic_write(pmic_client, 0x1F, 0x00);
+	// Disable LDO9 Lock
+	ret = mira050pmic_write(pmic_client, 0x24, 0x48);
+	// LDO9=0V VDDHI
+	ret = mira050pmic_write(pmic_client, 0x20, 0x00);
+	// LDO10=0V VDDLO_ANA
+	ret = mira050pmic_write(pmic_client, 0x21, 0x0);
+
+	// Enable master switch //
+	usleep_range(50,60);
+	ret = mira050pmic_write(pmic_client, 0x62, 0x0D);  // enable master switch
+	usleep_range(50,60);
+
+	// start PMIC
+	// Keep LDOs always on
+	ret = mira050pmic_write(pmic_client, 0x27, 0xFF);
+	ret = mira050pmic_write(pmic_client, 0x28, 0xFF);
+	ret = mira050pmic_write(pmic_client, 0x29, 0x00);
+	ret = mira050pmic_write(pmic_client, 0x2A, 0x00);
+	ret = mira050pmic_write(pmic_client, 0x2B, 0x00);
+
+	// Unused LDO off //
+	usleep_range(50,60);
+	// set GPIO1=0
+	ret = mira050pmic_write(pmic_client, 0x41, 0x04);
+	// DCDC2=0.0V SPARE_PWR1
+	ret = mira050pmic_write(pmic_client, 0x01, 0x00);
+	ret = mira050pmic_write(pmic_client, 0x08, 0x00);
+	// DCDC3=0V SPARE_PWR1
+	ret = mira050pmic_write(pmic_client, 0x02, 0x00);
+	ret = mira050pmic_write(pmic_client, 0x0B, 0x00);
+	// LDO2=0.0V
+	ret = mira050pmic_write(pmic_client, 0x14, 0x00);
+	// LDO3=0.0V
+	ret = mira050pmic_write(pmic_client, 0x17, 0x00);
+	// LDO5=0.0V
+	ret = mira050pmic_write(pmic_client, 0x1C, 0x00);
+	// LDO6=0.0V
+	ret = mira050pmic_write(pmic_client, 0x1D, 0x00);
+	// LDO8=0.0V
+	ret = mira050pmic_write(pmic_client, 0x1F, 0x00);
+
+	ret = mira050pmic_write(pmic_client, 0x42, 4);
+
+	// Enable 1.80V //
+	usleep_range(50,60);
+	// DCDC1=1.8V VINLDO1p8 >=1P8
+	ret = mira050pmic_write(pmic_client, 0x00, 0x00);
+	ret = mira050pmic_write(pmic_client, 0x04, 0x34);
+	ret = mira050pmic_write(pmic_client, 0x06, 0xBF);
+	ret = mira050pmic_write(pmic_client, 0x05, 0xB4);
+	// DCDC4=1.8V VDDIO
+	ret = mira050pmic_write(pmic_client, 0x03, 0x00);
+	ret = mira050pmic_write(pmic_client, 0x0D, 0x34);
+	ret = mira050pmic_write(pmic_client, 0x0F, 0xBF);
+	ret = mira050pmic_write(pmic_client, 0x0E, 0xB4);
+
+	// Enable 2.85V //
+	usleep_range(50,60);
+	// LDO4=2.85V VDDHI alternativ
+	ret = mira050pmic_write(pmic_client, 0x1A, 0xB8); // Either 0x00 or 0xB8
+	// Disable LDO9 Lock
+	ret = mira050pmic_write(pmic_client, 0x24, 0x48);
+	// LDO9=2.85V VDDHI
+	ret = mira050pmic_read(pmic_client, 0x20, &val);
+	dev_err(&pmic_client->dev, "Read 0x20 with val %x\n", val);
+	ret = mira050pmic_write(pmic_client, 0x20, 0xB9);
+	ret = mira050pmic_read(pmic_client, 0x20, &val);
+	dev_err(&pmic_client->dev, "Read 0x20 with val %x\n", val);
+
+	// VPIXH on cob = vdd25A on interposer = LDO4 on pmic
+	// VPIXH should connect to VDD28 on pcb, or enable 4th supply
+	ret = mira050pmic_read(pmic_client, 0x19, &val);
+	dev_err(&pmic_client->dev, "Read 0x19 with val %x\n", val);
+	ret = mira050pmic_write(pmic_client, 0x19, 0x38);
+	ret = mira050pmic_read(pmic_client, 0x19, &val);
+	dev_err(&pmic_client->dev, "Read 0x19 with val %x\n", val);
+
+
+	// Enable 1.2V //
+	usleep_range(700,710);
+	// LDO1=1.2V VDDLO_PLL
+	ret = mira050pmic_write(pmic_client, 0x12, 0x16);
+	ret = mira050pmic_write(pmic_client, 0x10, 0x16);
+	ret = mira050pmic_write(pmic_client, 0x11, 0x90);
+	// LDO7=1.2V VDDLO_DIG
+	ret = mira050pmic_write(pmic_client, 0x1E, 0x90);
+	// LDO10=1.2V VDDLO_ANA
+	ret = mira050pmic_write(pmic_client, 0x21, 0x90);
+
+	// Enable green LED //
+	usleep_range(50,60);
+	ret = mira050pmic_write(pmic_client, 0x42, 0x15); // gpio2
+	// ret = mira050pmic_write(pmic_client, 0x43, 0x40); // leda
+	// ret = mira050pmic_write(pmic_client, 0x44, 0x40); // ledb
+	ret = mira050pmic_write(pmic_client, 0x45, 0x40); // ledc
+
+	// ret = mira050pmic_write(pmic_client, 0x47, 0x02); // leda ctrl1
+	// ret = mira050pmic_write(pmic_client, 0x4F, 0x02); // ledb ctrl1
+	ret = mira050pmic_write(pmic_client, 0x57, 0x02); // ledc ctrl1
+
+
+	// ret = mira050pmic_write(pmic_client, 0x4D, 0x01); // leda ctrl1
+	// ret = mira050pmic_write(pmic_client, 0x55, 0x10); // ledb ctrl7
+	ret = mira050pmic_write(pmic_client, 0x5D, 0x10); // ledc ctrl7
+	ret = mira050pmic_write(pmic_client, 0x61, 0x10); // led seq -- use this to turn on leds. abc0000- 1110000 for all leds
+
+	// uC, set atb and jtag high and ldo_en
+	ret = mira050pmic_write(uc_client, 12, 0xF7);
+	ret = mira050pmic_write(uc_client, 16, 0xF7); // ldo en:0
+	/*
+	 * In Mira050-bringup.py, write 11, 0xCF; 15: 0x30.
+	 * In mira050.py, write 11, 0x8D; 15, 0xFD.
+	 */
+	ret = mira050pmic_write(uc_client, 11, 0X8D);
+	ret = mira050pmic_write(uc_client, 15, 0xFD);
+	ret = mira050pmic_write(uc_client, 6, 1); // write
+
+	usleep_range(2000000,2001000);
+
+	return 0;
+}
+
+
 static int mira050_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
@@ -2120,8 +2348,6 @@ static int mira050_probe(struct i2c_client *client)
 	printk(KERN_INFO "[MIRA050]: Driver Version 0.0.\n");
 
 	dev_err(dev, "[MIRA050] name: %s.\n", client->name);
-	dev_err(dev, "[MIRA050] Sleep for 1 second to let PMIC driver complete init.\n");
-	usleep_range(1000000, 1000000+100);
 
 	mira050 = devm_kzalloc(&client->dev, sizeof(*mira050), GFP_KERNEL);
 	if (!mira050)
@@ -2154,6 +2380,24 @@ static int mira050_probe(struct i2c_client *client)
 		dev_err(dev, "failed to get regulators\n");
 		return ret;
 	}
+
+#define MIRA050PMIC_I2C_ADDR 0x2D
+#define MIRA050UC_I2C_ADDR 0x0A
+	{
+		printk(KERN_INFO "[MIRA050]: Init PMIC and uC.\n");
+		mira050->pmic_client = i2c_new_dummy_device(client->adapter,
+				MIRA050PMIC_I2C_ADDR);
+		if (IS_ERR(mira050->pmic_client))
+			return PTR_ERR(mira050->pmic_client);
+		mira050->uc_client = i2c_new_dummy_device(client->adapter,
+				MIRA050UC_I2C_ADDR);
+		if (IS_ERR(mira050->uc_client))
+			return PTR_ERR(mira050->uc_client);
+		mira050pmic_init_controls(mira050->pmic_client, mira050->uc_client);
+	}
+
+	dev_err(dev, "[MIRA050] Sleep for 1 second to let PMIC driver complete init.\n");
+	usleep_range(1000000, 1000000+100);
 
 	/*
 	 * The sensor must be powered for mira050_identify_module()
@@ -2230,6 +2474,9 @@ error_handler_free:
 error_power_off:
 	mira050_power_off(dev);
 
+	i2c_unregister_device(mira050->pmic_client);
+	i2c_unregister_device(mira050->uc_client);
+
 	return ret;
 }
 
@@ -2237,6 +2484,9 @@ static int mira050_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mira050 *mira050 = to_mira050(sd);
+
+	i2c_unregister_device(mira050->pmic_client);
+	i2c_unregister_device(mira050->uc_client);
 
 	v4l2_async_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
