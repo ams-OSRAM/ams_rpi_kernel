@@ -4,18 +4,22 @@
 - Mira220 sensor board V3.0 or Mira050 sensor board V1.0.
 ## If cross-compiling with a host x86 machine
 - Host machine running Ubuntu 18.04 or later.
-- Host has the tool chain needed to compile a standard Raspberry Pi Linux Kernel. Refer to [Raspberry Pi doc](https://www.raspberrypi.com/documentation/computers/linux_kernel.html) on the required tools. Preferably, make sure the host has the required tool by compiling a standard Raspberry Pi kernel as stated in the Raspberry Pi doc.
+- Host has the tool chain needed to compile a standard Raspberry Pi Linux Kernel. Issue this command `sudo apt install git bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-armhf crossbuild-essential-arm64`. Refer to [Raspberry Pi doc](https://www.raspberrypi.com/documentation/computers/linux_kernel.html#cross-compiling-the-kernel) for further details. Preferably, make sure the host has the required tool by compiling a standard Raspberry Pi kernel as stated in the Raspberry Pi doc.
 ## If compiling natively on the raspberry pi
-- The Rasperry Pi has 64-bit Desktop version of Raspberry Pi OS image [link](https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2022-09-07/), or (not recommended) 32-bit version [link](https://downloads.raspberrypi.org/raspios_full_armhf/images/raspios_full_armhf-2022-09-07/).
+- The Raspberry Pi has 64-bit Desktop version of Raspberry Pi OS image [link](https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2022-09-07/), or (not recommended) 32-bit version [link](https://downloads.raspberrypi.org/raspios_full_armhf/images/raspios_full_armhf-2022-09-07/).
+- The Raspberry Pi has the required tools. Log into the RPI and issue this command `sudo apt install git bc bison flex libssl-dev make`. Refer to [Raspberry Pi doc](https://www.raspberrypi.com/documentation/computers/linux_kernel.html#building-the-kernel-locally) for further details.
 
 # Compilation and installation:
 ## If cross-compiling with a host x86 machine
+- Clone or copy this repo to an x86 machine. Make sure the host machine has prerequisites mentioned in the previous section.
 - Before compilation, configure whether 64bit OS or 32bit OS is built. Open the file `common/build.sh` and edit the variable `OSBIT` to be `64` or `32`. This variable controls a few build options. For example, it controls the `KERNEL` option that points to the actual kernel file used in the RPI. By default, 32-bit RPI 4 uses `kernel7l.img`, 64-bit RPI 4 uses `kernel8.img`.
 - Before compilation, configure the RPI hardware type. Open the file `common/build.sh` and edit the variable `RPIHW` to be `RPI4B` or `RPI3B`. This variable controls what kind of build config is used.
 - Open the file `common/build.sh` and point `RPI_KERNEL_INSTALL_DIR=` to the actual location that the Raspberry Pi SD card is mounted on the Ubuntu host. Alternative to mounting the SD card by physically plugging it on to the Ubuntu host, it is possible to mount it via ssh by the command `sudo sshfs -o sftp_server="/usr/bin/sudo /usr/lib/openssh/sftp-server" pi@IP_OF_PI:/ /media/pi` where `IP_OF_PI` is the IP address of pi and `/media/pi` is an example mount point on the host.
 - Run `build_all.sh`. The script performs the following: (1) Download a specific version of Linux kernel source; (2) Apply Mira220 and Mira050 related source code and patches; (3) Prepare compilation script; (4) Performs actual compilation and installation. To re-run the `build_all.sh` for a specific step, comment out the parts that are not relevant.
 ## If compiling natively on the raspberry pi
-- Run `build_native.sh`.
+- Clone or copy this git repo to the target RPI. Make sure the RPI has the prerequisites mentioned in the previous section.
+- Run `build_native.sh`. It builds the drivers and device trees into the Debian package, and then installs the Debian package to the local RPI.
+- The Debian package, with a name like `mira-driver_0.1.5-1_arm64.deb`, is built for a specific architecture (check via `dpkg --print-architecture`) and a specific kernel version (check via `uname -r`) of the RPI. If other RPIs have the same architecture and the same kernel version, users can simply copy the Debian package over to other RPIs and install the driver by two commands: `sudo dpkg -i mira-driver_0.1.5-1_arm64.deb` for installation and then `sudo depmod` for post-installation update.
 
 ## Configuration
 - Post-installation, log on to the Raspberry Pi, add a new line to `/boot/config.txt`. Depending on whether Mira220 mono or Mira220 color or Mira050 mono is connected, this new line will be either `dtoverlay=mira220` for Mira220 mono, or `dtoverlay=mira220color` for Mira220 color, or `dtoverlay=mira050` for Mira050 mono (pick one and only one!). This line tells the RPI to load the corresponding driver at boot time.
