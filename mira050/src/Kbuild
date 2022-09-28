@@ -1,1 +1,5 @@
 obj-m  := mira050.o mira050color.o
+dtbo-y += mira050.dtbo mira050color.dtbo
+targets += $(dtbo-y)
+always  := $(dtbo-y)
+always-y        := $(dtbo-y)

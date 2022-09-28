@@ -32,9 +32,9 @@ PKGNAME="mira-driver"
 # release version
 PKGVER="0.1.5"
 # arm64 for 64bit or armhf for 32bit
-ARCH="arm64"
+PKGARCH=$(dpkg --print-architecture)
 
-PKGDIR=$TOPDIR/$PKGNAME"_"$PKGVER"-1_"$ARCH
+PKGDIR=$TOPDIR/$PKGNAME"_"$PKGVER"-1_"$PKGARCH
 
 echo "Creating deb package at $PKGDIR"
 
@@ -42,40 +42,35 @@ mkdir -p $PKGDIR/DEBIAN
 
 echo "Package: $PKGNAME
 Version: $PKGVER
-Architecture: $ARCH
+Architecture: $PKGARCH
 Maintainer: Zhenyu Ye <zhenyu.ye@ams-osram.com>
-Description: Mira driver for RPI.
+Description: Mira device tree and driver for RPI.
  It contains mira220, mira220color, mira050, mira050color." > $PKGDIR/DEBIAN/control
-
-echo "#############################"
-echo "# Add device tree to deb"
-echo "#############################"
-
-mkdir -p $PKGDIR/boot/overlays
-
-for dtname in "mira220" "mira220color" "mira050" "mira050color"; do
-	dtdir=$(echo $dtname | sed 's/color//')
-	echo "Building device tree source $dtdir/src/$dtname.dts"
-	(cd $dtdir/src && cpp -nostdinc -I include -I arch -I/usr/src/linux-headers-${KERNELRELEASE}/include/ -undef -x assembler-with-cpp  $dtname-overlay.dts $dtname-overlay.dts.preprocessed)
-	(cd $dtdir/src && dtc -I dts -O dtb $dtname-overlay.dts.preprocessed -o $dtname.dtbo)
-	(cd $dtdir/src && rm $dtname-overlay.dts.preprocessed)
-	echo "Copying device tree blob overlay $dtdir/src/$dtname.dtbo to $PKGDIR/boot/overlays/"
-	sudo cp $dtdir/src/$dtname.dtbo $PKGDIR/boot/overlays/
-done
-
-echo "#############################"
-echo "# Add driver module to deb"
-echo "#############################"
 
 MODULEDIR=$PKGDIR/usr/lib/modules/$KERNELRELEASE/kernel/drivers/media/i2c
 mkdir -p $MODULEDIR
+mkdir -p $PKGDIR/boot/overlays
 
+echo "#############################"
+echo "# Add driver and dtbo to deb"
+echo "#############################"
+
+# Build dtbo and driver
 (cd mira220/src && make)
+# Install driver to deb package folder
 (cd mira220/src && make INSTALL_MOD_PATH=$PKGDIR install)
+# Install dtbo to deb package folder
+(cd mira220/src && cp mira220.dtbo mira220color.dtbo $PKGDIR/boot/overlays/)
+# Cleanup artifacts from source folder
 (cd mira220/src && make clean)
 
+# Build dtbo and driver
 (cd mira050/src && make)
+# Install driver to deb package folder
 (cd mira050/src && make INSTALL_MOD_PATH=$PKGDIR install)
+# Install dtbo to deb package folder
+(cd mira050/src && cp mira050.dtbo mira050color.dtbo $PKGDIR/boot/overlays/)
+# Cleanup artifacts from source folder
 (cd mira050/src && make clean)
 
 echo "#############################"
@@ -94,7 +89,8 @@ done
 echo "Installing $PKGDIR.deb"
 sudo dpkg -i $PKGDIR.deb
 
-echo "Installed to /usr/lib/modules/$KERNELRELEASE/kernel/drivers/media/i2c"
+echo "Device trees installed to /boot/overlays"
+echo "Drivers installed to /usr/lib/modules/$KERNELRELEASE/kernel/drivers/media/i2c"
 
 echo "Post installation: rebuild dependency modules to make modules loaded by kernel"
 sudo depmod
