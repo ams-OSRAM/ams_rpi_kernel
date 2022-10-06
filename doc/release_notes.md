@@ -1,6 +1,17 @@
 # Version v0.1.5
 
 New features:
+- Bump to `raspios_arm64-2022-09-07`, kernel 5.15.61-v8+, tag 1.20220830.
+- Add script `build_native.sh` to build the driver natively on an RPI.
+
+Bug fixes:
+- Fix module probe order problem by including pmic module inside mira220/050 module.
+- Fix over exposure problem of Mira220, and strange exposure of Mira050.
+
+
+# Version v0.1.5
+
+New features:
 - Support mira220color and mira050color.
 - Mira220 driver supports two modes: (1) 640x480 120fps; (2) 1600x1400 30fps. BPP:8/10/12.
 
