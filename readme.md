@@ -34,3 +34,16 @@
 # Post-installation:
 - Install other custom driver modules or software if needed. For example, the Quadric Dev Kit driver (`thor`) is located in a separate repo [link](https://gittf.ams-osram.info/cis_solutions/raspberry_evk/quadric_driver).
 - Instructions on creating a custom OS image from a plain OS image are described in [doc/create_os_image.md](doc/create_os_image.md).
+
+# Release workflow
+Two repositories, `ams_rpi_kernel` and `ams_rpi_software`, are released. Assumption is that, both repositories have a git tag for the release version, such as `v0.1.2`. Below are commands that create a specific release from the tag.
+```
+# Export the release tag version, for example, v0.1.2
+export RELEASE_TAG=v0.1.2
+# Create release pacakge ams_rpi_kernel_${RELEASE_TAG}.tar.gz
+cd ams_rpi_kernel
+git archive --prefix=ams_rpi_kernel/ -o ams_rpi_kernel_${RELEASE_TAG}.tar.gz ${RELEASE_TAG}
+# Create release for ams_rpi_software_${RELEASE_TAG}.tar.gz
+cd ams_rpi_software
+git archive --prefix=ams_rpi_software/ -o ams_rpi_software_${RELEASE_TAG}.tar.gz ${RELEASE_TAG}
+```
