@@ -24,6 +24,28 @@
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
 
+/*
+ * Introduce new v4l2 control
+ */
+#include <linux/v4l2-controls.h>
+#define AMS_CAMERA_CID_BASE		(V4L2_CTRL_CLASS_CAMERA | 0x2000)
+#define AMS_CAMERA_CID_MIRA050_REG_W	(AMS_CAMERA_CID_BASE+0)
+#define AMS_CAMERA_CID_MIRA050_REG_R	(AMS_CAMERA_CID_BASE+1)
+
+/* Most significant Byte is flag, and most significant bit is unused. */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_FOR_READ    0b00000001
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_USE_BANK    0b00000010
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_BANK        0b00000100
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_CONTEXT     0b00001000
+/* When sleep bit is set, the other 3 Bytes is sleep values in us. */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_SLEEP_US    0b00010000
+/* Bit 6&7 of flag are combined to specify I2C dev (default is Mira) */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL     0b01100000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_MIRA    0b00000000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_PMIC    0b00100000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_UC      0b01000000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_TBD     0b01100000
+
 #define MIRA050_NATIVE_WIDTH			576U
 #define MIRA050_NATIVE_HEIGHT			768U
 
@@ -219,6 +241,16 @@ struct mira050_reg_list {
 	const struct mira050_reg *regs;
 };
 
+struct mira050_v4l2_reg {
+	u32 val;
+};
+
+struct mira050_v4l2_reg_list {
+	unsigned int num_of_regs;
+	struct mira050_v4l2_reg *regs;
+};
+
+
 /* Mode : resolution and related config&values */
 struct mira050_mode {
 	/* Frame width */
@@ -235,6 +267,14 @@ struct mira050_mode {
 
 	u32 vblank;
 	u32 hblank;
+};
+
+// Allocate a buffer to store custom reg write
+#define AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE	2048
+static struct mira050_v4l2_reg s_ctrl_mira050_reg_w_buf[AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE];
+static struct mira050_v4l2_reg_list reg_list_s_ctrl_mira050_reg_w_buf = {
+	.num_of_regs = 0,
+        .regs = s_ctrl_mira050_reg_w_buf,
 };
 
 // 576_768_60fps_12b_1lane
@@ -931,11 +971,11 @@ static const struct mira050_mode supported_modes[] = {
 		},
 		.reg_list_pre_soft_reset = {
 			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_pre_soft_reset),
-			.regs = full_576_768_60fps_12b_1lane_reg_pre_soft_reset,
+			.regs = (struct mira050_reg *)full_576_768_60fps_12b_1lane_reg_pre_soft_reset,
 		},
 		.reg_list_post_soft_reset = {
 			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_post_soft_reset),
-			.regs = full_576_768_60fps_12b_1lane_reg_post_soft_reset,
+			.regs = (struct mira050_reg *)full_576_768_60fps_12b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
 		.hblank = 0, // TODO
@@ -962,6 +1002,11 @@ struct mira050 {
 	struct v4l2_ctrl *hblank;
 	struct v4l2_ctrl *exposure;
 	struct v4l2_ctrl *gain;
+	// custom v4l2 control
+	struct v4l2_ctrl *mira050_reg_w;
+	struct v4l2_ctrl *mira050_reg_r;
+	u16 mira050_reg_w_cached_addr;
+	u8 mira050_reg_w_cached_flag;
 
 	/* Current mode */
 	const struct mira050_mode *mode;
@@ -1128,6 +1173,176 @@ static int mira050_write_regs(struct mira050 *mira050,
 	return 0;
 }
 
+/* Write PMIC registers, and can be reused to write microcontroller reg. */
+static int mira050pmic_write(struct i2c_client *client, u8 reg, u8 val)
+{
+	int ret;
+	unsigned char data[2] = { reg & 0xff, val};
+
+	ret = i2c_master_send(client, data, 2);
+	/*
+	 * Writing the wrong number of bytes also needs to be flagged as an
+	 * error. Success needs to produce a 0 return code.
+	 */
+	if (ret == 2) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	u32 ret = 0;
+
+	u16 reg_addr = (value >> 8) & 0xFFFF;
+	u8 reg_val = value & 0xFF;
+	u8 reg_flag = (value >> 24) & 0xFF;
+
+	printk(KERN_INFO "[MIRA050]: %s reg_flag: 0x%02X; reg_addr: 0x%04X; reg_val: 0x%02X.\n",
+			__func__, reg_flag, reg_addr, reg_val);
+
+	if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_SLEEP_US) {
+		// If it is for sleep, combine all 24 bits of reg_addr and reg_val as sleep us.
+		u32 sleep_us_val = value & 0x00FFFFFF;
+		// Sleep range needs an interval, default to 1/8 of the sleep value.
+		u32 sleep_us_interval = sleep_us_val >> 3;
+		printk(KERN_INFO "[MIRA050]: %s sleep_us: %u.\n", __func__, sleep_us_val);
+		usleep_range(sleep_us_val, sleep_us_val + sleep_us_interval);
+	} else if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_FOR_READ) {
+		// If it is for read, skip reagister write, cache addr and flag for read.
+		mira050->mira050_reg_w_cached_addr = reg_addr;
+		mira050->mira050_reg_w_cached_flag = reg_flag;
+	} else {
+		// If it is for write, select which I2C device by the flag "I2C_SEL".
+		if ((reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_MIRA) {
+			// Before writing Mira050 register, first optionally select BANK and CONTEXT
+			if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_USE_BANK){
+				u8 bank;
+				u8 context;
+				// Set conetxt bank 0 or 1
+				if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_BANK) {
+					bank = 1;
+				} else {
+					bank = 0;
+				}
+				printk(KERN_INFO "[MIRA050]: %s select bank: %u.\n", __func__, bank);
+				ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, bank);
+				if (ret) {
+					dev_err(&client->dev, "Error setting BANK_SEL_REG.");
+					return ret;
+				}
+				// Set context bank 1A or bank 1B
+				if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_CONTEXT) {
+					context = 1;
+				} else {
+					context = 0;
+				}
+				printk(KERN_INFO "[MIRA050]: %s select context: %u.\n", __func__, context);
+				ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, context);
+				if (ret) {
+					dev_err(&client->dev, "Error setting RW_CONTEXT.");
+					return ret;
+				}
+			}
+			// Writing the actual Mira050 register
+			printk(KERN_INFO "[MIRA050]: %s write reg_addr: 0x%04X; reg_val: 0x%02X.\n", __func__, reg_addr, reg_val);
+			ret = mira050_write(mira050, reg_addr, reg_val);
+			if (ret) {
+				dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA050_REG_W reg_addr %X.\n", reg_addr);
+				return -EINVAL;
+			}
+		} else if ((reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_PMIC) {
+			// Write PMIC, with 8-bit reg_addr.
+			ret = mira050pmic_write(mira050->pmic_client, (u8)(reg_addr & 0xFF), reg_val);
+		} else if ((reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_UC) {
+			// Write micro-controller, reusing mira050pmic_write function, just give it uc_client.
+			ret = mira050pmic_write(mira050->uc_client, (u8)(reg_addr & 0xFF), reg_val);
+		}
+	}
+
+	return 0;
+}
+
+static int mira050_v4l2_reg_r(struct mira050 *mira050, u32 *value) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	u32 ret = 0;
+
+	u16 reg_addr = mira050->mira050_reg_w_cached_addr;
+	u8 reg_flag = mira050->mira050_reg_w_cached_flag;
+	u8 reg_val = 0;
+
+	*value = 0;
+
+	if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_USE_BANK){
+		u8 bank;
+		u8 context;
+		// Set conetxt bank 0 or 1
+		if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_BANK) {
+			bank = 1;
+		} else {
+			bank = 0;
+		}
+		printk(KERN_INFO "[MIRA050]: %s select bank: %u.\n", __func__, bank);
+		ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, bank);
+		if (ret) {
+			dev_err(&client->dev, "Error setting BANK_SEL_REG.");
+			return ret;
+		}
+		// Set context bank 1A or bank 1B
+		if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_CONTEXT) {
+			context = 1;
+		} else {
+			context = 0;
+		}
+		printk(KERN_INFO "[MIRA050]: %s select context: %u.\n", __func__, context);
+		ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, context);
+		if (ret) {
+			dev_err(&client->dev, "Error setting RW_CONTEXT.");
+			return ret;
+		}
+	}
+	ret = mira050_read(mira050, reg_addr, &reg_val);
+	if (ret) {
+		dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA050_REG_R reg_addr %X.\n", reg_addr);
+		return -EINVAL;
+	}
+	// Return 32-bit value that includes flags, addr, and register value
+	*value = ((u32)reg_flag << 24) | ((u32)reg_addr << 8) | (u32)reg_val;
+
+	printk(KERN_INFO "[MIRA050]: mira050_v4l2_reg_r() reg_flag: 0x%02X; reg_addr: 0x%04X, reg_val: 0x%02X.\n",
+			reg_flag, reg_addr, reg_val);
+
+	return 0;
+}
+
+
+/* Write a list of v4l2 registers */
+static int mira050_write_v4l2_regs(struct mira050 *mira050,
+				const struct mira050_v4l2_reg *regs, u32 len)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	unsigned int i;
+	int ret;
+
+	for (i = 0; i < len; i++) {
+		ret = mira050_v4l2_reg_w(mira050, regs[i].val);
+		if (ret) {
+			dev_err_ratelimited(&client->dev,
+					    "Failed to write v4l2 reg value 0x%8.8x. error = %d\n",
+					    regs[i].val, ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 // Returns the maximum exposure time in microseconds (reg value)
 static u32 mira050_calculate_max_exposure_time(u32 row_length, u32 vsize,
 					       u32 vblank) {
@@ -1218,6 +1433,7 @@ static int mira050_write_start_streaming_regs(struct mira050* mira050) {
 	return ret;
 }
 
+
 static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
@@ -1265,6 +1481,7 @@ static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
 
 	return ret;
 }
+
 
 // Gets the format code if supported. Otherwise returns the default format code `codes[0]`
 static u32 mira050_validate_format_code_or_default(struct mira050 *mira050, u32 code)
@@ -1349,6 +1566,9 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
 
+	// Debug print
+	// printk(KERN_INFO "[MIRA050]: mira050_set_ctrl() id: 0x%X value: 0x%X.\n", ctrl->id, ctrl->val);
+
 	if (ctrl->id == V4L2_CID_VBLANK) {
 		int exposure_max, exposure_def;
 
@@ -1369,8 +1589,12 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 	 * Applying V4L2 control value only happens
 	 * when power is up for streaming
 	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0)
+	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+		dev_info(&client->dev,
+                         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
+                         ctrl->id, ctrl->val);
 		return 0;
+	}
 
 	switch (ctrl->id) {
 	case V4L2_CID_ANALOGUE_GAIN:
@@ -1417,8 +1641,130 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 	return ret;
 }
 
+static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mira050 *mira050 =
+		container_of(ctrl->handler, struct mira050, ctrl_handler);
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	int ret = 0;
+
+	printk(KERN_INFO "[MIRA050]: mira050_s_ctrl() id: %X value: %X.\n", ctrl->id, ctrl->val);
+
+	/*
+	 * Applying V4L2 control value only happens
+	 * when power is up for streaming
+	 */
+	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+		struct mira050_v4l2_reg_list *reg_list;
+		reg_list = &reg_list_s_ctrl_mira050_reg_w_buf;
+		if (ctrl->id == AMS_CAMERA_CID_MIRA050_REG_W &&
+		    reg_list->num_of_regs < AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE) {
+			int buf_idx = reg_list->num_of_regs;
+			u32 value = ctrl->val;
+			reg_list->regs[buf_idx].val = value;
+			reg_list->num_of_regs++;
+		}
+		// Below is optional warning
+		// dev_info(&client->dev,
+                //         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
+                //         ctrl->id, ctrl->val);
+		return 0;
+	}
+
+	switch (ctrl->id) {
+	case AMS_CAMERA_CID_MIRA050_REG_W:
+		ret = mira050_v4l2_reg_w(mira050, ctrl->val);
+		break;
+	default:
+		dev_info(&client->dev,
+			 "set ctrl(id:0x%x,val:0x%x) is not handled\n",
+			 ctrl->id, ctrl->val);
+		ret = -EINVAL;
+		break;
+	}
+
+	pm_runtime_put(&client->dev);
+
+	// TODO: FIXIT
+	return ret;
+}
+
+static int mira050_g_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mira050 *mira050 =
+		container_of(ctrl->handler, struct mira050, ctrl_handler);
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	int ret = 0;
+
+	printk(KERN_INFO "[MIRA050]: mira050_g_ctrl() id: %X.\n", ctrl->id);
+
+	/*
+	 * Applying V4L2 control value only happens
+	 * when power is up for streaming
+	 */
+	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+		dev_info(&client->dev,
+                        "device in use, ctrl(id:0x%x) is not handled\n",
+                        ctrl->id);
+		return 0;
+	}
+
+	switch (ctrl->id) {
+	case AMS_CAMERA_CID_MIRA050_REG_R:
+		ret = mira050_v4l2_reg_r(mira050, (u32 *)&ctrl->cur.val);
+		ctrl->val = ctrl->cur.val;
+		break;
+	default:
+		dev_info(&client->dev,
+			 "get ctrl(id:0x%x) is not handled\n",
+			 ctrl->id);
+		ret = -EINVAL;
+		break;
+	}
+
+	pm_runtime_put(&client->dev);
+
+	// TODO: FIXIT
+	return ret;
+}
+
+
 static const struct v4l2_ctrl_ops mira050_ctrl_ops = {
 	.s_ctrl = mira050_set_ctrl,
+};
+
+static const struct v4l2_ctrl_ops mira050_custom_ctrl_ops = {
+	.g_volatile_ctrl = mira050_g_ctrl,
+	.s_ctrl = mira050_s_ctrl,
+};
+
+
+/* list of custom v4l2 ctls */
+static struct v4l2_ctrl_config custom_ctrl_config_list[] = {
+	/* Do not change the name field for the controls! */
+	{
+		.ops = &mira050_custom_ctrl_ops,
+		.id = AMS_CAMERA_CID_MIRA050_REG_W,
+		.name = "mira050_reg_w",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = 0,
+		.min = 0,
+		.max = 0x7FFFFFFF,
+		.def = 0,
+		.step = 1,
+	},
+	{
+		.ops = &mira050_custom_ctrl_ops,
+		.id = AMS_CAMERA_CID_MIRA050_REG_R,
+		.name = "mira050_reg_r",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = 0,
+		.min = 0,
+		.max = 0x7FFFFFFF,
+		.def = 0,
+		.step = 1,
+	},
+
 };
 
 // This function should enumerate all the media bus formats for the requested pads. If the requested
@@ -1706,6 +2052,7 @@ static int mira050_start_streaming(struct mira050 *mira050)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	const struct mira050_reg_list *reg_list;
+	const struct mira050_v4l2_reg_list *reg_v4l2_list;
 	int ret;
 
 	printk(KERN_INFO "[MIRA050]: Entering start streaming function.\n");
@@ -1752,6 +2099,16 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
 	if (ret)
 		goto err_rpm_put;
+
+
+	reg_v4l2_list = &reg_list_s_ctrl_mira050_reg_w_buf;
+	printk(KERN_INFO "[MIRA050]: Writing %d regs from AMS_CAMERA_CID_MIRA050_REG_W.\n", reg_v4l2_list->num_of_regs);
+	ret = mira050_write_v4l2_regs(mira050, reg_v4l2_list->regs, reg_v4l2_list->num_of_regs);
+        if (ret) {
+                dev_err(&client->dev, "%s failed to set mode\n", __func__);
+                goto err_rpm_put;
+        }
+	reg_list_s_ctrl_mira050_reg_w_buf.num_of_regs = 0;
 
 	printk(KERN_INFO "[MIRA050]: Writing start streaming regs.\n");
 
@@ -1976,9 +2333,12 @@ static int mira050_init_controls(struct mira050 *mira050)
 	struct v4l2_ctrl_handler *ctrl_hdlr;
 	struct v4l2_fwnode_device_properties props;
 	int ret;
+	struct v4l2_ctrl_config *mira050_reg_w;
+	struct v4l2_ctrl_config *mira050_reg_r;
 
 	ctrl_hdlr = &mira050->ctrl_handler;
-	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 11);
+	/* v4l2_ctrl_handler_init gives a hint/guess of the number of v4l2_ctrl_new */
+	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 16);
 	if (ret)
 		return ret;
 
@@ -2050,6 +2410,18 @@ static int mira050_init_controls(struct mira050 *mira050)
 				     V4L2_CID_TEST_PATTERN,
 				     ARRAY_SIZE(mira050_test_pattern_menu) - 1,
 				     0, 0, mira050_test_pattern_menu);
+	/*
+	 * Custom op
+	 */
+	mira050_reg_w = &custom_ctrl_config_list[0];
+	printk(KERN_INFO "[MIRA050]: %s AMS_CAMERA_CID_MIRA050_REG_W %X.\n", __func__, AMS_CAMERA_CID_MIRA050_REG_W);
+	mira050->mira050_reg_w = v4l2_ctrl_new_custom(ctrl_hdlr, mira050_reg_w, NULL);
+
+	mira050_reg_r = &custom_ctrl_config_list[1];
+	printk(KERN_INFO "[MIRA050]: %s AMS_CAMERA_CID_MIRA050_REG_R %X.\n", __func__, AMS_CAMERA_CID_MIRA050_REG_R);
+	mira050->mira050_reg_r = v4l2_ctrl_new_custom(ctrl_hdlr, mira050_reg_r, NULL);
+	if (mira050->mira050_reg_r)
+		mira050->mira050_reg_r->flags |= (V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY);
 
 	if (ctrl_hdlr->error) {
 		ret = ctrl_hdlr->error;
@@ -2068,6 +2440,14 @@ static int mira050_init_controls(struct mira050 *mira050)
 		goto error;
 
 	mira050->sd.ctrl_handler = ctrl_hdlr;
+
+	/* Apply customized values from user */
+	/*
+	ret =  __v4l2_ctrl_handler_setup(mira050->sd.ctrl_handler);
+	printk(KERN_INFO "[MIRA050]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
+	if (ret)
+		goto error;
+	*/
 
 	return 0;
 
@@ -2160,28 +2540,6 @@ static int mira050pmic_read(struct i2c_client *client, u8 reg, u8 *val)
 		ret = 0;
 	} else {
 		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
-				__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-	}
-
-	return ret;
-}
-
-static int mira050pmic_write(struct i2c_client *client, u8 reg, u8 val)
-{
-	int ret;
-	unsigned char data[2] = { reg & 0xff, val};
-
-	ret = i2c_master_send(client, data, 2);
-	/*
-	 * Writing the wrong number of bytes also needs to be flagged as an
-	 * error. Success needs to produce a 0 return code.
-	 */
-	if (ret == 2) {
-		ret = 0;
-	} else {
-		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
 				__func__, reg);
 		if (ret >= 0)
 			ret = -EINVAL;
