@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+;// SPDX-License-Identifier: GPL-2.0
 /*
  * A V4L2 driver for ams MIRA050 cameras.
  * Copyright (C) 2022, ams-OSRAM
@@ -224,6 +224,8 @@
 
 #define MIRA050_PLL_LOCKED_REG			0x207C
 #define MIRA050_CSI2_TX_HS_ACTIVE_REG		0x209A
+
+#define MIRA050_CURRENT_ACTIVE_CONTEXT	0x4002
 
 enum pad_types {
 	IMAGE_PAD,
@@ -725,15 +727,15 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{53, 32},
 	{57348, 1},
 	{57388, 0},
-	{57389, 0},
+	{57389, 12},
 	{57390, 2},
-	{57391, 87},
+	{57391, 75},
 	{57392, 0},
 	{57381, 0},
 	{57386, 0},
 	{8233, 70},
 	{52, 1},
-	{53, 44},
+	{53, 32},
 	// Vertical ROI
 	{57348, 0},
 	{57344, 1},
@@ -812,8 +814,8 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{57348, 1},
 	{14, 0},
 	{15, 0},
-	{16, 3},
-	{17, 232},
+	{16, 19},
+	{17, 136},
 	{18, 0},
 	{19, 0},
 	{20, 0},
@@ -824,18 +826,18 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{57348, 1},
 	{50, 9},
 	{51, 122},
-	{57348, 0},
+	{57348, 0}, // Context A
 	{7, 1},
-	{8, 0},
+	{8, 0}, // TARGET_FRAME_TIME 60 fps
 	{9, 0},
 	{10, 65},
 	{11, 26},
-	{57348, 1},
+	{57348, 1}, // Context B
 	{7, 1},
-	{8, 0},
-	{9, 0},
-	{10, 65},
-	{11, 26},
+	{8, 0}, // TARGET_FRAME_TIME 2 fps
+	{9, 7},
+	{10, 161},
+	{11, 32},
 	// Digital Gain
 	{57348, 0},
 	{57344, 1},
@@ -857,30 +859,30 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{6, 0},
 	{57352, 0},
 	// Event Detection
-	{57348, 0},
-	{57344, 1},
-	{49, 0},
-	{57348, 1},
-	{49, 0},
-	{57344, 0},
-	{312, 0},
-	{57349, 0},
-	{313, 0},
+	{57348, 0}, // Bank 1
+	{57344, 1}, // Context A
+	{49, 0}, // EN_EVENT_DETECTION
+	{57348, 1}, // Context B
+	{49, 1}, // EN_EVENT_DETECTION
+	{57344, 0}, // BANK 0, for both Context A and B
+	{312, 1}, // EN_AUTO_CNTXT_SWITCH
+	{57349, 0}, // AUTO_SWITCHTO_CNTXT
+	{313, 0}, // TILE_XSTART
 	{314, 0},
-	{315, 150},
-	{316, 0},
+	{315, 150}, // TILE_WIDTH
+	{316, 0}, // TILE_YSTART
 	{317, 0},
-	{318, 160},
-	{319, 6},
-	{320, 1},
-	{321, 20},
-	{322, 1},
-	{323, 0},
+	{318, 160}, // TILE_HEIGHT
+	{319, 6}, // TILE_DISCARD_NR_BITS
+	{320, 1}, // MIN_FLAGGED_TILES
+	{321, 20}, // MAX_FLAGGED_TILES
+	{322, 1}, // TILE_THRESHOLD
+	{323, 0}, // TILE_MIN_THRESHOLD
 	{324, 0},
-	{325, 0},
+	{325, 0}, // TILE_DISABLE_MASK
 	{326, 0},
 	{327, 0},
-	{328, 0},
+	{328, 0}, // CPY_TILES_INTERVAL
 	// Image Statistics
 	{57348, 0},
 	{57344, 1},
@@ -1374,6 +1376,7 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	const u32 min_exposure = MIRA050_EXPOSURE_MIN_US;
 	u32 max_exposure = mira050->exposure->maximum * MIRA050_MIN_ROW_LENGTH_US;
 	u32 ret = 0;
+	u8 current_active_context = 0;
 
 	if (exposure < min_exposure) {
 		exposure = min_exposure;
@@ -1382,7 +1385,9 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 		exposure = max_exposure;
 	}
 
-	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
+	/* Only write to current active context */
+	ret = mira050_read(mira050, MIRA050_CURRENT_ACTIVE_CONTEXT, &current_active_context);
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, current_active_context);
 	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
 	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
 	if (ret) {
