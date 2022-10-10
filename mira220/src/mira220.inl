@@ -24,6 +24,24 @@
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
 
+/*
+ * Introduce new v4l2 control
+ */
+#include <linux/v4l2-controls.h>
+#define AMS_CAMERA_CID_BASE		(V4L2_CTRL_CLASS_CAMERA | 0x2000)
+#define AMS_CAMERA_CID_MIRA_REG_W	(AMS_CAMERA_CID_BASE+0)
+#define AMS_CAMERA_CID_MIRA_REG_R	(AMS_CAMERA_CID_BASE+1)
+
+/* Most significant Byte is flag, and most significant bit is unused. */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_FOR_READ    0b00000001
+/* When sleep bit is set, the other 3 Bytes is sleep values in us. */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_SLEEP_US    0b00000010
+/* Bit 3&4 of flag are combined to specify I2C dev (default is Mira) */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL     0b00001100
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_MIRA    0b00000000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_PMIC    0b00000100
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_TBD     0b00001000
+
 #define MIRA220_NATIVE_WIDTH			1600U
 #define MIRA220_NATIVE_HEIGHT			1400U
 
@@ -209,6 +227,16 @@ struct mira220_reg_list {
 	const struct mira220_reg *regs;
 };
 
+struct mira220_v4l2_reg {
+	u32 val;
+};
+
+struct mira220_v4l2_reg_list {
+	unsigned int num_of_regs;
+	struct mira220_v4l2_reg *regs;
+};
+
+
 /* Mode : resolution and related config&values */
 struct mira220_mode {
 	/* Frame width */
@@ -227,6 +255,15 @@ struct mira220_mode {
 	u32 hblank;
 	u32 code;
 };
+
+// Allocate a buffer to store custom reg write
+#define AMS_CAMERA_CID_MIRA220_REG_W_BUF_SIZE	2048
+static struct mira220_v4l2_reg s_ctrl_mira220_reg_w_buf[AMS_CAMERA_CID_MIRA220_REG_W_BUF_SIZE];
+static struct mira220_v4l2_reg_list reg_list_s_ctrl_mira220_reg_w_buf = {
+	.num_of_regs = 0,
+        .regs = s_ctrl_mira220_reg_w_buf,
+};
+
 
 // 1600_1400_30fps_12b_2lanes
 static const struct mira220_reg full_1600_1400_30fps_12b_2lanes_reg[] = {
@@ -1831,6 +1868,12 @@ struct mira220 {
 	struct v4l2_ctrl *hblank;
 	struct v4l2_ctrl *exposure;
 	struct v4l2_ctrl *gain;
+	// custom v4l2 control
+	struct v4l2_ctrl *mira220_reg_w;
+	struct v4l2_ctrl *mira220_reg_r;
+	u16 mira220_reg_w_cached_addr;
+	u8 mira220_reg_w_cached_flag;
+
 
 	/* Current mode */
 	const struct mira220_mode *mode;
@@ -1964,6 +2007,116 @@ static int mira220_write_regs(struct mira220 *mira220,
 
 	return 0;
 }
+
+static int mira220pmic_write(struct i2c_client *client, u8 reg, u8 val)
+{
+	int ret;
+	unsigned char data[2] = { reg & 0xff, val};
+
+	ret = i2c_master_send(client, data, 2);
+	/*
+	 * Writing the wrong number of bytes also needs to be flagged as an
+	 * error. Success needs to produce a 0 return code.
+	 */
+	if (ret == 2) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+static int mira220_v4l2_reg_w(struct mira220 *mira220, u32 value) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira220->sd);
+	u32 ret = 0;
+
+	u16 reg_addr = (value >> 8) & 0xFFFF;
+	u8 reg_val = value & 0xFF;
+	u8 reg_flag = (value >> 24) & 0xFF;
+
+	// printk(KERN_INFO "[MIRA220]: %s reg_flag: 0x%02X; reg_addr: 0x%04X; reg_val: 0x%02X.\n",
+	// 		__func__, reg_flag, reg_addr, reg_val);
+
+	if (reg_flag & AMS_CAMERA_CID_MIRA220_REG_FLAG_SLEEP_US) {
+		// If it is for sleep, combine all 24 bits of reg_addr and reg_val as sleep us.
+		u32 sleep_us_val = value & 0x00FFFFFF;
+		// Sleep range needs an interval, default to 1/8 of the sleep value.
+		u32 sleep_us_interval = sleep_us_val >> 3;
+		printk(KERN_INFO "[MIRA220]: %s sleep_us: %u.\n", __func__, sleep_us_val);
+		usleep_range(sleep_us_val, sleep_us_val + sleep_us_interval);
+	} else if (reg_flag & AMS_CAMERA_CID_MIRA220_REG_FLAG_FOR_READ) {
+		// If it is for read, skip reagister write, cache addr and flag for read.
+		mira220->mira220_reg_w_cached_addr = reg_addr;
+		mira220->mira220_reg_w_cached_flag = reg_flag;
+	} else {
+		// If it is for write, select which I2C device by the flag "I2C_SEL".
+		if ((reg_flag & AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_MIRA) {
+			// Writing the actual Mira220 register
+			// printk(KERN_INFO "[MIRA220]: %s write reg_addr: 0x%04X; reg_val: 0x%02X.\n", __func__, reg_addr, reg_val);
+			ret = mira220_write(mira220, reg_addr, reg_val);
+			if (ret) {
+				dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_W reg_addr %X.\n", reg_addr);
+				return -EINVAL;
+			}
+		} else if ((reg_flag & AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_PMIC) {
+			// Write PMIC, with 8-bit reg_addr.
+			ret = mira220pmic_write(mira220->pmic_client, (u8)(reg_addr & 0xFF), reg_val);
+		}
+	}
+
+	return 0;
+}
+
+static int mira220_v4l2_reg_r(struct mira220 *mira220, u32 *value) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira220->sd);
+	u32 ret = 0;
+
+	u16 reg_addr = mira220->mira220_reg_w_cached_addr;
+	u8 reg_flag = mira220->mira220_reg_w_cached_flag;
+	u8 reg_val = 0;
+
+	*value = 0;
+
+	ret = mira220_read(mira220, reg_addr, &reg_val);
+	if (ret) {
+		dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_R reg_addr %X.\n", reg_addr);
+		return -EINVAL;
+	}
+	// Return 32-bit value that includes flags, addr, and register value
+	*value = ((u32)reg_flag << 24) | ((u32)reg_addr << 8) | (u32)reg_val;
+
+	// printk(KERN_INFO "[MIRA220]: mira220_v4l2_reg_r() reg_flag: 0x%02X; reg_addr: 0x%04X, reg_val: 0x%02X.\n",
+	// 		reg_flag, reg_addr, reg_val);
+
+	return 0;
+}
+
+
+/* Write a list of v4l2 registers */
+static int mira220_write_v4l2_regs(struct mira220 *mira220,
+				const struct mira220_v4l2_reg *regs, u32 len)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira220->sd);
+	unsigned int i;
+	int ret;
+
+	for (i = 0; i < len; i++) {
+		ret = mira220_v4l2_reg_w(mira220, regs[i].val);
+		if (ret) {
+			dev_err_ratelimited(&client->dev,
+					    "Failed to write v4l2 reg value 0x%8.8x. error = %d\n",
+					    regs[i].val, ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 
 // Returns the maximum exposure time in row_length (reg value).
 // Calculation is baded on Mira220 datasheet Section 9.2.
@@ -2188,8 +2341,12 @@ static int mira220_set_ctrl(struct v4l2_ctrl *ctrl)
 	 * Applying V4L2 control value only happens
 	 * when power is up for streaming
 	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0)
+	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+		dev_info(&client->dev,
+                         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
+                         ctrl->id, ctrl->val);
 		return 0;
+	}
 
 	switch (ctrl->id) {
 	case V4L2_CID_ANALOGUE_GAIN:
@@ -2228,9 +2385,132 @@ static int mira220_set_ctrl(struct v4l2_ctrl *ctrl)
 	return ret;
 }
 
+static int mira220_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mira220 *mira220 =
+		container_of(ctrl->handler, struct mira220, ctrl_handler);
+	struct i2c_client *client = v4l2_get_subdevdata(&mira220->sd);
+	int ret = 0;
+
+	// printk(KERN_INFO "[MIRA220]: mira220_s_ctrl() id: %X value: %X.\n", ctrl->id, ctrl->val);
+
+	/*
+	 * Applying V4L2 control value only happens
+	 * when power is up for streaming
+	 */
+	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+		struct mira220_v4l2_reg_list *reg_list;
+		reg_list = &reg_list_s_ctrl_mira220_reg_w_buf;
+		if (ctrl->id == AMS_CAMERA_CID_MIRA_REG_W &&
+		    reg_list->num_of_regs < AMS_CAMERA_CID_MIRA220_REG_W_BUF_SIZE) {
+			int buf_idx = reg_list->num_of_regs;
+			u32 value = ctrl->val;
+			reg_list->regs[buf_idx].val = value;
+			reg_list->num_of_regs++;
+		}
+		// Below is optional warning
+		// dev_info(&client->dev,
+                //         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
+                //         ctrl->id, ctrl->val);
+		return 0;
+	}
+
+	switch (ctrl->id) {
+	case AMS_CAMERA_CID_MIRA_REG_W:
+		ret = mira220_v4l2_reg_w(mira220, ctrl->val);
+		break;
+	default:
+		dev_info(&client->dev,
+			 "set ctrl(id:0x%x,val:0x%x) is not handled\n",
+			 ctrl->id, ctrl->val);
+		ret = -EINVAL;
+		break;
+	}
+
+	pm_runtime_put(&client->dev);
+
+	// TODO: FIXIT
+	return ret;
+}
+
+static int mira220_g_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mira220 *mira220 =
+		container_of(ctrl->handler, struct mira220, ctrl_handler);
+	struct i2c_client *client = v4l2_get_subdevdata(&mira220->sd);
+	int ret = 0;
+
+	// printk(KERN_INFO "[MIRA220]: mira220_g_ctrl() id: %X.\n", ctrl->id);
+
+	/*
+	 * Applying V4L2 control value only happens
+	 * when power is up for streaming
+	 */
+	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+		dev_info(&client->dev,
+                        "device in use, ctrl(id:0x%x) is not handled\n",
+                        ctrl->id);
+		return 0;
+	}
+
+	switch (ctrl->id) {
+	case AMS_CAMERA_CID_MIRA_REG_R:
+		ret = mira220_v4l2_reg_r(mira220, (u32 *)&ctrl->cur.val);
+		ctrl->val = ctrl->cur.val;
+		break;
+	default:
+		dev_info(&client->dev,
+			 "get ctrl(id:0x%x) is not handled\n",
+			 ctrl->id);
+		ret = -EINVAL;
+		break;
+	}
+
+	pm_runtime_put(&client->dev);
+
+	// TODO: FIXIT
+	return ret;
+}
+
+
 static const struct v4l2_ctrl_ops mira220_ctrl_ops = {
 	.s_ctrl = mira220_set_ctrl,
 };
+
+static const struct v4l2_ctrl_ops mira220_custom_ctrl_ops = {
+	.g_volatile_ctrl = mira220_g_ctrl,
+	.s_ctrl = mira220_s_ctrl,
+};
+
+
+/* list of custom v4l2 ctls */
+static struct v4l2_ctrl_config custom_ctrl_config_list[] = {
+	/* Do not change the name field for the controls! */
+	{
+		.ops = &mira220_custom_ctrl_ops,
+		.id = AMS_CAMERA_CID_MIRA_REG_W,
+		.name = "mira_reg_w",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = 0,
+		.min = 0,
+		.max = 0x7FFFFFFF,
+		.def = 0,
+		.step = 1,
+	},
+	{
+		.ops = &mira220_custom_ctrl_ops,
+		.id = AMS_CAMERA_CID_MIRA_REG_R,
+		.name = "mira_reg_r",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = 0,
+		.min = 0,
+		.max = 0x7FFFFFFF,
+		.def = 0,
+		.step = 1,
+	},
+
+};
+
 
 // This function should enumerate all the media bus formats for the requested pads. If the requested
 // format index is beyond the number of avaialble formats it shall return -EINVAL;
@@ -2532,6 +2812,7 @@ static int mira220_start_streaming(struct mira220 *mira220)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira220->sd);
 	const struct mira220_reg_list *reg_list;
+	const struct mira220_v4l2_reg_list *reg_v4l2_list;
 	int ret;
 
 	printk(KERN_INFO "[MIRA220]: Entering start streaming function.\n");
@@ -2575,6 +2856,15 @@ static int mira220_start_streaming(struct mira220 *mira220)
 	printk(KERN_INFO "[MIRA220]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
 	if (ret)
 		goto err_rpm_put;
+
+	reg_v4l2_list = &reg_list_s_ctrl_mira220_reg_w_buf;
+	printk(KERN_INFO "[MIRA220]: Writing %d regs from AMS_CAMERA_CID_MIRA_REG_W.\n", reg_v4l2_list->num_of_regs);
+	ret = mira220_write_v4l2_regs(mira220, reg_v4l2_list->regs, reg_v4l2_list->num_of_regs);
+        if (ret) {
+                dev_err(&client->dev, "%s failed to set mode\n", __func__);
+                goto err_rpm_put;
+        }
+	reg_list_s_ctrl_mira220_reg_w_buf.num_of_regs = 0;
 
 	printk(KERN_INFO "[MIRA220]: Writing start streaming regs.\n");
 
@@ -2849,10 +3139,14 @@ static int mira220_init_controls(struct mira220 *mira220)
 	struct v4l2_ctrl_handler *ctrl_hdlr;
 	struct v4l2_fwnode_device_properties props;
 	int ret;
+	struct v4l2_ctrl_config *mira220_reg_w;
+	struct v4l2_ctrl_config *mira220_reg_r;
+
 	u32 max_exposure = 0;
 
 	ctrl_hdlr = &mira220->ctrl_handler;
-	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 11);
+	/* v4l2_ctrl_handler_init gives a hint/guess of the number of v4l2_ctrl_new */
+	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 16);
 	if (ret)
 		return ret;
 
@@ -2928,6 +3222,18 @@ static int mira220_init_controls(struct mira220 *mira220)
 				     V4L2_CID_TEST_PATTERN,
 				     ARRAY_SIZE(mira220_test_pattern_menu) - 1,
 				     0, 0, mira220_test_pattern_menu);
+	/*
+	 * Custom op
+	 */
+	mira220_reg_w = &custom_ctrl_config_list[0];
+	printk(KERN_INFO "[MIRA220]: %s AMS_CAMERA_CID_MIRA_REG_W %X.\n", __func__, AMS_CAMERA_CID_MIRA_REG_W);
+	mira220->mira220_reg_w = v4l2_ctrl_new_custom(ctrl_hdlr, mira220_reg_w, NULL);
+
+	mira220_reg_r = &custom_ctrl_config_list[1];
+	printk(KERN_INFO "[MIRA220]: %s AMS_CAMERA_CID_MIRA_REG_R %X.\n", __func__, AMS_CAMERA_CID_MIRA_REG_R);
+	mira220->mira220_reg_r = v4l2_ctrl_new_custom(ctrl_hdlr, mira220_reg_r, NULL);
+	if (mira220->mira220_reg_r)
+		mira220->mira220_reg_r->flags |= (V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY);
 
 	if (ctrl_hdlr->error) {
 		ret = ctrl_hdlr->error;
@@ -3046,28 +3352,6 @@ static int mira220pmic_read(struct i2c_client *client, u8 reg, u8 *val)
 	return ret;
 }
 
-
-static int mira220pmic_write(struct i2c_client *client, u8 reg, u8 val)
-{
-	int ret;
-	unsigned char data[2] = { reg & 0xff, val};
-
-	ret = i2c_master_send(client, data, 2);
-	/*
-	 * Writing the wrong number of bytes also needs to be flagged as an
-	 * error. Success needs to produce a 0 return code.
-	 */
-	if (ret == 2) {
-		ret = 0;
-	} else {
-		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-				__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-	}
-
-	return ret;
-}
 
 static int mira220pmic_init_controls(struct i2c_client *client)
 {
