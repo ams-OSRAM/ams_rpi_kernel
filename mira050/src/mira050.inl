@@ -29,8 +29,8 @@
  */
 #include <linux/v4l2-controls.h>
 #define AMS_CAMERA_CID_BASE		(V4L2_CTRL_CLASS_CAMERA | 0x2000)
-#define AMS_CAMERA_CID_MIRA050_REG_W	(AMS_CAMERA_CID_BASE+0)
-#define AMS_CAMERA_CID_MIRA050_REG_R	(AMS_CAMERA_CID_BASE+1)
+#define AMS_CAMERA_CID_MIRA_REG_W	(AMS_CAMERA_CID_BASE+0)
+#define AMS_CAMERA_CID_MIRA_REG_R	(AMS_CAMERA_CID_BASE+1)
 
 /* Most significant Byte is flag, and most significant bit is unused. */
 #define AMS_CAMERA_CID_MIRA050_REG_FLAG_FOR_READ    0b00000001
@@ -973,11 +973,11 @@ static const struct mira050_mode supported_modes[] = {
 		},
 		.reg_list_pre_soft_reset = {
 			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_pre_soft_reset),
-			.regs = (struct mira050_reg *)full_576_768_60fps_12b_1lane_reg_pre_soft_reset,
+			.regs = full_576_768_60fps_12b_1lane_reg_pre_soft_reset,
 		},
 		.reg_list_post_soft_reset = {
 			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_post_soft_reset),
-			.regs = (struct mira050_reg *)full_576_768_60fps_12b_1lane_reg_post_soft_reset,
+			.regs = full_576_768_60fps_12b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
 		.hblank = 0, // TODO
@@ -1206,8 +1206,8 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 	u8 reg_val = value & 0xFF;
 	u8 reg_flag = (value >> 24) & 0xFF;
 
-	printk(KERN_INFO "[MIRA050]: %s reg_flag: 0x%02X; reg_addr: 0x%04X; reg_val: 0x%02X.\n",
-			__func__, reg_flag, reg_addr, reg_val);
+	// printk(KERN_INFO "[MIRA050]: %s reg_flag: 0x%02X; reg_addr: 0x%04X; reg_val: 0x%02X.\n",
+	// 		__func__, reg_flag, reg_addr, reg_val);
 
 	if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_SLEEP_US) {
 		// If it is for sleep, combine all 24 bits of reg_addr and reg_val as sleep us.
@@ -1233,7 +1233,7 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 				} else {
 					bank = 0;
 				}
-				printk(KERN_INFO "[MIRA050]: %s select bank: %u.\n", __func__, bank);
+				// printk(KERN_INFO "[MIRA050]: %s select bank: %u.\n", __func__, bank);
 				ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, bank);
 				if (ret) {
 					dev_err(&client->dev, "Error setting BANK_SEL_REG.");
@@ -1245,7 +1245,7 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 				} else {
 					context = 0;
 				}
-				printk(KERN_INFO "[MIRA050]: %s select context: %u.\n", __func__, context);
+				// printk(KERN_INFO "[MIRA050]: %s select context: %u.\n", __func__, context);
 				ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, context);
 				if (ret) {
 					dev_err(&client->dev, "Error setting RW_CONTEXT.");
@@ -1253,10 +1253,10 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 				}
 			}
 			// Writing the actual Mira050 register
-			printk(KERN_INFO "[MIRA050]: %s write reg_addr: 0x%04X; reg_val: 0x%02X.\n", __func__, reg_addr, reg_val);
+			// printk(KERN_INFO "[MIRA050]: %s write reg_addr: 0x%04X; reg_val: 0x%02X.\n", __func__, reg_addr, reg_val);
 			ret = mira050_write(mira050, reg_addr, reg_val);
 			if (ret) {
-				dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA050_REG_W reg_addr %X.\n", reg_addr);
+				dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_W reg_addr %X.\n", reg_addr);
 				return -EINVAL;
 			}
 		} else if ((reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_PMIC) {
@@ -1290,7 +1290,7 @@ static int mira050_v4l2_reg_r(struct mira050 *mira050, u32 *value) {
 		} else {
 			bank = 0;
 		}
-		printk(KERN_INFO "[MIRA050]: %s select bank: %u.\n", __func__, bank);
+		// printk(KERN_INFO "[MIRA050]: %s select bank: %u.\n", __func__, bank);
 		ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, bank);
 		if (ret) {
 			dev_err(&client->dev, "Error setting BANK_SEL_REG.");
@@ -1302,7 +1302,7 @@ static int mira050_v4l2_reg_r(struct mira050 *mira050, u32 *value) {
 		} else {
 			context = 0;
 		}
-		printk(KERN_INFO "[MIRA050]: %s select context: %u.\n", __func__, context);
+		// printk(KERN_INFO "[MIRA050]: %s select context: %u.\n", __func__, context);
 		ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, context);
 		if (ret) {
 			dev_err(&client->dev, "Error setting RW_CONTEXT.");
@@ -1311,14 +1311,14 @@ static int mira050_v4l2_reg_r(struct mira050 *mira050, u32 *value) {
 	}
 	ret = mira050_read(mira050, reg_addr, &reg_val);
 	if (ret) {
-		dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA050_REG_R reg_addr %X.\n", reg_addr);
+		dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_R reg_addr %X.\n", reg_addr);
 		return -EINVAL;
 	}
 	// Return 32-bit value that includes flags, addr, and register value
 	*value = ((u32)reg_flag << 24) | ((u32)reg_addr << 8) | (u32)reg_val;
 
-	printk(KERN_INFO "[MIRA050]: mira050_v4l2_reg_r() reg_flag: 0x%02X; reg_addr: 0x%04X, reg_val: 0x%02X.\n",
-			reg_flag, reg_addr, reg_val);
+	// printk(KERN_INFO "[MIRA050]: mira050_v4l2_reg_r() reg_flag: 0x%02X; reg_addr: 0x%04X, reg_val: 0x%02X.\n",
+	// 		reg_flag, reg_addr, reg_val);
 
 	return 0;
 }
@@ -1376,7 +1376,6 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	const u32 min_exposure = MIRA050_EXPOSURE_MIN_US;
 	u32 max_exposure = mira050->exposure->maximum * MIRA050_MIN_ROW_LENGTH_US;
 	u32 ret = 0;
-	u8 current_active_context = 0;
 
 	if (exposure < min_exposure) {
 		exposure = min_exposure;
@@ -1385,10 +1384,12 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 		exposure = max_exposure;
 	}
 
-	/* Only write to current active context */
-	ret = mira050_read(mira050, MIRA050_CURRENT_ACTIVE_CONTEXT, &current_active_context);
-	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, current_active_context);
+	/* Write Bank 1 context 0 */
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
 	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
+	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
+	/* Write Bank 1 context 1 */
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 1);
 	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
 	if (ret) {
 		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", exposure);
@@ -1653,7 +1654,7 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
 
-	printk(KERN_INFO "[MIRA050]: mira050_s_ctrl() id: %X value: %X.\n", ctrl->id, ctrl->val);
+	// printk(KERN_INFO "[MIRA050]: mira050_s_ctrl() id: %X value: %X.\n", ctrl->id, ctrl->val);
 
 	/*
 	 * Applying V4L2 control value only happens
@@ -1662,7 +1663,7 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
 		struct mira050_v4l2_reg_list *reg_list;
 		reg_list = &reg_list_s_ctrl_mira050_reg_w_buf;
-		if (ctrl->id == AMS_CAMERA_CID_MIRA050_REG_W &&
+		if (ctrl->id == AMS_CAMERA_CID_MIRA_REG_W &&
 		    reg_list->num_of_regs < AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE) {
 			int buf_idx = reg_list->num_of_regs;
 			u32 value = ctrl->val;
@@ -1677,7 +1678,7 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 	}
 
 	switch (ctrl->id) {
-	case AMS_CAMERA_CID_MIRA050_REG_W:
+	case AMS_CAMERA_CID_MIRA_REG_W:
 		ret = mira050_v4l2_reg_w(mira050, ctrl->val);
 		break;
 	default:
@@ -1701,7 +1702,7 @@ static int mira050_g_ctrl(struct v4l2_ctrl *ctrl)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
 
-	printk(KERN_INFO "[MIRA050]: mira050_g_ctrl() id: %X.\n", ctrl->id);
+	// printk(KERN_INFO "[MIRA050]: mira050_g_ctrl() id: %X.\n", ctrl->id);
 
 	/*
 	 * Applying V4L2 control value only happens
@@ -1715,7 +1716,7 @@ static int mira050_g_ctrl(struct v4l2_ctrl *ctrl)
 	}
 
 	switch (ctrl->id) {
-	case AMS_CAMERA_CID_MIRA050_REG_R:
+	case AMS_CAMERA_CID_MIRA_REG_R:
 		ret = mira050_v4l2_reg_r(mira050, (u32 *)&ctrl->cur.val);
 		ctrl->val = ctrl->cur.val;
 		break;
@@ -1749,8 +1750,8 @@ static struct v4l2_ctrl_config custom_ctrl_config_list[] = {
 	/* Do not change the name field for the controls! */
 	{
 		.ops = &mira050_custom_ctrl_ops,
-		.id = AMS_CAMERA_CID_MIRA050_REG_W,
-		.name = "mira050_reg_w",
+		.id = AMS_CAMERA_CID_MIRA_REG_W,
+		.name = "mira_reg_w",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = 0,
 		.min = 0,
@@ -1760,8 +1761,8 @@ static struct v4l2_ctrl_config custom_ctrl_config_list[] = {
 	},
 	{
 		.ops = &mira050_custom_ctrl_ops,
-		.id = AMS_CAMERA_CID_MIRA050_REG_R,
-		.name = "mira050_reg_r",
+		.id = AMS_CAMERA_CID_MIRA_REG_R,
+		.name = "mira_reg_r",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = 0,
 		.min = 0,
@@ -2107,7 +2108,7 @@ static int mira050_start_streaming(struct mira050 *mira050)
 
 
 	reg_v4l2_list = &reg_list_s_ctrl_mira050_reg_w_buf;
-	printk(KERN_INFO "[MIRA050]: Writing %d regs from AMS_CAMERA_CID_MIRA050_REG_W.\n", reg_v4l2_list->num_of_regs);
+	printk(KERN_INFO "[MIRA050]: Writing %d regs from AMS_CAMERA_CID_MIRA_REG_W.\n", reg_v4l2_list->num_of_regs);
 	ret = mira050_write_v4l2_regs(mira050, reg_v4l2_list->regs, reg_v4l2_list->num_of_regs);
         if (ret) {
                 dev_err(&client->dev, "%s failed to set mode\n", __func__);
@@ -2419,11 +2420,11 @@ static int mira050_init_controls(struct mira050 *mira050)
 	 * Custom op
 	 */
 	mira050_reg_w = &custom_ctrl_config_list[0];
-	printk(KERN_INFO "[MIRA050]: %s AMS_CAMERA_CID_MIRA050_REG_W %X.\n", __func__, AMS_CAMERA_CID_MIRA050_REG_W);
+	printk(KERN_INFO "[MIRA050]: %s AMS_CAMERA_CID_MIRA_REG_W %X.\n", __func__, AMS_CAMERA_CID_MIRA_REG_W);
 	mira050->mira050_reg_w = v4l2_ctrl_new_custom(ctrl_hdlr, mira050_reg_w, NULL);
 
 	mira050_reg_r = &custom_ctrl_config_list[1];
-	printk(KERN_INFO "[MIRA050]: %s AMS_CAMERA_CID_MIRA050_REG_R %X.\n", __func__, AMS_CAMERA_CID_MIRA050_REG_R);
+	printk(KERN_INFO "[MIRA050]: %s AMS_CAMERA_CID_MIRA_REG_R %X.\n", __func__, AMS_CAMERA_CID_MIRA_REG_R);
 	mira050->mira050_reg_r = v4l2_ctrl_new_custom(ctrl_hdlr, mira050_reg_r, NULL);
 	if (mira050->mira050_reg_r)
 		mira050->mira050_reg_r->flags |= (V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY);
@@ -2445,14 +2446,6 @@ static int mira050_init_controls(struct mira050 *mira050)
 		goto error;
 
 	mira050->sd.ctrl_handler = ctrl_hdlr;
-
-	/* Apply customized values from user */
-	/*
-	ret =  __v4l2_ctrl_handler_setup(mira050->sd.ctrl_handler);
-	printk(KERN_INFO "[MIRA050]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
-	if (ret)
-		goto error;
-	*/
 
 	return 0;
 
