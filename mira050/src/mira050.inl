@@ -1946,7 +1946,7 @@ static int mira050_set_pad_format(struct v4l2_subdev *sd,
 									   mira050->mode->height,
 									   mira050->mode->vblank);
 			default_exp = MIRA050_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : MIRA050_DEFAULT_EXPOSURE_US;
-			rc = v4l2_ctrl_modify_range(mira050->exposure,
+			rc = __v4l2_ctrl_modify_range(mira050->exposure,
 						     mira050->exposure->minimum,
 						     (int)( 1 + max_exposure / MIRA050_MIN_ROW_LENGTH_US), mira050->exposure->step,
 						     (int)( 1 + default_exp / MIRA050_MIN_ROW_LENGTH_US));
@@ -1955,7 +1955,7 @@ static int mira050_set_pad_format(struct v4l2_subdev *sd,
 			}
 
 			// Set the current vblank value
-			rc = v4l2_ctrl_s_ctrl(mira050->vblank, mira050->mode->vblank);
+			rc = __v4l2_ctrl_s_ctrl(mira050->vblank, mira050->mode->vblank);
 			if (rc) {
 				dev_err(&client->dev, "Error setting vblank value to %u",
 					mira050->mode->vblank);
