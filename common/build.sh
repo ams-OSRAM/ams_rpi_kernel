@@ -183,7 +183,9 @@ run_install_dtbs() {
 
 run_install_kernel() {
     run_command_as_su mkdir -p "${INSTALL_DIR}/boot"
-    run_command_as_su_no_fail if [ -e "${INSTALL_DIR}/boot/$KERNEL.img" ] ; then cp "${INSTALL_DIR}/boot/$KERNEL.img" "${INSTALL_DIR}/boot/${KERNEL}-backup.img"; fi
+    if [ -e ${INSTALL_DIR}/boot/$KERNEL.img ]; then
+	    run_command_as_su_no_fail cp "${INSTALL_DIR}/boot/$KERNEL.img" "${INSTALL_DIR}/boot/${KERNEL}-backup.img"
+    fi
     run_command_as_su cp "${BUILD_DIR}/arch/${ARCH}/boot/${IMG_NAME}" "${INSTALL_DIR}/boot/${KERNEL}.img"
 }
 
