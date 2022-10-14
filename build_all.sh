@@ -9,11 +9,14 @@ echo "${PWD}"
 TAG="1.20220830"
 # Previous kernel version is raspios_arm64-2022-04-07
 # TAG="1.20220331"
-# Check if the unzipped directory of the Linux source exist; Otherwise download it.
+# Check if the unzipped directory of the Linux source exist; Otherwise create it from cache or download it.
 if [[ ! -d $PWD/linux-${TAG} ]]
 then
-	echo "Downloading Raspberry Pi Linux repo tag ${TAG}"
-	wget https://github.com/raspberrypi/linux/archive/refs/tags/${TAG}.tar.gz
+	if [[ ! -e ./${TAG}.tar.gz ]]
+	then
+		echo "Downloading Raspberry Pi Linux repo tag ${TAG}"
+		wget https://github.com/raspberrypi/linux/archive/refs/tags/${TAG}.tar.gz
+	fi
 	tar -zxf ./${TAG}.tar.gz
 fi
 ln -sf $PWD/linux-${TAG} linux
