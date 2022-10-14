@@ -16,14 +16,31 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
+
+cache: # Cache external files to avoid download
+  paths:
+  - 1.20220830.tar.gz
+
 stages:          # List of stages for jobs, and their order of execution
+  - clean
   - build
 
-build-job:       # This job runs in the build stage, which runs first.
+clean-job: # This job runs first, to clean up previous builds, before any git clone/fetch
+  stage: clean
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - echo "Changing owner of files in build directory."
+    - sudo chown -R gitlab-runner:gitlab-runner .
+    - echo "Cleaning build folder."
+    - sudo rm -rf ./build
+
+build-job:
   stage: build
+  variables:
+    GIT_STRATEGY: clone
   script:
     - echo "Compiling the code..."
     - ./test_docker_x86.sh
     - echo "Compile complete."
-
 
