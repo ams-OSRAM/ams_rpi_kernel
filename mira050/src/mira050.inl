@@ -54,8 +54,7 @@
 #define MIRA050_PIXEL_ARRAY_WIDTH		576U
 #define MIRA050_PIXEL_ARRAY_HEIGHT		768U
 
-// #define MIRA050_ANALOG_GAIN_REG			0x400A
-#define MIRA050_ANALOG_GAIN_MAX			1
+#define MIRA050_ANALOG_GAIN_MAX			2
 #define MIRA050_ANALOG_GAIN_MIN			1
 #define MIRA050_ANALOG_GAIN_STEP		1
 #define MIRA050_ANALOG_GAIN_DEFAULT		MIRA050_ANALOG_GAIN_MIN
@@ -165,8 +164,8 @@
 #define MIRA050_LUT_DEL_008			66
 #define MIRA050_GRAN_TG				34
 #define MIRA050_DATA_RATE			1000 // Mbit/s
-// ROW_LENGTH register is 0x0032, with value 2417.
-#define MIRA050_MIN_ROW_LENGTH			2417
+// ROW_LENGTH register is 0x0032, with value 3069.
+#define MIRA050_MIN_ROW_LENGTH			3069
 // Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
 #define MIRA050_MIN_ROW_LENGTH_US		(MIRA050_MIN_ROW_LENGTH * 8 / MIRA050_DATA_RATE)
 // Mira050 EXP_TIME registe is in microsecond. V4L2 exposure value is in row time.
@@ -269,6 +268,9 @@ struct mira050_mode {
 
 	u32 vblank;
 	u32 hblank;
+
+	/* bit_depth needed for analog gain selection */
+	u8 bit_depth;
 };
 
 // Allocate a buffer to store custom reg write
@@ -820,12 +822,12 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{19, 0},
 	{20, 0},
 	{21, 0},
-	{57348, 0},
-	{50, 9},
-	{51, 122},
-	{57348, 1},
-	{50, 9},
-	{51, 122},
+	{57348, 0}, // Context A
+	{50, 11}, // ROW_LENGTH
+	{51, 253},
+	{57348, 1}, // Context B
+	{50, 11}, // ROW_LENGTH
+	{51, 253},
 	{57348, 0}, // Context A
 	{7, 1},
 	{8, 0}, // TARGET_FRAME_TIME 60 fps
@@ -922,6 +924,157 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{29, 0},
 };
 
+static const struct mira050_reg partial_analog_gain_x1_12bit[] = {
+	// Analog Gain
+	{57344, 0},
+	{443, 200},
+	{444, 192},
+	{208, 0},
+	{496, 8},
+	{499, 2},
+	{366, 206},
+	{370, 0},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 206},
+	{372, 0},
+	{373, 32},
+	{395, 3},
+	{396, 82},
+	{397, 2},
+	{398, 86},
+	{399, 11},
+	{400, 207},
+	{494, 21},
+	{495, 106},
+	{418, 5},
+	{419, 221},
+	{799, 5},
+	{800, 230},
+	{422, 6},
+	{423, 116},
+	{420, 11},
+	{421, 70},
+	{801, 11},
+	{802, 79},
+	{424, 11},
+	{425, 221},
+	{416, 0},
+	{417, 177},
+	{434, 0},
+	{435, 201},
+	{432, 0},
+	{433, 196},
+	{428, 0},
+	{429, 207},
+	// Black Level
+	{57344, 0},
+	{403, 6},
+	{404, 36},
+};
+
+static const struct mira050_reg partial_analog_gain_x2_12bit[] = {
+	// Analog Gain
+	{57344, 0},
+	{443, 175},
+	{444, 167},
+	{208, 0},
+	{496, 8},
+	{499, 1},
+	{366, 255},
+	{370, 77},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 255},
+	{372, 77},
+	{373, 63},
+	{395, 5},
+	{396, 74},
+	{397, 2},
+	{398, 86},
+	{399, 14},
+	{400, 68},
+	{494, 21},
+	{495, 6},
+	{418, 6},
+	{419, 65},
+	{799, 6},
+	{800, 74},
+	{422, 6},
+	{423, 216},
+	{420, 12},
+	{421, 197},
+	{801, 12},
+	{802, 206},
+	{424, 13},
+	{425, 92},
+	{416, 0},
+	{417, 219},
+	{434, 0},
+	{435, 243},
+	{432, 0},
+	{433, 238},
+	{428, 0},
+	{429, 249},
+	// Black Level
+	{57344, 0},
+	{403, 10},
+	{404, 20},
+};
+
+static const struct mira050_reg partial_analog_gain_x4_12bit[] = {
+	// Analog Gain
+	{57344, 0},
+	{443, 153},
+	{444, 145},
+	{208, 0},
+	{496, 8},
+	{499, 0},
+	{366, 255},
+	{370, 255},
+	{371, 46},
+	{367, 255},
+	{368, 255},
+	{369, 255},
+	{372, 255},
+	{373, 171},
+	{395, 8},
+	{396, 202},
+	{397, 2},
+	{398, 86},
+	{399, 18},
+	{400, 190},
+	{494, 20},
+	{495, 162},
+	{418, 6},
+	{419, 165},
+	{799, 6},
+	{800, 174},
+	{422, 7},
+	{423, 60},
+	{420, 15},
+	{421, 39},
+	{801, 15},
+	{802, 48},
+	{424, 15},
+	{425, 190},
+	{416, 1},
+	{417, 37},
+	{434, 1},
+	{435, 61},
+	{432, 1},
+	{433, 56},
+	{428, 1},
+	{429, 67},
+	// Black Level
+	{57344, 0},
+	{403, 17},
+	{404, 20},
+};
+
+
 static const char * const mira050_test_pattern_menu[] = {
 	"Disabled",
 	"Fixed Data",
@@ -981,6 +1134,7 @@ static const struct mira050_mode supported_modes[] = {
 		},
 		.vblank = 2866,
 		.hblank = 0, // TODO
+		.bit_depth = 12,
 	},
 };
 
@@ -1358,17 +1512,39 @@ static u32 mira050_calculate_max_exposure_time(u32 row_length, u32 vsize,
 
 static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	u32 num_of_regs;
 	u32 ret = 0;
 
-	//if ((gain < MIRA050_ANALOG_GAIN_MIN) || (gain > MIRA050_ANALOG_GAIN_MAX)) {
-	//	return -EINVAL;
-	//}
+	// Select partial register sequence according to bit depth
+	if (mira050->mode->bit_depth == 12) {
+		// Select register sequence according to gain value
+		if (gain == 1) {
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x1 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x1_12bit, num_of_regs);
+		} else if (gain == 2) {
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x2 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x2_12bit, num_of_regs);
+		} else if (gain == 4) {
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x4 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x4_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x4_12bit, num_of_regs);
+		} else {
+			// Other gains are not supported
+			printk(KERN_INFO "[MIRA050]: Ignore analog gain %u in 12 bit mode", gain);
+		}
+	} else {
+		// Other bit depths are not supported
+		printk(KERN_INFO "[MIRA050]: Ignore analog gain in %u bit mode", mira050->mode->bit_depth);
+	}
 
-	// TODO: There is no easy way to change analog gain by a single value.
-	// ret = mira050_write(mira050, MIRA050_ANALOG_GAIN_REG, reg_value);
-	dev_err_ratelimited(&client->dev, "Analog gain is fixed to 1. Ignore analog gain of %d",
-			gain);
-	return ret;
+	if (ret) {
+		dev_err(&client->dev, "%s failed to set mode\n", __func__);
+	}
+
+	// Always return 0 even if it fails
+	return 0;
 }
 
 static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
