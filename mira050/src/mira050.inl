@@ -55,7 +55,7 @@
 #define MIRA050_PIXEL_ARRAY_HEIGHT		768U
 
 #define MIRA050_ANALOG_GAIN_MAX			2
-#define MIRA050_ANALOG_GAIN_MIN			1
+#define MIRA050_ANALOG_GAIN_MIN			0
 #define MIRA050_ANALOG_GAIN_STEP		1
 #define MIRA050_ANALOG_GAIN_DEFAULT		MIRA050_ANALOG_GAIN_MIN
 
@@ -729,15 +729,15 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{53, 32},
 	{57348, 1},
 	{57388, 0},
-	{57389, 12},
+	{57389, 0},
 	{57390, 2},
-	{57391, 75},
+	{57391, 87},
 	{57392, 0},
 	{57381, 0},
 	{57386, 0},
 	{8233, 70},
 	{52, 1},
-	{53, 32},
+	{53, 44},	
 	// Vertical ROI
 	{57348, 0},
 	{57344, 1},
@@ -807,8 +807,8 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{57344, 1},
 	{14, 0},
 	{15, 0},
-	{16, 19},
-	{17, 136},
+	{16, 3},
+	{17, 232},
 	{18, 0},
 	{19, 0},
 	{20, 0},
@@ -816,8 +816,8 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{57348, 1},
 	{14, 0},
 	{15, 0},
-	{16, 19},
-	{17, 136},
+	{16, 3},
+	{17, 232},
 	{18, 0},
 	{19, 0},
 	{20, 0},
@@ -832,8 +832,8 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{7, 1},
 	{8, 0}, // TARGET_FRAME_TIME 60 fps
 	{9, 0},
-	{10, 65},
-	{11, 26},
+	{10, 78},
+	{11, 32},
 	{57348, 1}, // Context B
 	{7, 1},
 	{8, 0}, // TARGET_FRAME_TIME 2 fps
@@ -1510,43 +1510,6 @@ static u32 mira050_calculate_max_exposure_time(u32 row_length, u32 vsize,
 	return 	MIRA050_EXPOSURE_MAX_US;
 }
 
-static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
-	u32 num_of_regs;
-	u32 ret = 0;
-
-	// Select partial register sequence according to bit depth
-	if (mira050->mode->bit_depth == 12) {
-		// Select register sequence according to gain value
-		if (gain == 1) {
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x1 in 12 bit mode");
-			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
-			ret = mira050_write_regs(mira050, partial_analog_gain_x1_12bit, num_of_regs);
-		} else if (gain == 2) {
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x2 in 12 bit mode");
-			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
-			ret = mira050_write_regs(mira050, partial_analog_gain_x2_12bit, num_of_regs);
-		} else if (gain == 4) {
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x4 in 12 bit mode");
-			num_of_regs = ARRAY_SIZE(partial_analog_gain_x4_12bit);
-			ret = mira050_write_regs(mira050, partial_analog_gain_x4_12bit, num_of_regs);
-		} else {
-			// Other gains are not supported
-			printk(KERN_INFO "[MIRA050]: Ignore analog gain %u in 12 bit mode", gain);
-		}
-	} else {
-		// Other bit depths are not supported
-		printk(KERN_INFO "[MIRA050]: Ignore analog gain in %u bit mode", mira050->mode->bit_depth);
-	}
-
-	if (ret) {
-		dev_err(&client->dev, "%s failed to set mode\n", __func__);
-	}
-
-	// Always return 0 even if it fails
-	return 0;
-}
-
 static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
 	const u32 min_exposure = MIRA050_EXPOSURE_MIN_US;
@@ -1662,6 +1625,53 @@ static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
 	*/
 
 	return ret;
+}
+
+static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	u32 num_of_regs;
+	u32 ret = 0;
+	u32 wait_us = 20000;
+
+	// Select partial register sequence according to bit depth
+	if (mira050->mode->bit_depth == 12) {
+		// Select register sequence according to gain value
+		if (gain == 0) {
+			mira050_write_stop_streaming_regs(mira050);
+			usleep_range(wait_us, wait_us+100);
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x1 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x1_12bit, num_of_regs);
+			mira050_write_start_streaming_regs(mira050);
+		} else if (gain == 1) {
+			mira050_write_stop_streaming_regs(mira050);
+			usleep_range(wait_us, wait_us+100);
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x2 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x2_12bit, num_of_regs);
+			mira050_write_start_streaming_regs(mira050);
+		} else if (gain == 2) {
+			mira050_write_stop_streaming_regs(mira050);
+			usleep_range(wait_us, wait_us+100);
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x4 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x4_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x4_12bit, num_of_regs);
+			mira050_write_start_streaming_regs(mira050);
+		} else {
+			// Other gains are not supported
+			printk(KERN_INFO "[MIRA050]: Ignore analog gain %u in 12 bit mode", gain);
+		}
+	} else {
+		// Other bit depths are not supported
+		printk(KERN_INFO "[MIRA050]: Ignore analog gain in %u bit mode", mira050->mode->bit_depth);
+	}
+
+	if (ret) {
+		dev_err(&client->dev, "%s failed to set mode\n", __func__);
+	}
+
+	// Always return 0 even if it fails
+	return 0;
 }
 
 
