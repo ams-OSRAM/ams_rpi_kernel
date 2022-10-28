@@ -19,7 +19,22 @@
 ## If compiling natively on the raspberry pi
 - Clone or copy this git repo to the target RPI. Make sure the RPI has the prerequisites mentioned in the previous section.
 - Run `build_native.sh`. It builds the drivers and device trees into the Debian package, and then installs the Debian package to the local RPI.
-- The Debian package, with a name like `mira-driver_0.1.5-1_arm64.deb`, is built for a specific architecture (check via `dpkg --print-architecture`) and a specific kernel version (check via `uname -r`) of the RPI. If other RPIs have the same architecture and the same kernel version, users can simply copy the Debian package over to other RPIs and install the driver by two commands: `sudo dpkg -i mira-driver_0.1.5-1_arm64.deb` for installation and then `sudo depmod` for post-installation update.
+
+### Installing via a compiled Debian package
+The Debian package, with a name like `mira-driver_0.1.5-1_arm64.deb`, is built for a specific architecture (check via `dpkg --print-architecture`) and a specific kernel version (check via `uname -r`) of the RPI. If other RPIs have the same architecture and the same kernel version, users can simply copy the Debian package over to other RPIs and install the driver via three steps described below.
+
+Step 1: Issue the command below to move current version of Mira sensor device trees (if exist) to new file names. This step is needed because the next step (dpkg) can only create new files but cannot overwrite existing files on `boot` folder (FAT partition).
+```
+for file in `ls /boot/overlays/mira*.dtbo`; do echo "Moving ${file} to ${file}bak"; sudo mv ${file} ${file}bak; done
+```
+Step 2: Install the device trees and driver files via dpkg command.
+```
+sudo dpkg -i mira-driver_0.1.5-1_arm64.deb
+```
+Step 3: Perform post-installation update.
+```
+sudo depmod
+```
 
 ## Configuration
 - Post-installation, log on to the Raspberry Pi, add a new line to `/boot/config.txt`. Depending on whether Mira220 mono or Mira220 color or Mira050 mono is connected, this new line will be either `dtoverlay=mira220` for Mira220 mono, or `dtoverlay=mira220color` for Mira220 color, or `dtoverlay=mira050` for Mira050 mono (pick one and only one!). This line tells the RPI to load the corresponding driver at boot time.
