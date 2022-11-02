@@ -231,6 +231,12 @@
 #define MIRA050_BIAS_RG_MULT		0x01F3
 #define MIRA050_OFFSET_CLIPPING		0x0193
 
+#define MIRA050_OTP_COMMAND	0x0066
+#define MIRA050_OTP_ADDR	0x0067
+#define MIRA050_OTP_START	0x0064
+#define MIRA050_OTP_BUSY	0x0065
+#define MIRA050_OTP_DOUT	0x006C
+
 enum pad_types {
 	IMAGE_PAD,
 	METADATA_PAD,
@@ -1408,6 +1414,8 @@ struct mira050 {
 	const struct mira050_mode *mode;
 	/* current bit depth, may defer from mode->bit_depth */
 	u8 bit_depth;
+	/* OTP_CALIBRATION_VALUE stored in OTP memory */
+	u16 otp_cal_val;
 
 	/*
 	 * Mutex for serialized access:
@@ -1518,9 +1526,8 @@ static int mira050_write(struct mira050 *mira050, u16 reg, u8 val)
 
 /*
  * mira050 is big-endian: msb of val goes to lower reg addr
- * mira220 is little-endian: lsb of val goes to lower reg addr
  */
-static int mira050_write16(struct mira050 *mira050, u16 reg, u16 val)
+static int mira050_write_be16(struct mira050 *mira050, u16 reg, u16 val)
 {
        int ret;
        unsigned char data[4] = { reg >> 8, reg & 0xff, (val >> 8) & 0xff, val & 0xff };
@@ -1546,9 +1553,8 @@ static int mira050_write16(struct mira050 *mira050, u16 reg, u16 val)
 
 /*
  * mira050 is big-endian: msb of val goes to lower reg addr
- * mira220 is little-endian: lsb of val goes to lower reg addr
  */
-static int mira050_write32(struct mira050 *mira050, u16 reg, u32 val)
+static int mira050_write_be32(struct mira050 *mira050, u16 reg, u32 val)
 {
        int ret;
        unsigned char data[6] = { reg >> 8, reg & 0xff, (val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
@@ -1570,6 +1576,49 @@ static int mira050_write32(struct mira050 *mira050, u16 reg, u32 val)
 
        return ret;
 }
+
+/*
+ * mira050 OTP 32-bit val on I2C is big-endian. However, val content can be little-endian.
+ */
+static int mira050_read_be32(struct mira050 *mira050, u16 reg, u32 *val)
+{
+	int ret;
+	unsigned char data_w[2] = { reg >> 8, reg & 0xff };
+	/* Big-endian 32-bit buffer. */
+	unsigned char data_r[4];
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+
+	ret = i2c_master_send(client, data_w, 2);
+	/*
+	 * A negative return code, or sending the wrong number of bytes, both
+	 * count as an error.
+	 */
+	if (ret != 2) {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+			__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+		return ret;
+	}
+
+	ret = i2c_master_recv(client, data_r, 4);
+	*val = (u32)((data_r[0] << 24) | (data_r[1] << 16) | (data_r[2] << 8) | data_r[3]);
+	/*
+	 * The only return value indicating success is 4. Anything else, even
+	 * a non-negative value, indicates something went wrong.
+	 */
+	if (ret == 4) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
 
 /* Write a list of registers */
 static int mira050_write_regs(struct mira050 *mira050,
@@ -1598,6 +1647,40 @@ static int mira050_write_regs(struct mira050 *mira050,
 
 	return 0;
 }
+
+/*
+ * Read OTP memory: 8-bit addr and 32-bit value
+ */
+static int mira050_otp_read(struct mira050 *mira050, u8 addr, u32 *val)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	u8 busy_status = 1;
+	int poll_cnt = 0;
+	int poll_cnt_max = 10;
+	int ret;
+	mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+	mira050_write(mira050, MIRA050_OTP_COMMAND, 0);
+	mira050_write(mira050, MIRA050_OTP_ADDR, addr);
+	mira050_write(mira050, MIRA050_OTP_START, 1);
+	usleep_range(5, 10);
+	mira050_write(mira050, MIRA050_OTP_START, 0);
+	for (poll_cnt = 0; poll_cnt < poll_cnt_max; poll_cnt++) {
+		mira050_read(mira050, MIRA050_OTP_BUSY, &busy_status);
+		if (busy_status == 0) {
+			break;
+		}
+	}
+	if (poll_cnt < poll_cnt_max && busy_status == 0) {
+		ret = mira050_read_be32(mira050, MIRA050_OTP_DOUT, val);
+	} else {
+		dev_dbg(&client->dev, "%s: OTP memory busy, skip raeding addr: 0x%X\n",
+			__func__, addr);
+		ret = -EINVAL;
+	}
+
+	return ret;
+}
+
 
 /* Write PMIC registers, and can be reused to write microcontroller reg. */
 static int mira050pmic_write(struct i2c_client *client, u8 reg, u8 val)
@@ -1796,10 +1879,10 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	/* Write Bank 1 context 0 */
 	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
 	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
-	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
+	ret = mira050_write_be32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
 	/* Write Bank 1 context 1 */
 	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 1);
-	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
+	ret = mira050_write_be32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
 	if (ret) {
 		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", exposure);
 		return -EINVAL;
@@ -1936,10 +2019,17 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			u8 gdig_amp = fine_gain_lut_8bit_16x[gain].gdig_amp;
 			u8 rg_adcgain = fine_gain_lut_8bit_16x[gain].rg_adcgain;
 			u8 rg_mult = fine_gain_lut_8bit_16x[gain].rg_mult;
-			u16 otp_cal_val = 3000;
+			/* otp_cal_val should come from OTP, but OTP may have incorrect value. */
+			u16 otp_cal_val = mira050->otp_cal_val;
+			// u16 otp_cal_val = 2300;
 			u8 target_black_level = 32;
 			u16 adc_offset = 1700;
-			u16 offset_clipping = adc_offset + ((otp_cal_val - 2250) / 4) - (target_black_level * 16 / (gdig_amp + 1));
+			/* adc_offset_adjust only positive? */
+			int adc_offset_adjust = ((otp_cal_val - 2250) / 4) - (target_black_level * 16 / (gdig_amp + 1));
+			if (adc_offset_adjust < 0) {
+				adc_offset_adjust = 0;
+			}
+			u16 offset_clipping = adc_offset + adc_offset_adjust;
 			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 8 bit mode", gain);
 			printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
 					gdig_amp, rg_adcgain, rg_mult, offset_clipping);
@@ -1949,7 +2039,7 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
 			mira050_write(mira050, MIRA050_BIAS_RG_ADCGAIN, rg_adcgain);
 			mira050_write(mira050, MIRA050_BIAS_RG_MULT, rg_mult);
-			mira050_write16(mira050, MIRA050_OFFSET_CLIPPING, offset_clipping);
+			mira050_write_be16(mira050, MIRA050_OFFSET_CLIPPING, offset_clipping);
 		}
 	} else{
 		// Other bit depths are not supported
@@ -2107,7 +2197,7 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_VBLANK:
 		// TODO: check whether blanking control is supported in Mira050
-		//ret = mira050_write16(mira050, MIRA050_VBLANK_LO_REG,
+		//ret = mira050_write_be16(mira050, MIRA050_VBLANK_LO_REG,
 		//		        mira050->mode->height + ctrl->val);
 		break;
 	default:
@@ -2544,6 +2634,7 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	const struct mira050_reg_list *reg_list;
 	const struct mira050_v4l2_reg_list *reg_v4l2_list;
+	u32 otp_cal_val;
 	int ret;
 
 	printk(KERN_INFO "[MIRA050]: Entering start streaming function.\n");
@@ -2574,6 +2665,19 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	if (ret) {
 		dev_err(&client->dev, "%s failed to set mode\n", __func__);
 		goto err_rpm_put;
+	}
+
+	/* Read OTP memory for OTP_CALIBRATION_VALUE */
+	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
+	/* To check: OTP_CALIBRATION_VALUE is little-endian */
+	// mira050->otp_cal_val = (u16)(((otp_cal_val & 0x000000FF) << 8) | ((otp_cal_val & 0x0000FF00) >> 8));
+	mira050->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
+
+	if (ret) {
+		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
+		goto err_rpm_put;
+	} else {
+		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u.\n", mira050->otp_cal_val);
 	}
 
 	ret = mira050_set_framefmt(mira050);
