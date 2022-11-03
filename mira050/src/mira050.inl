@@ -2024,12 +2024,9 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			// u16 otp_cal_val = 2300;
 			u8 target_black_level = 32;
 			u16 adc_offset = 1700;
-			/* adc_offset_adjust only positive? */
 			int adc_offset_adjust = ((otp_cal_val - 2250) / 4) - (target_black_level * 16 / (gdig_amp + 1));
-			if (adc_offset_adjust < 0) {
-				adc_offset_adjust = 0;
-			}
-			u16 offset_clipping = adc_offset + adc_offset_adjust;
+			/* adc_offset_adjust only positive? */
+			u16 offset_clipping = adc_offset + ((adc_offset_adjust < 0) ? 0 : adc_offset_adjust);
 			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 8 bit mode", gain);
 			printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
 					gdig_amp, rg_adcgain, rg_mult, offset_clipping);
@@ -2669,15 +2666,13 @@ static int mira050_start_streaming(struct mira050 *mira050)
 
 	/* Read OTP memory for OTP_CALIBRATION_VALUE */
 	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
-	/* To check: OTP_CALIBRATION_VALUE is little-endian */
-	// mira050->otp_cal_val = (u16)(((otp_cal_val & 0x000000FF) << 8) | ((otp_cal_val & 0x0000FF00) >> 8));
+	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
 	mira050->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
-
 	if (ret) {
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
 		goto err_rpm_put;
 	} else {
-		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u.\n", mira050->otp_cal_val);
+		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_cal_val, otp_cal_val);
 	}
 
 	ret = mira050_set_framefmt(mira050);
