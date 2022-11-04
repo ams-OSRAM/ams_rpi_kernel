@@ -1,4 +1,4 @@
-;// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0
 /*
  * A V4L2 driver for ams MIRA050 cameras.
  * Copyright (C) 2022, ams-OSRAM
@@ -54,9 +54,8 @@
 #define MIRA050_PIXEL_ARRAY_WIDTH		576U
 #define MIRA050_PIXEL_ARRAY_HEIGHT		768U
 
-// #define MIRA050_ANALOG_GAIN_REG			0x400A
-#define MIRA050_ANALOG_GAIN_MAX			1
-#define MIRA050_ANALOG_GAIN_MIN			1
+#define MIRA050_ANALOG_GAIN_MAX			2
+#define MIRA050_ANALOG_GAIN_MIN			0
 #define MIRA050_ANALOG_GAIN_STEP		1
 #define MIRA050_ANALOG_GAIN_DEFAULT		MIRA050_ANALOG_GAIN_MIN
 
@@ -165,8 +164,8 @@
 #define MIRA050_LUT_DEL_008			66
 #define MIRA050_GRAN_TG				34
 #define MIRA050_DATA_RATE			1000 // Mbit/s
-// ROW_LENGTH register is 0x0032, with value 2417.
-#define MIRA050_MIN_ROW_LENGTH			2417
+// ROW_LENGTH register is 0x0032, with value 3069.
+#define MIRA050_MIN_ROW_LENGTH			3069
 // Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
 #define MIRA050_MIN_ROW_LENGTH_US		(MIRA050_MIN_ROW_LENGTH * 8 / MIRA050_DATA_RATE)
 // Mira050 EXP_TIME registe is in microsecond. V4L2 exposure value is in row time.
@@ -227,6 +226,17 @@
 
 #define MIRA050_CURRENT_ACTIVE_CONTEXT	0x4002
 
+#define MIRA050_GDIG_AMP		0x0024
+#define MIRA050_BIAS_RG_ADCGAIN		0x01F0
+#define MIRA050_BIAS_RG_MULT		0x01F3
+#define MIRA050_OFFSET_CLIPPING		0x0193
+
+#define MIRA050_OTP_COMMAND	0x0066
+#define MIRA050_OTP_ADDR	0x0067
+#define MIRA050_OTP_START	0x0064
+#define MIRA050_OTP_BUSY	0x0065
+#define MIRA050_OTP_DOUT	0x006C
+
 enum pad_types {
 	IMAGE_PAD,
 	METADATA_PAD,
@@ -236,6 +246,12 @@ enum pad_types {
 struct mira050_reg {
 	u16 address;
 	u8 val;
+};
+
+struct mira050_fine_gain_lut {
+	u8 gdig_amp;
+	u8 rg_adcgain;
+	u8 rg_mult;
 };
 
 struct mira050_reg_list {
@@ -269,6 +285,12 @@ struct mira050_mode {
 
 	u32 vblank;
 	u32 hblank;
+
+	/* Format code */
+	u32 code;
+
+	/* bit_depth needed for analog gain selection */
+	u8 bit_depth;
 };
 
 // Allocate a buffer to store custom reg write
@@ -595,12 +617,12 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_pre_soft_reset[
 	{22, 0},
 	{23, 5},
 	{232, 3},
-	{57536, 0},
+	{57536, 0}, // 0xE0C0 [15:0] value 8,16,32 for 8,10,12 bit mode
 	{57537, 32},
-	{57538, 0},
+	{57538, 0}, // 0xE0C2 [15:0] value 8,16,32 for 8,10,12 bit mode
 	{57539, 32},
-	{362, 2},
-	{360, 44},
+	{362, 2}, // 0x016A [1:0] value 0,1,2 for 8,10,12 bit mode
+	{360, 44}, // 0x0168 [5:0] value 42,43,44 for 8,10,12 bit mode
 	// PLL
 	{57344, 0},
 	{8311, 0},
@@ -727,15 +749,15 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{53, 32},
 	{57348, 1},
 	{57388, 0},
-	{57389, 12},
+	{57389, 0},
 	{57390, 2},
-	{57391, 75},
+	{57391, 87},
 	{57392, 0},
 	{57381, 0},
 	{57386, 0},
 	{8233, 70},
 	{52, 1},
-	{53, 32},
+	{53, 44},	
 	// Vertical ROI
 	{57348, 0},
 	{57344, 1},
@@ -805,8 +827,8 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{57344, 1},
 	{14, 0},
 	{15, 0},
-	{16, 19},
-	{17, 136},
+	{16, 3},
+	{17, 232},
 	{18, 0},
 	{19, 0},
 	{20, 0},
@@ -814,24 +836,24 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{57348, 1},
 	{14, 0},
 	{15, 0},
-	{16, 19},
-	{17, 136},
+	{16, 3},
+	{17, 232},
 	{18, 0},
 	{19, 0},
 	{20, 0},
 	{21, 0},
-	{57348, 0},
-	{50, 9},
-	{51, 122},
-	{57348, 1},
-	{50, 9},
-	{51, 122},
+	{57348, 0}, // Context A
+	{50, 11}, // ROW_LENGTH
+	{51, 253},
+	{57348, 1}, // Context B
+	{50, 11}, // ROW_LENGTH
+	{51, 253},
 	{57348, 0}, // Context A
 	{7, 1},
 	{8, 0}, // TARGET_FRAME_TIME 60 fps
 	{9, 0},
-	{10, 65},
-	{11, 26},
+	{10, 78},
+	{11, 32},
 	{57348, 1}, // Context B
 	{7, 1},
 	{8, 0}, // TARGET_FRAME_TIME 2 fps
@@ -922,6 +944,382 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{29, 0},
 };
 
+static const struct mira050_reg partial_analog_gain_x1_12bit[] = {
+	// Analog Gain
+	{57344, 0},
+	{443, 200},
+	{444, 192},
+	{208, 0},
+	{496, 8},
+	{499, 2},
+	{366, 206},
+	{370, 0},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 206},
+	{372, 0},
+	{373, 32},
+	{395, 3},
+	{396, 82},
+	{397, 2},
+	{398, 86},
+	{399, 11},
+	{400, 207},
+	{494, 21},
+	{495, 106},
+	{418, 5},
+	{419, 221},
+	{799, 5},
+	{800, 230},
+	{422, 6},
+	{423, 116},
+	{420, 11},
+	{421, 70},
+	{801, 11},
+	{802, 79},
+	{424, 11},
+	{425, 221},
+	{416, 0},
+	{417, 177},
+	{434, 0},
+	{435, 201},
+	{432, 0},
+	{433, 196},
+	{428, 0},
+	{429, 207},
+	// Black Level
+	{57344, 0},
+	{403, 6},
+	{404, 36},
+};
+
+static const struct mira050_reg partial_analog_gain_x2_12bit[] = {
+	// Analog Gain
+	{57344, 0},
+	{443, 175},
+	{444, 167},
+	{208, 0},
+	{496, 8},
+	{499, 1},
+	{366, 255},
+	{370, 77},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 255},
+	{372, 77},
+	{373, 63},
+	{395, 5},
+	{396, 74},
+	{397, 2},
+	{398, 86},
+	{399, 14},
+	{400, 68},
+	{494, 21},
+	{495, 6},
+	{418, 6},
+	{419, 65},
+	{799, 6},
+	{800, 74},
+	{422, 6},
+	{423, 216},
+	{420, 12},
+	{421, 197},
+	{801, 12},
+	{802, 206},
+	{424, 13},
+	{425, 92},
+	{416, 0},
+	{417, 219},
+	{434, 0},
+	{435, 243},
+	{432, 0},
+	{433, 238},
+	{428, 0},
+	{429, 249},
+	// Black Level
+	{57344, 0},
+	{403, 10},
+	{404, 20},
+};
+
+static const struct mira050_reg partial_analog_gain_x4_12bit[] = {
+	// Analog Gain
+	{57344, 0},
+	{443, 153},
+	{444, 145},
+	{208, 0},
+	{496, 8},
+	{499, 0},
+	{366, 255},
+	{370, 255},
+	{371, 46},
+	{367, 255},
+	{368, 255},
+	{369, 255},
+	{372, 255},
+	{373, 171},
+	{395, 8},
+	{396, 202},
+	{397, 2},
+	{398, 86},
+	{399, 18},
+	{400, 190},
+	{494, 20},
+	{495, 162},
+	{418, 6},
+	{419, 165},
+	{799, 6},
+	{800, 174},
+	{422, 7},
+	{423, 60},
+	{420, 15},
+	{421, 39},
+	{801, 15},
+	{802, 48},
+	{424, 15},
+	{425, 190},
+	{416, 1},
+	{417, 37},
+	{434, 1},
+	{435, 61},
+	{432, 1},
+	{433, 56},
+	{428, 1},
+	{429, 67},
+	// Black Level
+	{57344, 0},
+	{403, 17},
+	{404, 20},
+};
+
+static const struct mira050_reg partial_12bit_mode[] = {
+	// bit mode registers
+	{57536, 0}, // 0xE0C0 [15:0] value 8,16,32 for 8,10,12 bit mode
+	{57537, 32},
+	{57538, 0}, // 0xE0C2 [15:0] value 8,16,32 for 8,10,12 bit mode
+	{57539, 32},
+	{362, 2}, // 0x016A [1:0] value 0,1,2 for 8,10,12 bit mode
+	{360, 44}, // 0x0168 [5:0] value 42,43,44 for 8,10,12 bit mode
+	// Analog Gain
+	{57344, 0},
+	{443, 200},
+	{444, 192},
+	{208, 0},
+	{496, 8},
+	{499, 2},
+	{366, 206},
+	{370, 0},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 206},
+	{372, 0},
+	{373, 32},
+	{395, 3},
+	{396, 82},
+	{397, 2},
+	{398, 86},
+	{399, 11},
+	{400, 207},
+	{494, 21},
+	{495, 106},
+	{418, 5},
+	{419, 221},
+	{799, 5},
+	{800, 230},
+	{422, 6},
+	{423, 116},
+	{420, 11},
+	{421, 70},
+	{801, 11},
+	{802, 79},
+	{424, 11},
+	{425, 221},
+	{416, 0},
+	{417, 177},
+	{434, 0},
+	{435, 201},
+	{432, 0},
+	{433, 196},
+	{428, 0},
+	{429, 207},
+	// Black Level
+	{57344, 0},
+	{403, 6},
+	{404, 144},
+	// Row length
+	{57348, 0}, // Context A
+	{50, 11}, // ROW_LENGTH
+	{51, 253},
+	{57348, 1}, // Context B
+	{50, 11}, // ROW_LENGTH
+	{51, 253},
+};
+
+static const struct mira050_reg partial_8bit_mode[] = {
+	// bit mode registers
+	{57536, 0}, // 0xE0C0 [15:0] value 8,16,32 for 8,10,12 bit mode
+	{57537, 8},
+	{57538, 0}, // 0xE0C2 [15:0] value 8,16,32 for 8,10,12 bit mode
+	{57539, 8},
+	{362, 0}, // 0x016A [1:0] value 0,1,2 for 8,10,12 bit mode
+	{360, 42}, // 0x0168 [5:0] value 42,43,44 for 8,10,12 bit mode
+	// Analog Gain
+	{57344, 0},
+	{443, 200},
+	{444, 192},
+	{208, 0},
+	{496, 36},
+	{499, 1},
+	{366, 206},
+	{370, 0},
+	{371, 0},
+	{367, 216},
+	{368, 0},
+	{369, 206},
+	{372, 0},
+	{373, 32},
+	{395, 3},
+	{396, 82},
+	{397, 2},
+	{398, 86},
+	{399, 5},
+	{400, 207},
+	{494, 22},
+	{495, 50},
+	{418, 5},
+	{419, 21},
+	{799, 5},
+	{800, 30},
+	{422, 5},
+	{423, 172},
+	{420, 8},
+	{421, 254},
+	{801, 9},
+	{802, 7},
+	{424, 9},
+	{425, 149},
+	{416, 1},
+	{417, 9},
+	{434, 1},
+	{435, 33},
+	{432, 1},
+	{433, 28},
+	{428, 1},
+	{429, 39},
+	// Black Level
+	{57344, 0},
+	{403, 6},
+	{404, 36},
+	// Row length
+	{57348, 0}, // Context A
+	{50, 7}, // ROW_LENGTH
+	{51, 50},
+	{57348, 1}, // Context B
+	{50, 7}, // ROW_LENGTH
+	{51, 50},
+};
+
+static const struct mira050_fine_gain_lut fine_gain_lut_8bit_16x[] = {
+	{3,36,3},
+	{3,35,3},
+	{3,33,3},
+	{3,32,3},
+	{3,30,3},
+	{3,29,3},
+	{3,27,3},
+	{3,26,3},
+	{3,24,3},
+	{3,23,3},
+	{3,22,3},
+	{3,62,2},
+	{3,59,2},
+	{3,57,2},
+	{3,55,2},
+	{3,53,2},
+	{3,51,2},
+	{3,48,2},
+	{3,46,2},
+	{3,45,2},
+	{3,43,2},
+	{3,41,2},
+	{3,39,2},
+	{3,37,2},
+	{3,36,2},
+	{3,34,2},
+	{3,32,2},
+	{3,31,2},
+	{3,29,2},
+	{3,28,2},
+	{3,26,2},
+	{3,25,2},
+	{3,24,2},
+	{3,22,2},
+	{3,63,1},
+	{3,61,1},
+	{3,58,1},
+	{3,56,1},
+	{3,54,1},
+	{3,51,1},
+	{3,49,1},
+	{3,47,1},
+	{3,45,1},
+	{3,43,1},
+	{3,42,1},
+	{3,40,1},
+	{3,38,1},
+	{3,36,1},
+	{7,35,2},
+	{7,33,2},
+	{7,32,2},
+	{7,30,2},
+	{7,29,2},
+	{7,27,2},
+	{7,26,2},
+	{7,24,2},
+	{7,23,2},
+	{7,22,2},
+	{7,62,1},
+	{7,59,1},
+	{7,57,1},
+	{7,55,1},
+	{7,52,1},
+	{7,50,1},
+	{7,48,1},
+	{7,46,1},
+	{7,44,1},
+	{7,42,1},
+	{7,41,1},
+	{7,39,1},
+	{7,37,1},
+	{15,35,2},
+	{15,34,2},
+	{15,32,2},
+	{15,31,2},
+	{15,29,2},
+	{15,28,2},
+	{15,26,2},
+	{15,25,2},
+	{15,24,2},
+	{15,22,2},
+	{15,63,1},
+	{15,60,1},
+	{15,58,1},
+	{15,56,1},
+	{15,53,1},
+	{15,51,1},
+	{15,49,1},
+	{15,47,1},
+	{15,45,1},
+	{15,43,1},
+	{15,41,1},
+	{15,40,1},
+	{15,38,1},
+	{15,36,1},
+};
+
 static const char * const mira050_test_pattern_menu[] = {
 	"Disabled",
 	"Fixed Data",
@@ -981,6 +1379,8 @@ static const struct mira050_mode supported_modes[] = {
 		},
 		.vblank = 2866,
 		.hblank = 0, // TODO
+		.bit_depth = 12,
+		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
 };
 
@@ -1012,6 +1412,10 @@ struct mira050 {
 
 	/* Current mode */
 	const struct mira050_mode *mode;
+	/* current bit depth, may defer from mode->bit_depth */
+	u8 bit_depth;
+	/* OTP_CALIBRATION_VALUE stored in OTP memory */
+	u16 otp_cal_val;
 
 	/*
 	 * Mutex for serialized access:
@@ -1121,10 +1525,36 @@ static int mira050_write(struct mira050 *mira050, u16 reg, u8 val)
 }
 
 /*
- * Mira050 is big-endian: MSB of val goes to lower reg addr
- * Mira220 is little-endian: LSB of val goes to lower reg addr
+ * mira050 is big-endian: msb of val goes to lower reg addr
  */
-static int mira050_write32(struct mira050 *mira050, u16 reg, u32 val)
+static int mira050_write_be16(struct mira050 *mira050, u16 reg, u16 val)
+{
+       int ret;
+       unsigned char data[4] = { reg >> 8, reg & 0xff, (val >> 8) & 0xff, val & 0xff };
+       struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+
+       ret = i2c_master_send(client, data, 4);
+       /*
+        * Writing the wrong number of bytes also needs to be flagged as an
+        * error. Success needs to produce a 0 return code.
+        */
+       if (ret == 4) {
+               ret = 0;
+       } else {
+               dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+                               __func__, reg);
+               if (ret >= 0)
+                       ret = -EINVAL;
+       }
+
+       return ret;
+}
+
+
+/*
+ * mira050 is big-endian: msb of val goes to lower reg addr
+ */
+static int mira050_write_be32(struct mira050 *mira050, u16 reg, u32 val)
 {
        int ret;
        unsigned char data[6] = { reg >> 8, reg & 0xff, (val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
@@ -1146,6 +1576,49 @@ static int mira050_write32(struct mira050 *mira050, u16 reg, u32 val)
 
        return ret;
 }
+
+/*
+ * mira050 OTP 32-bit val on I2C is big-endian. However, val content can be little-endian.
+ */
+static int mira050_read_be32(struct mira050 *mira050, u16 reg, u32 *val)
+{
+	int ret;
+	unsigned char data_w[2] = { reg >> 8, reg & 0xff };
+	/* Big-endian 32-bit buffer. */
+	unsigned char data_r[4];
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+
+	ret = i2c_master_send(client, data_w, 2);
+	/*
+	 * A negative return code, or sending the wrong number of bytes, both
+	 * count as an error.
+	 */
+	if (ret != 2) {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+			__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+		return ret;
+	}
+
+	ret = i2c_master_recv(client, data_r, 4);
+	*val = (u32)((data_r[0] << 24) | (data_r[1] << 16) | (data_r[2] << 8) | data_r[3]);
+	/*
+	 * The only return value indicating success is 4. Anything else, even
+	 * a non-negative value, indicates something went wrong.
+	 */
+	if (ret == 4) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
 
 /* Write a list of registers */
 static int mira050_write_regs(struct mira050 *mira050,
@@ -1174,6 +1647,40 @@ static int mira050_write_regs(struct mira050 *mira050,
 
 	return 0;
 }
+
+/*
+ * Read OTP memory: 8-bit addr and 32-bit value
+ */
+static int mira050_otp_read(struct mira050 *mira050, u8 addr, u32 *val)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	u8 busy_status = 1;
+	int poll_cnt = 0;
+	int poll_cnt_max = 10;
+	int ret;
+	mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+	mira050_write(mira050, MIRA050_OTP_COMMAND, 0);
+	mira050_write(mira050, MIRA050_OTP_ADDR, addr);
+	mira050_write(mira050, MIRA050_OTP_START, 1);
+	usleep_range(5, 10);
+	mira050_write(mira050, MIRA050_OTP_START, 0);
+	for (poll_cnt = 0; poll_cnt < poll_cnt_max; poll_cnt++) {
+		mira050_read(mira050, MIRA050_OTP_BUSY, &busy_status);
+		if (busy_status == 0) {
+			break;
+		}
+	}
+	if (poll_cnt < poll_cnt_max && busy_status == 0) {
+		ret = mira050_read_be32(mira050, MIRA050_OTP_DOUT, val);
+	} else {
+		dev_dbg(&client->dev, "%s: OTP memory busy, skip raeding addr: 0x%X\n",
+			__func__, addr);
+		ret = -EINVAL;
+	}
+
+	return ret;
+}
+
 
 /* Write PMIC registers, and can be reused to write microcontroller reg. */
 static int mira050pmic_write(struct i2c_client *client, u8 reg, u8 val)
@@ -1356,21 +1863,6 @@ static u32 mira050_calculate_max_exposure_time(u32 row_length, u32 vsize,
 	return 	MIRA050_EXPOSURE_MAX_US;
 }
 
-static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
-	u32 ret = 0;
-
-	//if ((gain < MIRA050_ANALOG_GAIN_MIN) || (gain > MIRA050_ANALOG_GAIN_MAX)) {
-	//	return -EINVAL;
-	//}
-
-	// TODO: There is no easy way to change analog gain by a single value.
-	// ret = mira050_write(mira050, MIRA050_ANALOG_GAIN_REG, reg_value);
-	dev_err_ratelimited(&client->dev, "Analog gain is fixed to 1. Ignore analog gain of %d",
-			gain);
-	return ret;
-}
-
 static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
 	const u32 min_exposure = MIRA050_EXPOSURE_MIN_US;
@@ -1387,10 +1879,10 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	/* Write Bank 1 context 0 */
 	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
 	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
-	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
+	ret = mira050_write_be32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
 	/* Write Bank 1 context 1 */
 	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 1);
-	ret = mira050_write32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
+	ret = mira050_write_be32(mira050, MIRA050_EXP_TIME_L_REG, exposure);
 	if (ret) {
 		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", exposure);
 		return -EINVAL;
@@ -1488,6 +1980,77 @@ static int mira050_write_stop_streaming_regs(struct mira050* mira050) {
 	return ret;
 }
 
+static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	u32 num_of_regs;
+	u32 ret = 0;
+	u32 wait_us = 20000;
+
+	// Select partial register sequence according to bit depth
+	if (mira050->bit_depth == 12) {
+		// Select register sequence according to gain value
+		if (gain == 0) {
+			mira050_write_stop_streaming_regs(mira050);
+			usleep_range(wait_us, wait_us+100);
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x1 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x1_12bit, num_of_regs);
+			mira050_write_start_streaming_regs(mira050);
+		} else if (gain == 1) {
+			mira050_write_stop_streaming_regs(mira050);
+			usleep_range(wait_us, wait_us+100);
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x2 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x2_12bit, num_of_regs);
+			mira050_write_start_streaming_regs(mira050);
+		} else if (gain == 2) {
+			mira050_write_stop_streaming_regs(mira050);
+			usleep_range(wait_us, wait_us+100);
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x4 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x4_12bit);
+			ret = mira050_write_regs(mira050, partial_analog_gain_x4_12bit, num_of_regs);
+			mira050_write_start_streaming_regs(mira050);
+		} else {
+			// Other gains are not supported
+			printk(KERN_INFO "[MIRA050]: Ignore analog gain %u in 12 bit mode", gain);
+		}
+	} else if (mira050->bit_depth == 8) {
+		if (gain < ARRAY_SIZE(fine_gain_lut_8bit_16x)) {
+			u8 gdig_amp = fine_gain_lut_8bit_16x[gain].gdig_amp;
+			u8 rg_adcgain = fine_gain_lut_8bit_16x[gain].rg_adcgain;
+			u8 rg_mult = fine_gain_lut_8bit_16x[gain].rg_mult;
+			/* otp_cal_val should come from OTP, but OTP may have incorrect value. */
+			u16 otp_cal_val = mira050->otp_cal_val;
+			// u16 otp_cal_val = 2300;
+			u8 target_black_level = 32;
+			u16 adc_offset = 1700;
+			int scaled_calibration_value = ((otp_cal_val - 2250) / 4 - target_black_level) * 16 / (gdig_amp + 1);
+			/* Avoid negative scaled_calibration_value, which is likely due to problematic calibration. */
+			u16 offset_clipping = adc_offset + ((scaled_calibration_value < 0) ? 0 : scaled_calibration_value);
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 8 bit mode", gain);
+			printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
+					gdig_amp, rg_adcgain, rg_mult, offset_clipping);
+			mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
+			mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
+			mira050_write(mira050, MIRA050_GDIG_AMP, gdig_amp);
+			mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+			mira050_write(mira050, MIRA050_BIAS_RG_ADCGAIN, rg_adcgain);
+			mira050_write(mira050, MIRA050_BIAS_RG_MULT, rg_mult);
+			mira050_write_be16(mira050, MIRA050_OFFSET_CLIPPING, offset_clipping);
+		}
+	} else{
+		// Other bit depths are not supported
+		printk(KERN_INFO "[MIRA050]: Ignore analog gain in %u bit mode", mira050->mode->bit_depth);
+	}
+
+	if (ret) {
+		dev_err(&client->dev, "%s failed to set mode\n", __func__);
+	}
+
+	// Always return 0 even if it fails
+	return 0;
+}
+
 
 // Gets the format code if supported. Otherwise returns the default format code `codes[0]`
 static u32 mira050_validate_format_code_or_default(struct mira050 *mira050, u32 code)
@@ -1516,6 +2079,7 @@ static void mira050_set_default_format(struct mira050 *mira050)
 
 	fmt = &mira050->fmt;
 	fmt->code = MEDIA_BUS_FMT_SGRBG12_1X12; // MEDIA_BUS_FMT_Y12_1X12;
+	mira050->bit_depth = 12;
 	fmt->colorspace = V4L2_COLORSPACE_RAW;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
@@ -1630,7 +2194,7 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_VBLANK:
 		// TODO: check whether blanking control is supported in Mira050
-		//ret = mira050_write16(mira050, MIRA050_VBLANK_LO_REG,
+		//ret = mira050_write_be16(mira050, MIRA050_VBLANK_LO_REG,
 		//		        mira050->mode->height + ctrl->val);
 		break;
 	default:
@@ -1979,22 +2543,30 @@ static int mira050_set_pad_format(struct v4l2_subdev *sd,
 
 static int mira050_set_framefmt(struct mira050 *mira050)
 {
+	u32 num_of_regs;
+
 	// TODO: There is no easy way to change frame format
 	switch (mira050->fmt.code) {
 	case MEDIA_BUS_FMT_SGRBG8_1X8:
-		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG, MIRA050_BIT_DEPTH_8_BIT);
-		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
-		//	MIRA050_CSI_DATA_TYPE_8_BIT);
+		printk(KERN_INFO "[MIRA050]: mira050_set_framefmt() write registers for 8 bbp.\n");
+		num_of_regs = ARRAY_SIZE(partial_8bit_mode);
+		mira050_write_regs(mira050, partial_8bit_mode, num_of_regs);
+		mira050->bit_depth = 8;
+		__v4l2_ctrl_modify_range(mira050->gain,
+					 0, ARRAY_SIZE(fine_gain_lut_8bit_16x) - 1, 1, 0);
 		return 0;
 	case MEDIA_BUS_FMT_SGRBG10_1X10:
-		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG,MIRA050_BIT_DEPTH_10_BIT);
-		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
-		//	MIRA050_CSI_DATA_TYPE_10_BIT);
+		printk(KERN_INFO "[MIRA050]: mira050_set_framefmt() ignores 10 bbp.\n");
+		// mira050->bit_depth = 10;
 		return 0;
 	case MEDIA_BUS_FMT_SGRBG12_1X12:
-		//mira050_write(mira050, MIRA050_BIT_DEPTH_REG, MIRA050_BIT_DEPTH_12_BIT);
-		//mira050_write(mira050, MIRA050_CSI_DATA_TYPE_REG,
-		//	MIRA050_CSI_DATA_TYPE_12_BIT);
+		printk(KERN_INFO "[MIRA050]: mira050_set_framefmt() write registers for 12 bbp.\n");
+		num_of_regs = ARRAY_SIZE(partial_12bit_mode);
+		mira050_write_regs(mira050, partial_12bit_mode, num_of_regs);
+		mira050->bit_depth = 12;
+		__v4l2_ctrl_modify_range(mira050->gain,
+					 MIRA050_ANALOG_GAIN_MIN, MIRA050_ANALOG_GAIN_MAX,
+					 MIRA050_ANALOG_GAIN_STEP, MIRA050_ANALOG_GAIN_DEFAULT);
 		return 0;
 	default:
 		printk(KERN_ERR "Unknown format requested %d", mira050->fmt.code);
@@ -2059,6 +2631,7 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	const struct mira050_reg_list *reg_list;
 	const struct mira050_v4l2_reg_list *reg_v4l2_list;
+	u32 otp_cal_val;
 	int ret;
 
 	printk(KERN_INFO "[MIRA050]: Entering start streaming function.\n");
@@ -2089,6 +2662,17 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	if (ret) {
 		dev_err(&client->dev, "%s failed to set mode\n", __func__);
 		goto err_rpm_put;
+	}
+
+	/* Read OTP memory for OTP_CALIBRATION_VALUE */
+	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
+	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
+	mira050->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
+	if (ret) {
+		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
+		goto err_rpm_put;
+	} else {
+		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_cal_val, otp_cal_val);
 	}
 
 	ret = mira050_set_framefmt(mira050);
