@@ -2027,6 +2027,10 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			int scaled_calibration_value = ((otp_cal_val - 2250) / 4 - target_black_level) * 16 / (gdig_amp + 1);
 			/* Avoid negative scaled_calibration_value, which is likely due to problematic calibration. */
 			u16 offset_clipping = adc_offset + ((scaled_calibration_value < 0) ? 0 : scaled_calibration_value);
+			/* Stop streaming and wait for frame data transmission done */
+			mira050_write_stop_streaming_regs(mira050);
+			usleep_range(wait_us, wait_us+100);
+			/* Write fine gain registers */
 			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 8 bit mode", gain);
 			printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
 					gdig_amp, rg_adcgain, rg_mult, offset_clipping);
@@ -2037,6 +2041,8 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			mira050_write(mira050, MIRA050_BIAS_RG_ADCGAIN, rg_adcgain);
 			mira050_write(mira050, MIRA050_BIAS_RG_MULT, rg_mult);
 			mira050_write_be16(mira050, MIRA050_OFFSET_CLIPPING, offset_clipping);
+			/* Resume streaming */
+			mira050_write_start_streaming_regs(mira050);
 		}
 	} else{
 		// Other bit depths are not supported
