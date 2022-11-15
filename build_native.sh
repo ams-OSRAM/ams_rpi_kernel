@@ -7,7 +7,7 @@ TOPDIR=${PWD}
 
 echo "Building from DIR: ${TOPDIR}"
 
-KERNELRELEASE=$(uname -r)
+KERNELRELEASE=${KERNELRELEASE:=$(uname -r)}
 
 echo "Building for kernel version: ${KERNELRELEASE}"
 
@@ -93,5 +93,5 @@ echo "Device trees installed to /boot/overlays"
 echo "Drivers installed to /usr/lib/modules/$KERNELRELEASE/kernel/drivers/media/i2c"
 
 echo "Post installation: rebuild dependency modules to make modules loaded by kernel"
-sudo depmod
+sudo depmod -v $KERNELRELEASE
 

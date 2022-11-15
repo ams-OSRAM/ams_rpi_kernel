@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-2.0
 
-KDIR ?= /lib/modules/`uname -r`/build
-INCDIR ?= /usr/src/linux-headers-`uname -r`/include
-
 KERNELRELEASE ?= $(shell uname -r)
+
+KDIR ?= /lib/modules/$(KERNELRELEASE)/build
+INCDIR ?= /usr/src/linux-headers-$(KERNELRELEASE)/include
+
 KERNEL_SRC ?= /lib/modules/$(KERNELRELEASE)/build
 MODSRC := $(shell pwd)/
 
