@@ -301,9 +301,9 @@ static struct mira050_v4l2_reg_list reg_list_s_ctrl_mira050_reg_w_buf = {
         .regs = s_ctrl_mira050_reg_w_buf,
 };
 
-// 576_768_60fps_12b_1lane
-// Taken from Mira050_register_sequence_12b_60fps_576_768_1000Mbit_24M.txt
-static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_pre_soft_reset[] = {
+// 576_768_50fps_12b_1lane
+// Taken from Mira050_register_sequence_12b_50fps_576_768_1000Mbit_24M.txt
+static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_pre_soft_reset[] = {
 	// Base Configuration
 	{57344, 0},
 	{484, 0},
@@ -720,7 +720,7 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_pre_soft_reset[
 	{404, 144},
 };
 
-static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset[] = {
+static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_post_soft_reset[] = {
 	// Release Soft Reset
 	{57344, 0},
 	{57353, 1},
@@ -945,7 +945,7 @@ static const struct mira050_reg full_576_768_60fps_12b_1lane_reg_post_soft_reset
 	{29, 0},
 };
 
-static const struct mira050_reg full_576_768_60fps_10b_hs_1lane_reg_pre_soft_reset[] = {
+static const struct mira050_reg full_576_768_50fps_10b_hs_1lane_reg_pre_soft_reset[] = {
 	// Base Configuration
 	//Base Configuration
 	{ 57344, 0},
@@ -1363,7 +1363,7 @@ static const struct mira050_reg full_576_768_60fps_10b_hs_1lane_reg_pre_soft_res
 	{ 404, 36},
 	};
 
-static const struct mira050_reg full_576_768_60fps_10b_hs_1lane_reg_post_soft_reset[] = {
+static const struct mira050_reg full_576_768_50fps_10b_hs_1lane_reg_post_soft_reset[] = {
 //Release Soft Reset
 { 57344, 0},
 { 57353, 1},
@@ -1740,7 +1740,7 @@ static const struct mira050_reg partial_analog_gain_x4_12bit[] = {
 	{404, 20},
 };
 
-static const struct mira050_reg full_576_768_60fps_8b_1lane_reg_pre_soft_reset[] = {
+static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_pre_soft_reset[] = {
 	//Base Configuration
 	{ 57344, 0},
 	{ 484, 0},
@@ -2157,7 +2157,7 @@ static const struct mira050_reg full_576_768_60fps_8b_1lane_reg_pre_soft_reset[]
 	{ 404, 36},
 };
 
-static const struct mira050_reg full_576_768_60fps_8b_1lane_reg_post_soft_reset[] = {
+static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_post_soft_reset[] = {
 	//Release Soft Reset
 	{ 57344, 0},
 	{ 57353, 1},
@@ -2581,12 +2581,12 @@ static const struct mira050_mode supported_modes[] = {
 			.height = 768
 		},
 		.reg_list_pre_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_pre_soft_reset),
-			.regs = full_576_768_60fps_12b_1lane_reg_pre_soft_reset,
+			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_12b_1lane_reg_pre_soft_reset),
+			.regs = full_576_768_50fps_12b_1lane_reg_pre_soft_reset,
 		},
 		.reg_list_post_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_12b_1lane_reg_post_soft_reset),
-			.regs = full_576_768_60fps_12b_1lane_reg_post_soft_reset,
+			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_12b_1lane_reg_post_soft_reset),
+			.regs = full_576_768_50fps_12b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
 		.hblank = 0, // TODO
@@ -2604,12 +2604,12 @@ static const struct mira050_mode supported_modes[] = {
 			.height = 768
 		},
 		.reg_list_pre_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_10b_hs_1lane_reg_pre_soft_reset),
-			.regs = full_576_768_60fps_10b_hs_1lane_reg_pre_soft_reset,
+			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_10b_hs_1lane_reg_pre_soft_reset),
+			.regs = full_576_768_50fps_10b_hs_1lane_reg_pre_soft_reset,
 		},
 		.reg_list_post_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_10b_hs_1lane_reg_post_soft_reset),
-			.regs = full_576_768_60fps_10b_hs_1lane_reg_post_soft_reset,
+			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_10b_hs_1lane_reg_post_soft_reset),
+			.regs = full_576_768_50fps_10b_hs_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
 		.hblank = 0, // TODO
@@ -2627,12 +2627,12 @@ static const struct mira050_mode supported_modes[] = {
 			.height = 768
 		},
 		.reg_list_pre_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_8b_1lane_reg_pre_soft_reset),
-			.regs = full_576_768_60fps_8b_1lane_reg_pre_soft_reset,
+			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_8b_1lane_reg_pre_soft_reset),
+			.regs = full_576_768_50fps_8b_1lane_reg_pre_soft_reset,
 		},
 		.reg_list_post_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_576_768_60fps_8b_1lane_reg_post_soft_reset),
-			.regs = full_576_768_60fps_8b_1lane_reg_post_soft_reset,
+			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_8b_1lane_reg_post_soft_reset),
+			.regs = full_576_768_50fps_8b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
 		.hblank = 0, // TODO
