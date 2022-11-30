@@ -1,4 +1,14 @@
-# Version v0.1.5
+# Version v0.1.7
+
+New features:
+- Enable 8/10/12 bit modes for Mira050.
+- Mira050 12 bit mode uses coarse gains 1x/2x/4x.
+- Mira050 8 and 10 bit modes use fine gain.
+
+Bug fixes:
+- Fix --list-cameras bug on Mira050.
+
+# Version v0.1.6
 
 New features:
 - Bump to `raspios_arm64-2022-09-07`, kernel 5.15.61-v8+, tag 1.20220830.
