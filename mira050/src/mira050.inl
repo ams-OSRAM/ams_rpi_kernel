@@ -3248,27 +3248,27 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 		if (gain == 0) {
 			mira050_write_stop_streaming_regs(mira050);
 			usleep_range(wait_us, wait_us+100);
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x1 in 12 bit mode");
+			// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x1 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
 			ret = mira050_write_regs(mira050, partial_analog_gain_x1_12bit, num_of_regs);
 			mira050_write_start_streaming_regs(mira050);
 		} else if (gain == 1) {
 			mira050_write_stop_streaming_regs(mira050);
 			usleep_range(wait_us, wait_us+100);
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x2 in 12 bit mode");
+			// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x2 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
 			ret = mira050_write_regs(mira050, partial_analog_gain_x2_12bit, num_of_regs);
 			mira050_write_start_streaming_regs(mira050);
 		} else if (gain == 2) {
 			mira050_write_stop_streaming_regs(mira050);
 			usleep_range(wait_us, wait_us+100);
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x4 in 12 bit mode");
+			// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x4 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x4_12bit);
 			ret = mira050_write_regs(mira050, partial_analog_gain_x4_12bit, num_of_regs);
 			mira050_write_start_streaming_regs(mira050);
 		} else {
 			// Other gains are not supported
-			printk(KERN_INFO "[MIRA050]: Ignore analog gain %u in 12 bit mode", gain);
+			// printk(KERN_INFO "[MIRA050]: Ignore analog gain %u in 12 bit mode", gain);
 		}
 	} else if (mira050->bit_depth == 10) {
 		if (gain < ARRAY_SIZE(fine_gain_lut_10bit_hs_4x)) {
@@ -3286,9 +3286,9 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			mira050_write_stop_streaming_regs(mira050);
 			usleep_range(wait_us, wait_us+100);
 			/* Write fine gain registers */
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 10 bit mode", gain);
-			printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
-					gdig_amp, rg_adcgain, rg_mult, offset_clipping);
+			// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 10 bit mode", gain);
+			// printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
+			// 		gdig_amp, rg_adcgain, rg_mult, offset_clipping);
 			mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
 			mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
 			mira050_write(mira050, MIRA050_GDIG_AMP, gdig_amp);
@@ -3315,9 +3315,9 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			mira050_write_stop_streaming_regs(mira050);
 			usleep_range(wait_us, wait_us+100);
 			/* Write fine gain registers */
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 8 bit mode", gain);
-			printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
-					gdig_amp, rg_adcgain, rg_mult, offset_clipping);
+			// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 8 bit mode", gain);
+			// printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
+			//		gdig_amp, rg_adcgain, rg_mult, offset_clipping);
 			mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
 			mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
 			mira050_write(mira050, MIRA050_GDIG_AMP, gdig_amp);
