@@ -2371,6 +2371,8 @@ static int mira220_set_ctrl(struct v4l2_ctrl *ctrl)
 		ret = mira220_write16(mira220, MIRA220_VBLANK_LO_REG,
 				        ctrl->val);
 		break;
+	case V4L2_CID_HBLANK:
+		break;
 	default:
 		dev_info(&client->dev,
 			 "ctrl(id:0x%x,val:0x%x) is not handled\n",
@@ -3172,12 +3174,9 @@ static int mira220_init_controls(struct mira220 *mira220)
 	printk(KERN_INFO "[MIRA220]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
 
 	mira220->hblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira220_ctrl_ops,
-					   V4L2_CID_HBLANK, 0x0000,
-					   0xFFFF, 1,
+					   V4L2_CID_HBLANK, mira220->mode->hblank,
+					   mira220->mode->hblank, 1,
 					   mira220->mode->hblank);
-	if (mira220->hblank)
-		mira220->hblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
-
 
 	// Make the vblank control read only. This could be changed to allow changing framerate in
 	// runtime, but would require adapting other settings
