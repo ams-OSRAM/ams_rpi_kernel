@@ -3487,6 +3487,8 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		//ret = mira050_write_be16(mira050, MIRA050_VBLANK_LO_REG,
 		//		        mira050->mode->height + ctrl->val);
 		break;
+	case V4L2_CID_HBLANK:
+		break;
 	default:
 		dev_info(&client->dev,
 			 "ctrl(id:0x%x,val:0x%x) is not handled\n",
@@ -4246,12 +4248,9 @@ static int mira050_init_controls(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
 
 	mira050->hblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
-					   V4L2_CID_HBLANK, 0x0000,
-					   0xFFFF, 1,
+					   V4L2_CID_HBLANK, mira050->mode->hblank,
+					   mira050->mode->hblank, 1,
 					   mira050->mode->hblank);
-	if (mira050->hblank)
-		mira050->hblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
-
 
 	// Make the vblank control read only. This could be changed to allow changing framerate in
 	// runtime, but would require adapting other settings
