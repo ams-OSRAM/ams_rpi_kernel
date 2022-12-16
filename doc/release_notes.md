@@ -1,4 +1,9 @@
-# Version v0.1.7
+# Version v0.1.9
+
+Bug fixes:
+- Fix bug when integrating latest libcamera tag v0.0.2.
+
+# Version v0.1.7 and v0.1.8
 
 New features:
 - Enable 8/10/12 bit modes for Mira050.
