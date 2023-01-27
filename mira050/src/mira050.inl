@@ -2685,6 +2685,8 @@ struct mira050 {
 	/* pmic and uC */
 	struct i2c_client *pmic_client;
 	struct i2c_client *uc_client;
+	struct i2c_client *tbd_client;
+
 
 };
 
@@ -3028,6 +3030,10 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 		} else if ((reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_UC) {
 			// Write micro-controller, reusing mira050pmic_write function, just give it uc_client.
 			ret = mira050pmic_write(mira050->uc_client, (u8)(reg_addr & 0xFF), reg_val);
+		} else if ((reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_TBD) {
+			// Write micro-controller, reusing mira050pmic_write function, just give it uc_client.
+			printk(KERN_INFO "[MIRA050]: write tbd_client.\n");
+			ret = mira050pmic_write(mira050->tbd_client, (u8)(reg_addr & 0xFF), reg_val);
 		}
 	}
 
@@ -4422,7 +4428,7 @@ static int mira050pmic_read(struct i2c_client *client, u8 reg, u8 *val)
 }
 
 
-static int mira050pmic_init_controls(struct i2c_client *pmic_client, struct i2c_client *uc_client)
+static int mira050pmic_init_controls(struct i2c_client *pmic_client, struct i2c_client *uc_client, struct i2c_client *tbd_client)
 {
 	int ret;
 	u8 val;
@@ -4633,8 +4639,10 @@ static int mira050_probe(struct i2c_client *client)
 
 #define MIRA050PMIC_I2C_ADDR 0x2D
 #define MIRA050UC_I2C_ADDR 0x0A
+#define MIRA050TBD_I2C_ADDR 0x53
+
 	{
-		printk(KERN_INFO "[MIRA050]: Init PMIC and uC.\n");
+		printk(KERN_INFO "[MIRA050]: Init PMIC and uC and led driver.\n");
 		mira050->pmic_client = i2c_new_dummy_device(client->adapter,
 				MIRA050PMIC_I2C_ADDR);
 		if (IS_ERR(mira050->pmic_client))
@@ -4643,7 +4651,11 @@ static int mira050_probe(struct i2c_client *client)
 				MIRA050UC_I2C_ADDR);
 		if (IS_ERR(mira050->uc_client))
 			return PTR_ERR(mira050->uc_client);
-		mira050pmic_init_controls(mira050->pmic_client, mira050->uc_client);
+		mira050->tbd_client = i2c_new_dummy_device(client->adapter,
+				MIRA050TBD_I2C_ADDR);
+		if (IS_ERR(mira050->tbd_client))
+			return PTR_ERR(mira050->tbd_client);
+		mira050pmic_init_controls(mira050->pmic_client, mira050->uc_client, mira050->tbd_client);
 	}
 
 	dev_err(dev, "[MIRA050] Sleep for 1 second to let PMIC driver complete init.\n");
@@ -4726,6 +4738,7 @@ error_power_off:
 
 	i2c_unregister_device(mira050->pmic_client);
 	i2c_unregister_device(mira050->uc_client);
+	i2c_unregister_device(mira050->tbd_client);
 
 	return ret;
 }
@@ -4737,6 +4750,7 @@ static int mira050_remove(struct i2c_client *client)
 
 	i2c_unregister_device(mira050->pmic_client);
 	i2c_unregister_device(mira050->uc_client);
+	i2c_unregister_device(mira050->tbd_client);
 
 	v4l2_async_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
