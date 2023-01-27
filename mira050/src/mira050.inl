@@ -2567,6 +2567,13 @@ static const u32 codes[] = {
 };
 
 /* Mode configs */
+/*
+ * Only one mode is exposed to the public (576x768 at 12 bit).
+ * Three codes (8/10/12 bit) are exposed to public.
+ * The public user specifies the code.
+ * That is used to specify which internal supported_mode to use.
+ */
+#define MIRA050_SUPPORTED_MODE_SIZE_PUBLIC 1
 static const struct mira050_mode supported_modes[] = {
 	{
 		/* 2 MPx 30fps mode */
@@ -3666,7 +3673,12 @@ static int mira050_enum_frame_size(struct v4l2_subdev *sd,
 		return -EINVAL;
 
 	if (fse->pad == IMAGE_PAD) {
-		if (fse->index >= ARRAY_SIZE(supported_modes))
+		/* Two options about how many modes to be exposed:
+		 * - Expose all supported_modes by ARRAY_SIZE(supported_modes).
+		 * - Expose less modes by MIRA050_SUPPORTED_MODE_SIZE_PUBLIC.
+		 */
+		/* if (fse->index >= ARRAY_SIZE(supported_modes)) */
+		if (fse->index >= MIRA050_SUPPORTED_MODE_SIZE_PUBLIC)
 			return -EINVAL;
 
 		if (fse->code != mira050_validate_format_code_or_default(mira050, fse->code))
