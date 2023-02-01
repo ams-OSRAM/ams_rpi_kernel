@@ -202,6 +202,20 @@
 /* Should match device tree link freq */
 #define MIRA050_DEFAULT_LINK_FREQ	456000000
 
+/* Trick the libcamera with achievable fps via hblank */
+
+/* Formular in libcamera to derive TARGET_FPS:
+ * TARGET_FPS=1/((1/MIRA050_PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+MIRA050_MIN_VBLANK))
+ * Example with HBLANK=0 and MIRA050_MIN_VBLANK=12
+ * TARGET_FPS=1/((1/178956970)*576*(768+12))=398
+ * 
+ * Inverse the above formula to derive HBLANK from TARGET_FPS:
+ * HBLANK=1/((1/MIRA050_PIXEL_RATE)*TARGET_FPS*(HEIGHT+MIRA050_MIN_VBLANK))-WIDTH
+ * Example with TARGET_FPS of 60 fps
+ * HBLANK=1/((1/178956970)*60*(768+12))-576=3248
+ */
+#define MIRA050_HBLANK_60FPS			3248
+
 // For test pattern with fixed data
 #define MIRA050_TRAINING_WORD_REG		0x0060
 // For test pattern with 2D gradiant
@@ -2594,7 +2608,7 @@ static const struct mira050_mode supported_modes[] = {
 			.regs = full_576_768_50fps_12b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
-		.hblank = 0, // TODO
+		.hblank = MIRA050_HBLANK_60FPS, // TODO
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
@@ -2617,7 +2631,7 @@ static const struct mira050_mode supported_modes[] = {
 			.regs = full_576_768_50fps_10b_hs_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
-		.hblank = 0, // TODO
+		.hblank = MIRA050_HBLANK_60FPS, // TODO
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
 	},
@@ -2640,7 +2654,7 @@ static const struct mira050_mode supported_modes[] = {
 			.regs = full_576_768_50fps_8b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
-		.hblank = 0, // TODO
+		.hblank = MIRA050_HBLANK_60FPS, // TODO
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
 	},

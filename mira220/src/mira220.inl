@@ -197,6 +197,25 @@
 /* Should match device tree link freq */
 #define MIRA220_DEFAULT_LINK_FREQ	456000000
 
+/* Trick the libcamera with achievable fps via hblank */
+
+/* Formular in libcamera to derive TARGET_FPS:
+ * TARGET_FPS=1/((1/MIRA220_PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+MIRA220_MIN_VBLANK))
+ * Example: 640x480 with HBLANK=0 and MIRA220_MIN_VBLANK=13
+ * TARGET_FPS=1/((1/536870912)*640*(480+13))=1701
+ * Example: 1600x1400 with HBLANK=0 and MIRA220_MIN_VBLANK=13
+ * TARGET_FPS=1/((1/536870912)*1600*(1400+13))=237
+ * 
+ * Inverse the above formula to derive HBLANK from TARGET_FPS:
+ * HBLANK=1/((1/MIRA220_PIXEL_RATE)*TARGET_FPS*(HEIGHT+MIRA220_MIN_VBLANK))-WIDTH
+ * Example with TARGET_FPS of 120 fps for 640x480
+ * HBLANK=1/((1/536870912)*120*(480+13))-640=8435
+ * Example with TARGET_FPS of 30 fps for 1600x1400
+ * HBLANK=1/((1/536870912)*30*(1400+13))-1600=11065
+ */
+#define MIRA220_HBLANK_640x480_120FPS		8435
+#define MIRA220_HBLANK_1600x1400_30FPS		11065
+
 #define MIRA220_REG_TEST_PATTERN	0x2091
 #define	MIRA220_TEST_PATTERN_DISABLE	0x00
 #define	MIRA220_TEST_PATTERN_VERTICAL_GRADIENT	0x01
@@ -1822,7 +1841,7 @@ static const struct mira220_mode supported_modes[] = {
 		// ROW_LENGTH is configured by register 0x102B, 0x102C.
 		.row_length = 0x012C,
 		.vblank = 18, // ceil(1928 / 300) + 11
-		.hblank = 0, // TODO
+		.hblank = MIRA220_HBLANK_640x480_120FPS, // TODO
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
 	/* 2 MPx 30fps 12bpp mode */
@@ -1843,7 +1862,7 @@ static const struct mira220_mode supported_modes[] = {
 		// ROW_LENGTH is configured by register 0x102B, 0x102C.
 		.row_length = 0x01C2,
 		.vblank = 16, // ceil(1928 / 450) + 11
-		.hblank = 0, // TODO
+		.hblank = MIRA220_HBLANK_1600x1400_30FPS, // TODO
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
 };
