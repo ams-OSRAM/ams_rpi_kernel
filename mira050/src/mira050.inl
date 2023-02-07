@@ -211,10 +211,10 @@
  * 
  * Inverse the above formula to derive HBLANK from TARGET_FPS:
  * HBLANK=1/((1/MIRA050_PIXEL_RATE)*TARGET_FPS*(HEIGHT+MIRA050_MIN_VBLANK))-WIDTH
- * Example with TARGET_FPS of 60 fps
- * HBLANK=1/((1/178956970)*60*(768+12))-576=3248
+ * Example with TARGET_FPS of 50 fps
+ * HBLANK=1/((1/178956970)*50*(768+12))-576=4012
  */
-#define MIRA050_HBLANK_60FPS			3248
+#define MIRA050_HBLANK_50FPS			4013
 
 // For test pattern with fixed data
 #define MIRA050_TRAINING_WORD_REG		0x0060
@@ -865,7 +865,7 @@ static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_post_soft_reset
 	{51, 253},
 	{57348, 0}, // Context A
 	{7, 1},
-	{8, 0}, // TARGET_FRAME_TIME 60 fps
+	{8, 0}, // TARGET_FRAME_TIME 50 fps
 	{9, 0},
 	{10, 78},
 	{11, 32},
@@ -2608,7 +2608,7 @@ static const struct mira050_mode supported_modes[] = {
 			.regs = full_576_768_50fps_12b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
-		.hblank = MIRA050_HBLANK_60FPS, // TODO
+		.hblank = MIRA050_HBLANK_50FPS, // TODO
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
@@ -2631,7 +2631,7 @@ static const struct mira050_mode supported_modes[] = {
 			.regs = full_576_768_50fps_10b_hs_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
-		.hblank = MIRA050_HBLANK_60FPS, // TODO
+		.hblank = MIRA050_HBLANK_50FPS, // TODO
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
 	},
@@ -2654,7 +2654,7 @@ static const struct mira050_mode supported_modes[] = {
 			.regs = full_576_768_50fps_8b_1lane_reg_post_soft_reset,
 		},
 		.vblank = 2866,
-		.hblank = MIRA050_HBLANK_60FPS, // TODO
+		.hblank = MIRA050_HBLANK_50FPS, // TODO
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
 	},
