@@ -5,10 +5,10 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 echo "${PWD}"
 
-# Latest kernel version is raspios_arm64-2022-09-07
-TAG="1.20220830"
-# Previous kernel version is raspios_arm64-2022-04-07
-# TAG="1.20220331"
+# Use a very new tag, to sync with pi-gen.
+TAG="1.20230405"
+# Previous kernel version is raspios_arm64-2022-09-07
+# TAG="1.20220830"
 # Check if the unzipped directory of the Linux source exist; Otherwise create it from cache or download it.
 if [[ ! -d $PWD/linux-${TAG} ]]
 then

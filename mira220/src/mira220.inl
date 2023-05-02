@@ -3605,7 +3605,7 @@ error_power_off:
 	return ret;
 }
 
-static int mira220_remove(struct i2c_client *client)
+static void mira220_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mira220 *mira220 = to_mira220(sd);
@@ -3621,7 +3621,6 @@ static int mira220_remove(struct i2c_client *client)
 		mira220_power_off(&client->dev);
 	pm_runtime_set_suspended(&client->dev);
 
-	return 0;
 }
 
 static const struct dev_pm_ops mira220_pm_ops = {
