@@ -20,6 +20,7 @@
 cache: # Cache external files to avoid download
   paths:
   - 1.20220830.tar.gz
+  - 1.20230405.tar.gz
 
 stages:          # List of stages for jobs, and their order of execution
   - clean
