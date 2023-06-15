@@ -45,7 +45,7 @@ Version: $PKGVER
 Architecture: $PKGARCH
 Maintainer: Zhenyu Ye <zhenyu.ye@ams-osram.com>
 Description: Mira device tree and driver for RPI.
- It contains mira220, mira220color, mira050, mira050color." > $PKGDIR/DEBIAN/control
+ It contains mira220, mira220color, mira050, mira050color, mira016." > $PKGDIR/DEBIAN/control
 
 MODULEDIR=$PKGDIR/usr/lib/modules/$KERNELRELEASE/kernel/drivers/media/i2c
 mkdir -p $MODULEDIR
@@ -72,6 +72,16 @@ echo "#############################"
 (cd mira050/src && cp mira050.dtbo mira050color.dtbo $PKGDIR/boot/overlays/)
 # Cleanup artifacts from source folder
 (cd mira050/src && make clean)
+
+# Build dtbo and driver
+(cd mira016/src && make)
+# Install driver to deb package folder
+(cd mira016/src && make INSTALL_MOD_PATH=$PKGDIR install)
+# Install dtbo to deb package folder
+(cd mira016/src && cp mira016.dtbo $PKGDIR/boot/overlays/)
+# Cleanup artifacts from source folder
+(cd mira016/src && make clean)
+
 
 echo "#############################"
 echo "# Build and install deb pkg"
