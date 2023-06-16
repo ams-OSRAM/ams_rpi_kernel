@@ -1,1 +1,1 @@
-obj-$(CONFIG_VIDEO_MIRA050)	+= mira050.o
+obj-$(CONFIG_VIDEO_MIRA016)	+= mira016.o
