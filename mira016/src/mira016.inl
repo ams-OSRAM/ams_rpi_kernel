@@ -162,10 +162,10 @@
 #define MIRA016_SUPPORTED_XCLK_FREQ		24000000
 
 // Default exposure is adjusted to 1 ms
-#define MIRA016_LUT_DEL_008			0
-#define MIRA016_GRAN_TG				50
+#define MIRA016_LUT_DEL_008			66
+#define MIRA016_GRAN_TG				34
 // TODO: Check Mira016 data rate in reg sequence
-#define MIRA016_DATA_RATE			1200 // Mbit/s
+#define MIRA016_DATA_RATE			1000 // Mbit/s
 // ROW_LENGTH register is 0x0032, with value 696 (10 bit). Choose smaller one for safety.
 #define MIRA016_MIN_ROW_LENGTH			696
 // Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
@@ -199,8 +199,8 @@
 #define MIRA016_REG_VALUE_16BIT		2
 
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
-// 1.2Gb/s * 2 * 1 / 10 = 178956970
-#define MIRA016_PIXEL_RATE		(240000000)
+// 1.Gb/s * 2 * 1 / 10 = 178956970
+#define MIRA016_PIXEL_RATE		(178956970)
 /* Should match device tree link freq */
 #define MIRA016_DEFAULT_LINK_FREQ	456000000
 
@@ -209,14 +209,14 @@
 /* Formular in libcamera to derive TARGET_FPS:
  * TARGET_FPS=1/((1/MIRA016_PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+MIRA016_MIN_VBLANK))
  * Example with HBLANK=0 and MIRA016_MIN_VBLANK=12
- * TARGET_FPS=1/((1/240000000)*400*(400+12))=1456
+ * TARGET_FPS=1/((1/178956970)*400*(400+12))=1086
  * 
  * Inverse the above formula to derive HBLANK from TARGET_FPS:
  * HBLANK=1/((1/MIRA016_PIXEL_RATE)*TARGET_FPS*(HEIGHT+MIRA016_MIN_VBLANK))-WIDTH
  * Example with TARGET_FPS of 30 fps
- * HBLANK=1/((1/240000000)*30*(400+12))-400=19017
+ * HBLANK=1/((1/178956970)*30*(400+12))-400=14078
  */
-#define MIRA016_HBLANK_30FPS			19017
+#define MIRA016_HBLANK_30FPS			14078
 
 // For test pattern with fixed data
 #define MIRA016_TRAINING_WORD_REG		0x0060
@@ -689,11 +689,11 @@ static const struct mira016_reg full_400_400_30fps_10b_1lane_reg_pre_soft_reset[
 	{57464,  0},
 	{57465,  1},
 	{8311,  0},
-	{8310,  189},
+	{8310,  147},
 	{206,  1},
-	{112,  9},
-	{365,  50},
-	{374,  0},
+	{112,  6},
+	{365,  34},
+	{374,  66},
 	{57654,  0},
 	{57542,  0},
 	{57543,  0},
@@ -735,11 +735,11 @@ static const struct mira016_reg full_400_400_30fps_10b_1lane_reg_pre_soft_reset[
 	{18,  0},
 	{19,  24},
 	{346,  0},
-	{347,  51},
+	{347,  70},
 	{348,  0},
-	{349,  51},
+	{349,  70},
 	{350,  0},
-	{351,  51},
+	{351,  70},
 	{354,  0},
 	{355,  2},
 	{356,  4},
