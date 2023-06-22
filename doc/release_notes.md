@@ -1,3 +1,19 @@
+# Version v0.1.11
+
+Bug fixes:
+- Fix driver code to compile with latest RPI Linux kernel and tags used by pi-gen.
+
+Known issues:
+- From now on, Mira driver is no longer compatible to Linux kernel < 6.1.21.
+
+# Version v0.1.10
+
+New features:
+- Add LED control to Mira050 driver.
+
+Bug fixes:
+- Fix Mira050 driver duplicated modes and wrong fps.
+
 # Version v0.1.9
 
 Bug fixes:
