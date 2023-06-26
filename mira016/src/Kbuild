@@ -1,0 +1,5 @@
+obj-m  := mira016.o
+dtbo-y += mira016.dtbo
+targets += $(dtbo-y)
+always  := $(dtbo-y)
+always-y        := $(dtbo-y)
