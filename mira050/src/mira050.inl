@@ -86,9 +86,8 @@
 #define MIRA050_EXP_TIME_L_REG			0x000E
 #define MIRA050_EXP_TIME_S_REG			0x0012
 
-// VBLANK is indicated in number of rows
-#define MIRA050_VBLANK_LO_REG			0x1012
-#define MIRA050_VBLANK_HI_REG			0x1013
+// Target frame time is indicated in us 
+#define MIRA050_TARGET_FRAME_TIME_REG		0x0008
 
 #define MIRA050_EXT_EXP_PW_SEL_REG		0x1001
 #define MIRA050_EXT_EXP_PW_SEL_USE_REG		1
@@ -3174,6 +3173,26 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	return 0;
 }
 
+static int mira050_write_target_frame_time_reg(struct mira050 *mira050, u32 target_frame_time_us) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	u32 ret = 0;
+
+	/* Write Bank 1 context 0 */
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
+	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
+	ret = mira050_write_be32(mira050, MIRA050_TARGET_FRAME_TIME_REG, target_frame_time_us);
+	/* Write Bank 1 context 1 */
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 1);
+	ret = mira050_write_be32(mira050, MIRA050_TARGET_FRAME_TIME_REG, target_frame_time_us);
+	if (ret) {
+		dev_err_ratelimited(&client->dev, "Error setting target frame time to %d", target_frame_time_us);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+
 static int mira050_write_start_streaming_regs(struct mira050* mira050) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
@@ -3452,6 +3471,7 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		container_of(ctrl->handler, struct mira050, ctrl_handler);
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
+	u32 target_frame_time_us;
 
 	// Debug print
 	// printk(KERN_INFO "[MIRA050]: mira050_set_ctrl() id: 0x%X value: 0x%X.\n", ctrl->id, ctrl->val);
@@ -3510,9 +3530,17 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		//		        ctrl->val);
 		break;
 	case V4L2_CID_VBLANK:
-		// TODO: check whether blanking control is supported in Mira050
-		//ret = mira050_write_be16(mira050, MIRA050_VBLANK_LO_REG,
-		//		        mira050->mode->height + ctrl->val);
+		/*
+		 * In libcamera, frame time (== 1/framerate) is controlled by VBLANK:
+		 * TARGET_FRAME_TIME (us) = 1000000 * ((1/PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+VBLANK))
+		 */
+		target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira050->mode->width + mira050->mode->hblank) * (u64)(mira050->mode->height + ctrl->val)) / MIRA050_PIXEL_RATE);
+		// Debug print
+		//printk(KERN_INFO "[MIRA050]: mira050_write_target_frame_time_reg target_frame_time_us = %u.\n",
+		//	target_frame_time_us);
+		//printk(KERN_INFO "[MIRA050]: width %d, hblank %d, height %d, ctrl->val %d.\n",
+		//		mira050->mode->width, mira050->mode->hblank, mira050->mode->height, ctrl->val);
+		ret = mira050_write_target_frame_time_reg(mira050, target_frame_time_us);
 		break;
 	case V4L2_CID_HBLANK:
 		break;
