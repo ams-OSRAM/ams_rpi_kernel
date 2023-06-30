@@ -70,6 +70,7 @@
 				// FIXME(jalv): Make sure orientation is correct
 				rotation = <0>;
 				orientation = <2>;
+				skip-reg-upload = <0>;
 
 				port {
 					mira016_0: endpoint {
@@ -106,6 +107,7 @@
 	__overrides__ {
 		rotation = <&mira016>,"rotation:0";
 		orientation = <&mira016>,"orientation:0";
+		skip-reg-upload = <&mira016>,"skip-reg-upload:0";
 		media-controller = <&csi>,"brcm,media-controller?";
 		cam0 = <&i2c_frag>, "target:0=",<&i2c_vc>,
 		       <&csi_frag>, "target:0=",<&csi0>,

@@ -36,11 +36,24 @@
 #define AMS_CAMERA_CID_MIRA220_REG_FLAG_FOR_READ    0b00000001
 /* When sleep bit is set, the other 3 Bytes is sleep values in us. */
 #define AMS_CAMERA_CID_MIRA220_REG_FLAG_SLEEP_US    0b00000010
-/* Bit 3&4 of flag are combined to specify I2C dev (default is Mira) */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL     0b00001100
+/*
+ * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
+ * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
+ * The TBD I2C address is default to MIRA220LED_I2C_ADDR.
+ * To change the TBD I2C address, set bit 6&7 to 0b10,
+ * then the reg_val will become TBD I2C address.
+ * The TBD I2C address is stored in mira220->tbd_client_i2c_addr.
+ */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL     0b01100000
 #define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_MIRA    0b00000000
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_PMIC    0b00000100
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_TBD     0b00001000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_TBD     0b00100000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SET_TBD 0b01000000
+
+/* Pre-allocated i2c_client */
+#define MIRA220PMIC_I2C_ADDR 0x2D
+#define MIRA220UC_I2C_ADDR 0x0A
+#define MIRA220LED_I2C_ADDR 0x53
+
 
 #define MIRA220_NATIVE_WIDTH			1600U
 #define MIRA220_NATIVE_HEIGHT			1400U
@@ -1896,6 +1909,8 @@ struct mira220 {
 
 	/* Current mode */
 	const struct mira220_mode *mode;
+	/* Whether to skip base register sequence upload, by parsing dtoverlay param */
+	u32 skip_reg_upload;
 
 	/*
 	 * Mutex for serialized access:
@@ -1908,8 +1923,13 @@ struct mira220 {
 	/* Whether regulator is enabled */
 	bool regulator_enabled;
 
-	/* pmic */
+	/* pmic, uC, LED */
 	struct i2c_client *pmic_client;
+	struct i2c_client *uc_client;
+	struct i2c_client *led_client;
+	/* User specified I2C device address */
+	u32 tbd_client_i2c_addr;
+
 };
 
 static inline struct mira220 *to_mira220(struct v4l2_subdev *_sd)
@@ -2081,9 +2101,38 @@ static int mira220_v4l2_reg_w(struct mira220 *mira220, u32 value) {
 				dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_W reg_addr %X.\n", reg_addr);
 				return -EINVAL;
 			}
-		} else if ((reg_flag & AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_PMIC) {
-			// Write PMIC, with 8-bit reg_addr.
-			ret = mira220pmic_write(mira220->pmic_client, (u8)(reg_addr & 0xFF), reg_val);
+		} else if ((reg_flag & AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SET_TBD) {
+			/* User tries to set TBD I2C address, store reg_val to mira220->tbd_client_i2c_addr. Skip write. */
+			printk(KERN_INFO "[MIRA220]: mira220->tbd_client_i2c_addr = 0x%X.\n", reg_val);
+			mira220->tbd_client_i2c_addr = reg_val;
+		} else if ((reg_flag & AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_TBD) {
+			if (mira220->tbd_client_i2c_addr == MIRA220PMIC_I2C_ADDR) {
+				// Write PMIC. Use pre-allocated mira220->pmic_client.
+				printk(KERN_INFO "[MIRA220]: write pmic_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
+				ret = mira220pmic_write(mira220->pmic_client, (u8)(reg_addr & 0xFF), reg_val);
+			} else if (mira220->tbd_client_i2c_addr == MIRA220UC_I2C_ADDR) {
+				// Write micro-controller. Use pre-allocated mira220->uc_client.
+				printk(KERN_INFO "[MIRA220]: write uc_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
+				ret = mira220pmic_write(mira220->uc_client, (u8)(reg_addr & 0xFF), reg_val);
+			} else if (mira220->tbd_client_i2c_addr == MIRA220LED_I2C_ADDR) {
+				// Write LED driver. Use pre-allocated mira220->led_client.
+				printk(KERN_INFO "[MIRA220]: write led_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
+				ret = mira220pmic_write(mira220->led_client, (u8)(reg_addr & 0xFF), reg_val);
+			} else {
+				/* Write other TBD I2C address.
+				 * The TBD I2C address is set via AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SET_TBD.
+				 * The TBD I2C address is stored in mira220->tbd_client_i2c_addr.
+				 * A temporary I2C client, tmp_client, is created and then destroyed (unregistered).
+				 */
+				struct i2c_client *tmp_client;
+				tmp_client = i2c_new_dummy_device(client->adapter, mira220->tbd_client_i2c_addr);
+				if (IS_ERR(tmp_client))
+					return PTR_ERR(tmp_client);
+				printk(KERN_INFO "[MIRA220]: write tbd_client, i2c_addr %u, reg_addr 0x%X, reg_val 0x%X.\n",
+						mira220->tbd_client_i2c_addr, (u8)(reg_addr & 0xFF), reg_val);
+				ret = mira220pmic_write(tmp_client, (u8)(reg_addr & 0xFF), reg_val);
+				i2c_unregister_device(tmp_client);
+			}
 		}
 	}
 
@@ -2853,22 +2902,26 @@ static int mira220_start_streaming(struct mira220 *mira220)
 		goto err_rpm_put;
 	}
 
-
 	/* Apply default values of current mode */
-	reg_list = &mira220->mode->reg_list;
-	printk(KERN_INFO "[MIRA220]: Write %d regs.\n", reg_list->num_of_regs);
-	ret = mira220_write_regs(mira220, reg_list->regs, reg_list->num_of_regs);
-	if (ret) {
-		dev_err(&client->dev, "%s failed to set mode\n", __func__);
-		goto err_rpm_put;
+	if (mira220->skip_reg_upload == 0) {
+		reg_list = &mira220->mode->reg_list;
+		printk(KERN_INFO "[MIRA220]: Write %d regs.\n", reg_list->num_of_regs);
+		ret = mira220_write_regs(mira220, reg_list->regs, reg_list->num_of_regs);
+		if (ret) {
+			dev_err(&client->dev, "%s failed to set mode\n", __func__);
+			goto err_rpm_put;
+		}
+
+		ret = mira220_set_framefmt(mira220);
+		if (ret) {
+			dev_err(&client->dev, "%s failed to set frame format: %d\n",
+				__func__, ret);
+			goto err_rpm_put;
+		}
+	} else {
+		printk(KERN_INFO "[MIRA220]: Skip base register sequence upload, due to skip-reg-upload=1 in dtoverlay.\n");
 	}
 
-	ret = mira220_set_framefmt(mira220);
-	if (ret) {
-		dev_err(&client->dev, "%s failed to set frame format: %d\n",
-			__func__, ret);
-		goto err_rpm_put;
-	}
 
 	printk(KERN_INFO "[MIRA220]: Entering v4l2 ctrl handler setup function.\n");
 
@@ -3489,7 +3542,13 @@ static int mira220_probe(struct i2c_client *client)
 	if (mira220_check_hwcfg(dev))
 		return -EINVAL;
 
-	// TODO(jalv): Get GPIO's, regulators and clocks from dts
+	/* Parse device tree to check if dtoverlay has param skip-reg-upload=1 */
+        device_property_read_u32(dev, "skip-reg-upload", &mira220->skip_reg_upload);
+	printk(KERN_INFO "[MIRA220]: skip-reg-upload %d.\n", mira220->skip_reg_upload);
+	/* Set default TBD I2C device address to LED I2C Address*/
+	mira220->tbd_client_i2c_addr = MIRA220LED_I2C_ADDR;
+	printk(KERN_INFO "[MIRA220]: User defined I2C device address defaults to LED driver I2C address 0x%X.\n", mira220->tbd_client_i2c_addr);
+
 
 	/* Get system clock (xclk) */
 	mira220->xclk = devm_clk_get(dev, NULL);
@@ -3515,13 +3574,21 @@ static int mira220_probe(struct i2c_client *client)
 	// mira220->reset_gpio = devm_gpiod_get_optional(dev, "reset",
 	//					     GPIOD_OUT_HIGH);
 
-#define MIRA220PMIC_I2C_ADDR 0x2D
 	{
 		printk(KERN_INFO "[MIRA220]: Init PMIC.\n");
 		mira220->pmic_client = i2c_new_dummy_device(client->adapter,
 				MIRA220PMIC_I2C_ADDR);
 		if (IS_ERR(mira220->pmic_client))
 			return PTR_ERR(mira220->pmic_client);
+		mira220->uc_client = i2c_new_dummy_device(client->adapter,
+				MIRA220UC_I2C_ADDR);
+		if (IS_ERR(mira220->uc_client))
+			return PTR_ERR(mira220->uc_client);
+		mira220->led_client = i2c_new_dummy_device(client->adapter,
+				MIRA220LED_I2C_ADDR);
+		if (IS_ERR(mira220->led_client))
+			return PTR_ERR(mira220->led_client);
+
 		mira220pmic_init_controls(mira220->pmic_client);
 	}
 
@@ -3601,6 +3668,8 @@ error_power_off:
 	mira220_power_off(dev);
 
 	i2c_unregister_device(mira220->pmic_client);
+	i2c_unregister_device(mira220->uc_client);
+	i2c_unregister_device(mira220->led_client);
 
 	return ret;
 }
@@ -3611,6 +3680,8 @@ static void mira220_remove(struct i2c_client *client)
 	struct mira220 *mira220 = to_mira220(sd);
 
 	i2c_unregister_device(mira220->pmic_client);
+	i2c_unregister_device(mira220->uc_client);
+	i2c_unregister_device(mira220->led_client);
 
 	v4l2_async_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
