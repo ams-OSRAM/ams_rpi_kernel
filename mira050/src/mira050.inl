@@ -4028,6 +4028,11 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
 	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
 	mira050->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
+	/* in case no opt is written */
+	if (mira050->otp_cal_val > 3000){
+	    mira050->otp_cal_val=2270;
+	}
+	
 	if (ret) {
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
 		goto err_rpm_put;
