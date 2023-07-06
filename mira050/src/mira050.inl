@@ -260,6 +260,7 @@
 #define MIRA050_OTP_START	0x0064
 #define MIRA050_OTP_BUSY	0x0065
 #define MIRA050_OTP_DOUT	0x006C
+#define MIRA050_BLACK_VALUE_DEFAULT    2300
 
 enum pad_types {
 	IMAGE_PAD,
@@ -4064,17 +4065,6 @@ static int mira050_start_streaming(struct mira050 *mira050)
 		printk(KERN_INFO "[MIRA050]: Skip base register sequence upload, due to skip-reg-upload=1 in dtoverlay.\n");
 	}
 
-	/* Read OTP memory for OTP_CALIBRATION_VALUE */
-	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
-	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
-	mira050->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
-	if (ret) {
-		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
-		goto err_rpm_put;
-	} else {
-		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_cal_val, otp_cal_val);
-	}
-
 
 	printk(KERN_INFO "[MIRA050]: Entering v4l2 ctrl handler setup function.\n");
 
@@ -4093,6 +4083,18 @@ static int mira050_start_streaming(struct mira050 *mira050)
                 goto err_rpm_put;
         }
 	reg_list_s_ctrl_mira050_reg_w_buf.num_of_regs = 0;
+
+	/* Read OTP memory for OTP_CALIBRATION_VALUE */
+	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
+	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
+	mira050->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
+	if (ret) {
+		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
+		/* Even if OTP reading fails, continue with the rest. */
+		/* goto err_rpm_put; */
+	} else {
+		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_cal_val, otp_cal_val);
+	}
 
 	printk(KERN_INFO "[MIRA050]: Writing start streaming regs.\n");
 

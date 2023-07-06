@@ -3078,18 +3078,6 @@ static int mira016_start_streaming(struct mira016 *mira016)
 		printk(KERN_INFO "[MIRA016]: Skip base register sequence upload, due to skip-reg-upload=1 in dtoverlay.\n");
 	}
 
-	/* Read OTP memory for OTP_CALIBRATION_VALUE */
-	ret = mira016_otp_read(mira016, 0x01, &otp_cal_val);
-	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
-	mira016->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
-	if (ret) {
-		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
-		goto err_rpm_put;
-	} else {
-		printk(KERN_INFO "[MIRA016]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira016->otp_cal_val, otp_cal_val);
-	}
-
-
 	printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl handler setup function.\n");
 
 	/* Apply customized values from user */
@@ -3107,6 +3095,18 @@ static int mira016_start_streaming(struct mira016 *mira016)
                 goto err_rpm_put;
         }
 	reg_list_s_ctrl_mira016_reg_w_buf.num_of_regs = 0;
+
+	/* Read OTP memory for OTP_CALIBRATION_VALUE */
+	ret = mira016_otp_read(mira016, 0x01, &otp_cal_val);
+	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
+	mira016->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
+	if (ret) {
+		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
+		/* Even if OTP reading fails, continue with the rest. */
+		/* goto err_rpm_put; */
+	} else {
+		printk(KERN_INFO "[MIRA016]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira016->otp_cal_val, otp_cal_val);
+	}
 
 	printk(KERN_INFO "[MIRA016]: Writing start streaming regs.\n");
 
