@@ -37,8 +37,18 @@
 #define AMS_CAMERA_CID_MIRA050_REG_FLAG_USE_BANK    0b00000010
 #define AMS_CAMERA_CID_MIRA050_REG_FLAG_BANK        0b00000100
 #define AMS_CAMERA_CID_MIRA050_REG_FLAG_CONTEXT     0b00001000
-/* When sleep bit is set, the other 3 Bytes is sleep values in us. */
+/* Use bit 5 to indicate special command, bit 2,3,4 for command. */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_CMD_SEL     0b00010000
+/* Special command for sleep. The other 3 Bytes is sleep values in us. */
 #define AMS_CAMERA_CID_MIRA050_REG_FLAG_SLEEP_US    0b00010000
+/* Special command to enable power on (/off) when stream on (/off). */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_RESET_ON    0b00010010
+/* Special command to disable power on (/off) when stream on (/off). */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_RESET_OFF   0b00010100
+/* Special command to enable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_REG_UP_ON   0b00010110
+/* Special command to disable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_REG_UP_OFF  0b00011000
 /*
  * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
  * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
@@ -2704,8 +2714,10 @@ struct mira050 {
 	u8 bit_depth;
 	/* OTP_CALIBRATION_VALUE stored in OTP memory */
 	u16 otp_cal_val;
-	/* Whether to skip base register sequence upload, by parsing dtoverlay param */
+	/* Whether to skip base register sequence upload */
 	u32 skip_reg_upload;
+	/* Whether to reset sensor when stream on/off */
+	u32 skip_reset;
 
 	/*
 	 * Mutex for serialized access:
@@ -3009,13 +3021,29 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 	// printk(KERN_INFO "[MIRA050]: %s reg_flag: 0x%02X; reg_addr: 0x%04X; reg_val: 0x%02X.\n",
 	// 		__func__, reg_flag, reg_addr, reg_val);
 
-	if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_SLEEP_US) {
-		// If it is for sleep, combine all 24 bits of reg_addr and reg_val as sleep us.
-		u32 sleep_us_val = value & 0x00FFFFFF;
-		// Sleep range needs an interval, default to 1/8 of the sleep value.
-		u32 sleep_us_interval = sleep_us_val >> 3;
-		printk(KERN_INFO "[MIRA050]: %s sleep_us: %u.\n", __func__, sleep_us_val);
-		usleep_range(sleep_us_val, sleep_us_val + sleep_us_interval);
+	if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_CMD_SEL) {
+		if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_SLEEP_US) {
+			// If it is for sleep, combine all 24 bits of reg_addr and reg_val as sleep us.
+			u32 sleep_us_val = value & 0x00FFFFFF;
+			// Sleep range needs an interval, default to 1/8 of the sleep value.
+			u32 sleep_us_interval = sleep_us_val >> 3;
+			printk(KERN_INFO "[MIRA050]: %s sleep_us: %u.\n", __func__, sleep_us_val);
+			usleep_range(sleep_us_val, sleep_us_val + sleep_us_interval);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_RESET_ON) {
+			printk(KERN_INFO "[MIRA050]: %s Enable reset at stream on/off.\n", __func__);
+			mira050->skip_reset = 0;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_RESET_OFF) {
+			printk(KERN_INFO "[MIRA050]: %s Disable reset at stream on/off.\n", __func__);
+			mira050->skip_reset = 1;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_REG_UP_ON) {
+			printk(KERN_INFO "[MIRA050]: %s Enable base register sequence upload.\n", __func__);
+			mira050->skip_reg_upload = 0;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_REG_UP_OFF) {
+			printk(KERN_INFO "[MIRA050]: %s Disable base register sequence upload.\n", __func__);
+			mira050->skip_reg_upload = 1;
+		} else {
+			printk(KERN_INFO "[MIRA050]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
+		}
 	} else if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_FOR_READ) {
 		// If it is for read, skip reagister write, cache addr and flag for read.
 		mira050->mira050_reg_w_cached_addr = reg_addr;
@@ -4062,7 +4090,7 @@ static int mira050_start_streaming(struct mira050 *mira050)
 			goto err_rpm_put;
 		}
 	} else {
-		printk(KERN_INFO "[MIRA050]: Skip base register sequence upload, due to skip-reg-upload=1 in dtoverlay.\n");
+		printk(KERN_INFO "[MIRA050]: Skip base register sequence upload, due to mira050->skip_reg_upload=%u.\n", mira050->skip_reg_upload);
 	}
 
 
@@ -4183,6 +4211,7 @@ static int mira050_power_on(struct device *dev)
 
 	printk(KERN_INFO "[MIRA050]: Entering power on function.\n");
 
+	/* Alway enable regulator even if (skip_reset == 1) */
 	ret = regulator_bulk_enable(MIRA050_NUM_SUPPLIES, mira050->supplies);
 	if (ret) {
 		dev_err(&client->dev, "%s: failed to enable regulators\n",
@@ -4213,8 +4242,14 @@ static int mira050_power_off(struct device *dev)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mira050 *mira050 = to_mira050(sd);
 
-	regulator_bulk_disable(MIRA050_NUM_SUPPLIES, mira050->supplies);
-	clk_disable_unprepare(mira050->xclk);
+	printk(KERN_INFO "[MIRA050]: Entering power off function.\n");
+
+	if (mira050->skip_reset == 0) {
+		regulator_bulk_disable(MIRA050_NUM_SUPPLIES, mira050->supplies);
+		clk_disable_unprepare(mira050->xclk);
+	} else {
+		printk(KERN_INFO "[MIRA050]: Skip disabling regulator at power on due to mira050->skip_reset=%u.\n", mira050->skip_reset);
+	}
 
 	return 0;
 }
@@ -4224,6 +4259,8 @@ static int __maybe_unused mira050_suspend(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mira050 *mira050 = to_mira050(sd);
+
+	printk(KERN_INFO "[MIRA050]: Entering suspend function.\n");
 
 	if (mira050->streaming)
 		mira050_stop_streaming(mira050);
@@ -4237,6 +4274,8 @@ static int __maybe_unused mira050_resume(struct device *dev)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct mira050 *mira050 = to_mira050(sd);
 	int ret;
+
+	printk(KERN_INFO "[MIRA050]: Entering resume function.\n");
 
 	if (mira050->streaming) {
 		ret = mira050_start_streaming(mira050);
