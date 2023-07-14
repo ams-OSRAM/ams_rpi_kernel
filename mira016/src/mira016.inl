@@ -49,6 +49,10 @@
 #define AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_ON   0b00010110
 /* Special command to disable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
 #define AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_OFF  0b00011000
+/* Special command to manually power on */
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_ON    0b00011010
+/* Special command to manually power off */
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_OFF   0b00011100
 /*
  * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
  * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
@@ -296,16 +300,6 @@ struct mira016_reg_list {
 	const struct mira016_reg *regs;
 };
 
-struct mira016_v4l2_reg {
-	u32 val;
-};
-
-struct mira016_v4l2_reg_list {
-	unsigned int num_of_regs;
-	struct mira016_v4l2_reg *regs;
-};
-
-
 /* Mode : resolution and related config&values */
 struct mira016_mode {
 	/* Frame width */
@@ -328,14 +322,6 @@ struct mira016_mode {
 
 	/* bit_depth needed for analog gain selection */
 	u8 bit_depth;
-};
-
-// Allocate a buffer to store custom reg write
-#define AMS_CAMERA_CID_MIRA016_REG_W_BUF_SIZE	2048
-static struct mira016_v4l2_reg s_ctrl_mira016_reg_w_buf[AMS_CAMERA_CID_MIRA016_REG_W_BUF_SIZE];
-static struct mira016_v4l2_reg_list reg_list_s_ctrl_mira016_reg_w_buf = {
-	.num_of_regs = 0,
-        .regs = s_ctrl_mira016_reg_w_buf,
 };
 
 // 400_400_60fps_10b_1lane
@@ -2171,6 +2157,60 @@ static int mira016pmic_write(struct i2c_client *client, u8 reg, u8 val)
 	return ret;
 }
 
+/* Power/clock management functions */
+static int mira016_power_on(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira016 *mira016 = to_mira016(sd);
+	int ret = -EINVAL;
+
+	printk(KERN_INFO "[MIRA016]: Entering power on function.\n");
+
+	/* Alway enable regulator even if (skip_reset == 1) */
+	ret = regulator_bulk_enable(MIRA016_NUM_SUPPLIES, mira016->supplies);
+	if (ret) {
+		dev_err(&client->dev, "%s: failed to enable regulators\n",
+			__func__);
+		return ret;
+	}
+
+	ret = clk_prepare_enable(mira016->xclk);
+	if (ret) {
+		dev_err(&client->dev, "%s: failed to enable clock\n",
+			__func__);
+		goto reg_off;
+	}
+
+	usleep_range(MIRA016_XCLR_MIN_DELAY_US,
+		     MIRA016_XCLR_MIN_DELAY_US + MIRA016_XCLR_DELAY_RANGE_US);
+
+	return 0;
+
+reg_off:
+	ret = regulator_bulk_disable(MIRA016_NUM_SUPPLIES, mira016->supplies);
+	return ret;
+}
+
+static int mira016_power_off(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira016 *mira016 = to_mira016(sd);
+
+	printk(KERN_INFO "[MIRA016]: Entering power off function.\n");
+
+	if (mira016->skip_reset == 0) {
+		regulator_bulk_disable(MIRA016_NUM_SUPPLIES, mira016->supplies);
+		clk_disable_unprepare(mira016->xclk);
+	} else {
+		printk(KERN_INFO "[MIRA016]: Skip disabling regulator at power on due to mira016->skip_reset=%u.\n", mira016->skip_reset);
+	}
+
+	return 0;
+}
+
+
 static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
 	u32 ret = 0;
@@ -2202,6 +2242,12 @@ static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_OFF) {
 			printk(KERN_INFO "[MIRA016]: %s Disable base register sequence upload.\n", __func__);
 			mira016->skip_reg_upload = 1;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_ON) {
+			printk(KERN_INFO "[MIRA016]: %s Call power on function mira016_power_on().\n", __func__);
+			mira016_power_on(&client->dev);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_OFF) {
+			printk(KERN_INFO "[MIRA016]: %s Call power off function mira016_power_off().\n", __func__);
+			mira016_power_off(&client->dev);
 		} else {
 			printk(KERN_INFO "[MIRA016]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
@@ -2338,27 +2384,6 @@ static int mira016_v4l2_reg_r(struct mira016 *mira016, u32 *value) {
 	return 0;
 }
 
-
-/* Write a list of v4l2 registers */
-static int mira016_write_v4l2_regs(struct mira016 *mira016,
-				const struct mira016_v4l2_reg *regs, u32 len)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
-	unsigned int i;
-	int ret;
-
-	for (i = 0; i < len; i++) {
-		ret = mira016_v4l2_reg_w(mira016, regs[i].val);
-		if (ret) {
-			dev_err_ratelimited(&client->dev,
-					    "Failed to write v4l2 reg value 0x%8.8x. error = %d\n",
-					    regs[i].val, ret);
-			return ret;
-		}
-	}
-
-	return 0;
-}
 
 // Returns the maximum exposure time in microseconds (reg value)
 static u32 mira016_calculate_max_exposure_time(u32 row_length, u32 vsize,
@@ -2657,27 +2682,6 @@ static int mira016_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	// printk(KERN_INFO "[MIRA016]: mira016_s_ctrl() id: %X value: %X.\n", ctrl->id, ctrl->val);
 
-	/*
-	 * Applying V4L2 control value only happens
-	 * when power is up for streaming
-	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
-		struct mira016_v4l2_reg_list *reg_list;
-		reg_list = &reg_list_s_ctrl_mira016_reg_w_buf;
-		if (ctrl->id == AMS_CAMERA_CID_MIRA_REG_W &&
-		    reg_list->num_of_regs < AMS_CAMERA_CID_MIRA016_REG_W_BUF_SIZE) {
-			int buf_idx = reg_list->num_of_regs;
-			u32 value = ctrl->val;
-			reg_list->regs[buf_idx].val = value;
-			reg_list->num_of_regs++;
-		}
-		// Below is optional warning
-		// dev_info(&client->dev,
-                //         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
-                //         ctrl->id, ctrl->val);
-		return 0;
-	}
-
 	switch (ctrl->id) {
 	case AMS_CAMERA_CID_MIRA_REG_W:
 		ret = mira016_v4l2_reg_w(mira016, ctrl->val);
@@ -2689,8 +2693,6 @@ static int mira016_s_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
-
-	pm_runtime_put(&client->dev);
 
 	// TODO: FIXIT
 	return ret;
@@ -2705,17 +2707,6 @@ static int mira016_g_ctrl(struct v4l2_ctrl *ctrl)
 
 	// printk(KERN_INFO "[MIRA016]: mira016_g_ctrl() id: %X.\n", ctrl->id);
 
-	/*
-	 * Applying V4L2 control value only happens
-	 * when power is up for streaming
-	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
-		dev_info(&client->dev,
-                        "device in use, ctrl(id:0x%x) is not handled\n",
-                        ctrl->id);
-		return 0;
-	}
-
 	switch (ctrl->id) {
 	case AMS_CAMERA_CID_MIRA_REG_R:
 		ret = mira016_v4l2_reg_r(mira016, (u32 *)&ctrl->cur.val);
@@ -2728,8 +2719,6 @@ static int mira016_g_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
-
-	pm_runtime_put(&client->dev);
 
 	// TODO: FIXIT
 	return ret;
@@ -3060,7 +3049,6 @@ static int mira016_start_streaming(struct mira016 *mira016)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	const struct mira016_reg_list *reg_list;
-	const struct mira016_v4l2_reg_list *reg_v4l2_list;
 	u32 otp_cal_val;
 	int ret;
 
@@ -3114,16 +3102,6 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	printk(KERN_INFO "[MIRA016]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
 	if (ret)
 		goto err_rpm_put;
-
-
-	reg_v4l2_list = &reg_list_s_ctrl_mira016_reg_w_buf;
-	printk(KERN_INFO "[MIRA016]: Writing %d regs from AMS_CAMERA_CID_MIRA_REG_W.\n", reg_v4l2_list->num_of_regs);
-	ret = mira016_write_v4l2_regs(mira016, reg_v4l2_list->regs, reg_v4l2_list->num_of_regs);
-        if (ret) {
-                dev_err(&client->dev, "%s failed to set mode\n", __func__);
-                goto err_rpm_put;
-        }
-	reg_list_s_ctrl_mira016_reg_w_buf.num_of_regs = 0;
 
 	/* Read OTP memory for OTP_CALIBRATION_VALUE */
 	ret = mira016_otp_read(mira016, 0x01, &otp_cal_val);
@@ -3212,59 +3190,6 @@ err_unlock:
 	mutex_unlock(&mira016->mutex);
 
 	return ret;
-}
-
-/* Power/clock management functions */
-static int mira016_power_on(struct device *dev)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct mira016 *mira016 = to_mira016(sd);
-	int ret = -EINVAL;
-
-	printk(KERN_INFO "[MIRA016]: Entering power on function.\n");
-
-	/* Alway enable regulator even if (skip_reset == 1) */
-	ret = regulator_bulk_enable(MIRA016_NUM_SUPPLIES, mira016->supplies);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable regulators\n",
-			__func__);
-		return ret;
-	}
-
-	ret = clk_prepare_enable(mira016->xclk);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable clock\n",
-			__func__);
-		goto reg_off;
-	}
-
-	usleep_range(MIRA016_XCLR_MIN_DELAY_US,
-		     MIRA016_XCLR_MIN_DELAY_US + MIRA016_XCLR_DELAY_RANGE_US);
-
-	return 0;
-
-reg_off:
-	ret = regulator_bulk_disable(MIRA016_NUM_SUPPLIES, mira016->supplies);
-	return ret;
-}
-
-static int mira016_power_off(struct device *dev)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct mira016 *mira016 = to_mira016(sd);
-
-	printk(KERN_INFO "[MIRA016]: Entering power off function.\n");
-
-	if (mira016->skip_reset == 0) {
-		regulator_bulk_disable(MIRA016_NUM_SUPPLIES, mira016->supplies);
-		clk_disable_unprepare(mira016->xclk);
-	} else {
-		printk(KERN_INFO "[MIRA016]: Skip disabling regulator at power on due to mira016->skip_reset=%u.\n", mira016->skip_reset);
-	}
-
-	return 0;
 }
 
 static int __maybe_unused mira016_suspend(struct device *dev)

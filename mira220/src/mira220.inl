@@ -46,6 +46,10 @@
 #define AMS_CAMERA_CID_MIRA220_REG_FLAG_REG_UP_ON   0b00010110
 /* Special command to disable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
 #define AMS_CAMERA_CID_MIRA220_REG_FLAG_REG_UP_OFF  0b00011000
+/* Special command to manually power on */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_POWER_ON    0b00011010
+/* Special command to manually power off */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_POWER_OFF   0b00011100
 /*
  * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
  * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
@@ -269,16 +273,6 @@ struct mira220_reg_list {
 	const struct mira220_reg *regs;
 };
 
-struct mira220_v4l2_reg {
-	u32 val;
-};
-
-struct mira220_v4l2_reg_list {
-	unsigned int num_of_regs;
-	struct mira220_v4l2_reg *regs;
-};
-
-
 /* Mode : resolution and related config&values */
 struct mira220_mode {
 	/* Frame width */
@@ -297,15 +291,6 @@ struct mira220_mode {
 	u32 hblank;
 	u32 code;
 };
-
-// Allocate a buffer to store custom reg write
-#define AMS_CAMERA_CID_MIRA220_REG_W_BUF_SIZE	2048
-static struct mira220_v4l2_reg s_ctrl_mira220_reg_w_buf[AMS_CAMERA_CID_MIRA220_REG_W_BUF_SIZE];
-static struct mira220_v4l2_reg_list reg_list_s_ctrl_mira220_reg_w_buf = {
-	.num_of_regs = 0,
-        .regs = s_ctrl_mira220_reg_w_buf,
-};
-
 
 // 1600_1400_30fps_12b_2lanes
 static const struct mira220_reg full_1600_1400_30fps_12b_2lanes_reg[] = {
@@ -2081,6 +2066,79 @@ static int mira220pmic_write(struct i2c_client *client, u8 reg, u8 val)
 	return ret;
 }
 
+/* Power/clock management functions */
+static int mira220_power_on(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira220 *mira220 = to_mira220(sd);
+	int ret = -EINVAL;
+
+	printk(KERN_INFO "[MIRA220]: Entering power on function.\n");
+
+	/* Skip pulling reset to low if (skip_reset == 0) */
+	if (mira220->skip_reset == 0) {
+		/* Pull reset to low if it is high */
+		if (mira220->regulator_enabled) {
+			ret = regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
+			if (ret) {
+				dev_err(&client->dev, "%s: failed to disable regulators\n",
+					__func__);
+				return ret;
+			}
+			clk_disable_unprepare(mira220->xclk);
+			usleep_range(MIRA220_XCLR_MIN_DELAY_US,
+				     MIRA220_XCLR_MIN_DELAY_US + MIRA220_XCLR_DELAY_RANGE_US);
+			mira220->regulator_enabled = false;
+		}
+	} else {
+		printk(KERN_INFO "[MIRA220]: Skip pulling reset to low due to mira220->skip_reset=%u.\n", mira220->skip_reset);
+	}
+
+	/* Alway enable regulator even if (skip_reset == 1) */
+	ret = regulator_bulk_enable(MIRA220_NUM_SUPPLIES, mira220->supplies);
+	if (ret) {
+		dev_err(&client->dev, "%s: failed to enable regulators\n",
+			__func__);
+		return ret;
+	}
+	mira220->regulator_enabled = true;
+
+	ret = clk_prepare_enable(mira220->xclk);
+	if (ret) {
+		dev_err(&client->dev, "%s: failed to enable clock\n",
+			__func__);
+		goto reg_off;
+	}
+
+	// gpiod_set_value_cansleep(mira220->reset_gpio, 1);
+	usleep_range(MIRA220_XCLR_MIN_DELAY_US,
+		     MIRA220_XCLR_MIN_DELAY_US + MIRA220_XCLR_DELAY_RANGE_US);
+	return 0;
+
+reg_off:
+	ret = regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
+	mira220->regulator_enabled = false;
+	return ret;
+}
+
+static int mira220_power_off(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct mira220 *mira220 = to_mira220(sd);
+	(void)mira220;
+	printk(KERN_INFO "[MIRA220]: Entering power off function.\n");
+
+	/* Keep reset pin high, due to mira220 consums max power when reset pin is low */
+	// regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
+	// mira220->regulator_enabled = false;
+	// clk_disable_unprepare(mira220->xclk);
+
+	return 0;
+}
+
+
 static int mira220_v4l2_reg_w(struct mira220 *mira220, u32 value) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira220->sd);
 	u32 ret = 0;
@@ -2112,6 +2170,12 @@ static int mira220_v4l2_reg_w(struct mira220 *mira220, u32 value) {
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA220_REG_FLAG_REG_UP_OFF) {
 			printk(KERN_INFO "[MIRA220]: %s Disable base register sequence upload.\n", __func__);
 			mira220->skip_reg_upload = 1;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA220_REG_FLAG_POWER_ON) {
+			printk(KERN_INFO "[MIRA220]: %s Call power on function mira220_power_on().\n", __func__);
+			mira220_power_on(&client->dev);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA220_REG_FLAG_POWER_OFF) {
+			printk(KERN_INFO "[MIRA220]: %s Call power off function mira220_power_off().\n", __func__);
+			mira220_power_off(&client->dev);
 		} else {
 			printk(KERN_INFO "[MIRA220]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
@@ -2190,29 +2254,6 @@ static int mira220_v4l2_reg_r(struct mira220 *mira220, u32 *value) {
 
 	return 0;
 }
-
-
-/* Write a list of v4l2 registers */
-static int mira220_write_v4l2_regs(struct mira220 *mira220,
-				const struct mira220_v4l2_reg *regs, u32 len)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(&mira220->sd);
-	unsigned int i;
-	int ret;
-
-	for (i = 0; i < len; i++) {
-		ret = mira220_v4l2_reg_w(mira220, regs[i].val);
-		if (ret) {
-			dev_err_ratelimited(&client->dev,
-					    "Failed to write v4l2 reg value 0x%8.8x. error = %d\n",
-					    regs[i].val, ret);
-			return ret;
-		}
-	}
-
-	return 0;
-}
-
 
 // Returns the maximum exposure time in row_length (reg value).
 // Calculation is baded on Mira220 datasheet Section 9.2.
@@ -2492,27 +2533,6 @@ static int mira220_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	// printk(KERN_INFO "[MIRA220]: mira220_s_ctrl() id: %X value: %X.\n", ctrl->id, ctrl->val);
 
-	/*
-	 * Applying V4L2 control value only happens
-	 * when power is up for streaming
-	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
-		struct mira220_v4l2_reg_list *reg_list;
-		reg_list = &reg_list_s_ctrl_mira220_reg_w_buf;
-		if (ctrl->id == AMS_CAMERA_CID_MIRA_REG_W &&
-		    reg_list->num_of_regs < AMS_CAMERA_CID_MIRA220_REG_W_BUF_SIZE) {
-			int buf_idx = reg_list->num_of_regs;
-			u32 value = ctrl->val;
-			reg_list->regs[buf_idx].val = value;
-			reg_list->num_of_regs++;
-		}
-		// Below is optional warning
-		// dev_info(&client->dev,
-                //         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
-                //         ctrl->id, ctrl->val);
-		return 0;
-	}
-
 	switch (ctrl->id) {
 	case AMS_CAMERA_CID_MIRA_REG_W:
 		ret = mira220_v4l2_reg_w(mira220, ctrl->val);
@@ -2524,8 +2544,6 @@ static int mira220_s_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
-
-	pm_runtime_put(&client->dev);
 
 	// TODO: FIXIT
 	return ret;
@@ -2540,17 +2558,6 @@ static int mira220_g_ctrl(struct v4l2_ctrl *ctrl)
 
 	// printk(KERN_INFO "[MIRA220]: mira220_g_ctrl() id: %X.\n", ctrl->id);
 
-	/*
-	 * Applying V4L2 control value only happens
-	 * when power is up for streaming
-	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
-		dev_info(&client->dev,
-                        "device in use, ctrl(id:0x%x) is not handled\n",
-                        ctrl->id);
-		return 0;
-	}
-
 	switch (ctrl->id) {
 	case AMS_CAMERA_CID_MIRA_REG_R:
 		ret = mira220_v4l2_reg_r(mira220, (u32 *)&ctrl->cur.val);
@@ -2563,8 +2570,6 @@ static int mira220_g_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
-
-	pm_runtime_put(&client->dev);
 
 	// TODO: FIXIT
 	return ret;
@@ -2910,7 +2915,6 @@ static int mira220_start_streaming(struct mira220 *mira220)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira220->sd);
 	const struct mira220_reg_list *reg_list;
-	const struct mira220_v4l2_reg_list *reg_v4l2_list;
 	int ret;
 
 	printk(KERN_INFO "[MIRA220]: Entering start streaming function.\n");
@@ -2958,15 +2962,6 @@ static int mira220_start_streaming(struct mira220 *mira220)
 	printk(KERN_INFO "[MIRA220]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
 	if (ret)
 		goto err_rpm_put;
-
-	reg_v4l2_list = &reg_list_s_ctrl_mira220_reg_w_buf;
-	printk(KERN_INFO "[MIRA220]: Writing %d regs from AMS_CAMERA_CID_MIRA_REG_W.\n", reg_v4l2_list->num_of_regs);
-	ret = mira220_write_v4l2_regs(mira220, reg_v4l2_list->regs, reg_v4l2_list->num_of_regs);
-        if (ret) {
-                dev_err(&client->dev, "%s failed to set mode\n", __func__);
-                goto err_rpm_put;
-        }
-	reg_list_s_ctrl_mira220_reg_w_buf.num_of_regs = 0;
 
 	printk(KERN_INFO "[MIRA220]: Writing start streaming regs.\n");
 
@@ -3043,78 +3038,6 @@ err_unlock:
 	mutex_unlock(&mira220->mutex);
 
 	return ret;
-}
-
-/* Power/clock management functions */
-static int mira220_power_on(struct device *dev)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct mira220 *mira220 = to_mira220(sd);
-	int ret = -EINVAL;
-
-	printk(KERN_INFO "[MIRA220]: Entering power on function.\n");
-
-	/* Skip pulling reset to low if (skip_reset == 0) */
-	if (mira220->skip_reset == 0) {
-		/* Pull reset to low if it is high */
-		if (mira220->regulator_enabled) {
-			ret = regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
-			if (ret) {
-				dev_err(&client->dev, "%s: failed to disable regulators\n",
-					__func__);
-				return ret;
-			}
-			clk_disable_unprepare(mira220->xclk);
-			usleep_range(MIRA220_XCLR_MIN_DELAY_US,
-				     MIRA220_XCLR_MIN_DELAY_US + MIRA220_XCLR_DELAY_RANGE_US);
-			mira220->regulator_enabled = false;
-		}
-	} else {
-		printk(KERN_INFO "[MIRA220]: Skip pulling reset to low due to mira220->skip_reset=%u.\n", mira220->skip_reset);
-	}
-
-	/* Alway enable regulator even if (skip_reset == 1) */
-	ret = regulator_bulk_enable(MIRA220_NUM_SUPPLIES, mira220->supplies);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable regulators\n",
-			__func__);
-		return ret;
-	}
-	mira220->regulator_enabled = true;
-
-	ret = clk_prepare_enable(mira220->xclk);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable clock\n",
-			__func__);
-		goto reg_off;
-	}
-
-	// gpiod_set_value_cansleep(mira220->reset_gpio, 1);
-	usleep_range(MIRA220_XCLR_MIN_DELAY_US,
-		     MIRA220_XCLR_MIN_DELAY_US + MIRA220_XCLR_DELAY_RANGE_US);
-	return 0;
-
-reg_off:
-	ret = regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
-	mira220->regulator_enabled = false;
-	return ret;
-}
-
-static int mira220_power_off(struct device *dev)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct mira220 *mira220 = to_mira220(sd);
-
-	printk(KERN_INFO "[MIRA220]: Entering power off function.\n");
-
-	/* Keep reset pin high, due to mira220 consums max power when reset pin is low */
-	// regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
-	// mira220->regulator_enabled = false;
-	// clk_disable_unprepare(mira220->xclk);
-
-	return 0;
 }
 
 static int __maybe_unused mira220_suspend(struct device *dev)
