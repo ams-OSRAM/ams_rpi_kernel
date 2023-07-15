@@ -298,6 +298,15 @@ struct mira050_reg_list {
 	const struct mira050_reg *regs;
 };
 
+struct mira050_v4l2_reg {
+	u32 val;
+};
+
+struct mira050_v4l2_reg_list {
+	unsigned int num_of_regs;
+	struct mira050_v4l2_reg *regs;
+};
+
 /* Mode : resolution and related config&values */
 struct mira050_mode {
 	/* Frame width */
@@ -320,6 +329,14 @@ struct mira050_mode {
 
 	/* bit_depth needed for analog gain selection */
 	u8 bit_depth;
+};
+
+// Allocate a buffer to store custom reg write
+#define AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE	2048
+static struct mira050_v4l2_reg s_ctrl_mira050_reg_w_buf[AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE];
+static struct mira050_v4l2_reg_list reg_list_s_ctrl_mira050_reg_w_buf = {
+	.num_of_regs = 0,
+        .regs = s_ctrl_mira050_reg_w_buf,
 };
 
 // 576_768_50fps_12b_1lane
@@ -3053,6 +3070,7 @@ static int mira050_power_off(struct device *dev)
 static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
 	u32 ret = 0;
+	u32 tmp_flag;
 
 	u16 reg_addr = (value >> 8) & 0xFFFF;
 	u8 reg_val = value & 0xFF;
@@ -3083,10 +3101,18 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 			mira050->skip_reg_upload = 1;
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_POWER_ON) {
 			printk(KERN_INFO "[MIRA050]: %s Call power on function mira050_power_on().\n", __func__);
-			mira050_power_on(&client->dev);
+			/* Temporarily disable skip_reset if manually doing power on/off */
+			tmp_flag = mira050->skip_reset;
+			mira050->skip_reset = 0;
+			pm_runtime_get_sync(&client->dev);
+			mira050->skip_reset = tmp_flag;
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_POWER_OFF) {
 			printk(KERN_INFO "[MIRA050]: %s Call power off function mira050_power_off().\n", __func__);
-			mira050_power_off(&client->dev);
+			/* Temporarily disable skip_reset if manually doing power on/off */
+			tmp_flag = mira050->skip_reset;
+			mira050->skip_reset = 0;
+			pm_runtime_put(&client->dev);
+			mira050->skip_reset = tmp_flag;
 		} else {
 			printk(KERN_INFO "[MIRA050]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
@@ -3219,6 +3245,27 @@ static int mira050_v4l2_reg_r(struct mira050 *mira050, u32 *value) {
 
 	// printk(KERN_INFO "[MIRA050]: mira050_v4l2_reg_r() reg_flag: 0x%02X; reg_addr: 0x%04X, reg_val: 0x%02X.\n",
 	// 		reg_flag, reg_addr, reg_val);
+
+	return 0;
+}
+
+/* Write a list of v4l2 registers */
+static int mira050_write_v4l2_regs(struct mira050 *mira050,
+				const struct mira050_v4l2_reg *regs, u32 len)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+	unsigned int i;
+	int ret;
+
+	for (i = 0; i < len; i++) {
+		ret = mira050_v4l2_reg_w(mira050, regs[i].val);
+		if (ret) {
+			dev_err_ratelimited(&client->dev,
+					    "Failed to write v4l2 reg value 0x%8.8x. error = %d\n",
+					    regs[i].val, ret);
+			return ret;
+		}
+	}
 
 	return 0;
 }
@@ -3656,6 +3703,36 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	// printk(KERN_INFO "[MIRA050]: mira050_s_ctrl() id: %X value: %X.\n", ctrl->id, ctrl->val);
 
+	/*
+	 * Applying V4L2 control value only happens
+	 * when power is up for streaming
+	 */
+	/* If it is special command, immediate apply, no need to buffer */
+	if (ctrl->id == AMS_CAMERA_CID_MIRA_REG_W) {
+	        u8 reg_flag = (ctrl->val >> 24) & 0xFF;
+		if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_CMD_SEL) {
+		    ret = mira050_v4l2_reg_w(mira050, ctrl->val);
+		    return ret;
+		}
+	}
+	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+	    /* Register writes are buffered, to be applied when start streaming */
+	    struct mira050_v4l2_reg_list *reg_list;
+	    reg_list = &reg_list_s_ctrl_mira050_reg_w_buf;
+	    if (ctrl->id == AMS_CAMERA_CID_MIRA_REG_W &&
+		reg_list->num_of_regs < AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE) {
+		    int buf_idx = reg_list->num_of_regs;
+		    u32 value = ctrl->val;
+		    reg_list->regs[buf_idx].val = value;
+		    reg_list->num_of_regs++;
+	    }
+	    // Below is optional warning
+	    // dev_info(&client->dev,
+	    //         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
+	    //         ctrl->id, ctrl->val);
+	    return 0;
+	}
+
 	switch (ctrl->id) {
 	case AMS_CAMERA_CID_MIRA_REG_W:
 		ret = mira050_v4l2_reg_w(mira050, ctrl->val);
@@ -3667,6 +3744,8 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
+
+	pm_runtime_put(&client->dev);
 
 	// TODO: FIXIT
 	return ret;
@@ -3681,6 +3760,17 @@ static int mira050_g_ctrl(struct v4l2_ctrl *ctrl)
 
 	// printk(KERN_INFO "[MIRA050]: mira050_g_ctrl() id: %X.\n", ctrl->id);
 
+	/*
+	 * Applying V4L2 control value only happens
+	 * when power is up for streaming
+	 */
+	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+		dev_info(&client->dev,
+                        "device in use, ctrl(id:0x%x) is not handled\n",
+                        ctrl->id);
+		return 0;
+	}
+
 	switch (ctrl->id) {
 	case AMS_CAMERA_CID_MIRA_REG_R:
 		ret = mira050_v4l2_reg_r(mira050, (u32 *)&ctrl->cur.val);
@@ -3693,6 +3783,8 @@ static int mira050_g_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
+
+	pm_runtime_put(&client->dev);
 
 	// TODO: FIXIT
 	return ret;
@@ -4034,6 +4126,7 @@ static int mira050_start_streaming(struct mira050 *mira050)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	const struct mira050_reg_list *reg_list;
+	const struct mira050_v4l2_reg_list *reg_v4l2_list;
 	u32 otp_cal_val;
 	int ret;
 
@@ -4088,6 +4181,15 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
 	if (ret)
 		goto err_rpm_put;
+
+	reg_v4l2_list = &reg_list_s_ctrl_mira050_reg_w_buf;
+	printk(KERN_INFO "[MIRA050]: Writing %d regs from AMS_CAMERA_CID_MIRA_REG_W.\n", reg_v4l2_list->num_of_regs);
+	ret = mira050_write_v4l2_regs(mira050, reg_v4l2_list->regs, reg_v4l2_list->num_of_regs);
+        if (ret) {
+                dev_err(&client->dev, "%s failed to set mode\n", __func__);
+                goto err_rpm_put;
+        }
+	reg_list_s_ctrl_mira050_reg_w_buf.num_of_regs = 0;
 
 	/* Read OTP memory for OTP_CALIBRATION_VALUE */
 	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
