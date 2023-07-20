@@ -2266,7 +2266,7 @@ static int mira220_v4l2_reg_w(struct mira220 *mira220, u32 value) {
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira220->skip_reset;
 			mira220->skip_reset = 0;
-			pm_runtime_get_sync(&client->dev);
+			pm_runtime_resume_and_get(&client->dev);
 			mira220->skip_reset = tmp_flag;
 			/* Write stop streaming registers before manual reg upload */
 			mira220_write_stop_streaming_regs(mira220);
@@ -2534,37 +2534,39 @@ static int mira220_set_ctrl(struct v4l2_ctrl *ctrl)
 		return 0;
 	}
 
-	switch (ctrl->id) {
-	case V4L2_CID_ANALOGUE_GAIN:
-		ret = mira220_write_analog_gain_reg(mira220, ctrl->val);
-		break;
-	case V4L2_CID_EXPOSURE:
-		ret = mira220_write_exposure_reg(mira220, ctrl->val);
-		break;
-	case V4L2_CID_TEST_PATTERN:
-		ret = mira220_write(mira220, MIRA220_REG_TEST_PATTERN,
-				       mira220_test_pattern_val[ctrl->val]);
-		break;
-	case V4L2_CID_HFLIP:
-		ret = mira220_write(mira220, MIRA220_HFLIP_REG,
-				        ctrl->val);
-		break;
-	case V4L2_CID_VFLIP:
-		ret = mira220_write(mira220, MIRA220_VFLIP_REG,
-				        ctrl->val);
-		break;
-	case V4L2_CID_VBLANK:
-		ret = mira220_write16(mira220, MIRA220_VBLANK_LO_REG,
-				        ctrl->val);
-		break;
-	case V4L2_CID_HBLANK:
-		break;
-	default:
-		dev_info(&client->dev,
-			 "ctrl(id:0x%x,val:0x%x) is not handled\n",
-			 ctrl->id, ctrl->val);
-		ret = -EINVAL;
-		break;
+	if (mira220->skip_reg_upload == 0) {
+		switch (ctrl->id) {
+		case V4L2_CID_ANALOGUE_GAIN:
+			ret = mira220_write_analog_gain_reg(mira220, ctrl->val);
+			break;
+		case V4L2_CID_EXPOSURE:
+			ret = mira220_write_exposure_reg(mira220, ctrl->val);
+			break;
+		case V4L2_CID_TEST_PATTERN:
+			ret = mira220_write(mira220, MIRA220_REG_TEST_PATTERN,
+					       mira220_test_pattern_val[ctrl->val]);
+			break;
+		case V4L2_CID_HFLIP:
+			ret = mira220_write(mira220, MIRA220_HFLIP_REG,
+						ctrl->val);
+			break;
+		case V4L2_CID_VFLIP:
+			ret = mira220_write(mira220, MIRA220_VFLIP_REG,
+						ctrl->val);
+			break;
+		case V4L2_CID_VBLANK:
+			ret = mira220_write16(mira220, MIRA220_VBLANK_LO_REG,
+						ctrl->val);
+			break;
+		case V4L2_CID_HBLANK:
+			break;
+		default:
+			dev_info(&client->dev,
+				 "ctrl(id:0x%x,val:0x%x) is not handled\n",
+				 ctrl->id, ctrl->val);
+			ret = -EINVAL;
+			break;
+		}
 	}
 
 	pm_runtime_put(&client->dev);
@@ -2594,7 +2596,9 @@ static int mira220_s_ctrl(struct v4l2_ctrl *ctrl)
 		    return ret;
 		}
 	}
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+	ret = pm_runtime_get_if_in_use(&client->dev);
+	// printk(KERN_INFO "[MIRA220]: mira220_s_ctrl() pm_runtime_get_if_in_use(&client->dev) ret : %d.\n", ret);
+	if (ret == 0) {
 	    /* Register writes are buffered, to be applied when start streaming */
 	    struct mira220_v4l2_reg_list *reg_list;
 	    reg_list = &reg_list_s_ctrl_mira220_reg_w_buf;
@@ -2925,30 +2929,32 @@ static int mira220_set_pad_format(struct v4l2_subdev *sd,
 
 static int mira220_set_framefmt(struct mira220 *mira220)
 {
-	switch (mira220->fmt.code) {
-	case MEDIA_BUS_FMT_Y8_1X8:
-	case MEDIA_BUS_FMT_SGRBG8_1X8:
-		printk(KERN_INFO "[MIRA220]: mira220_set_framefmt() write 8 bpp regs.\n");
-		mira220_write(mira220, MIRA220_BIT_DEPTH_REG, MIRA220_BIT_DEPTH_8_BIT);
-		mira220_write(mira220, MIRA220_CSI_DATA_TYPE_REG,
-			MIRA220_CSI_DATA_TYPE_8_BIT);
-		return 0;
-	case MEDIA_BUS_FMT_Y10_1X10:
-	case MEDIA_BUS_FMT_SGRBG10_1X10:
-		printk(KERN_INFO "[MIRA220]: mira220_set_framefmt() write 10 bpp regs.\n");
-		mira220_write(mira220, MIRA220_BIT_DEPTH_REG,MIRA220_BIT_DEPTH_10_BIT);
-		mira220_write(mira220, MIRA220_CSI_DATA_TYPE_REG,
-			MIRA220_CSI_DATA_TYPE_10_BIT);
-		return 0;
-	case MEDIA_BUS_FMT_Y12_1X12:
-	case MEDIA_BUS_FMT_SGRBG12_1X12:
-		printk(KERN_INFO "[MIRA220]: mira220_set_framefmt() write 12 bpp regs.\n");
-		mira220_write(mira220, MIRA220_BIT_DEPTH_REG, MIRA220_BIT_DEPTH_12_BIT);
-		mira220_write(mira220, MIRA220_CSI_DATA_TYPE_REG,
-			MIRA220_CSI_DATA_TYPE_12_BIT);
-		return 0;
-	default:
-		printk(KERN_ERR "Unknown format requested %d", mira220->fmt.code);
+	if (mira220->skip_reg_upload == 0) {
+		switch (mira220->fmt.code) {
+		case MEDIA_BUS_FMT_Y8_1X8:
+		case MEDIA_BUS_FMT_SGRBG8_1X8:
+			printk(KERN_INFO "[MIRA220]: mira220_set_framefmt() write 8 bpp regs.\n");
+			mira220_write(mira220, MIRA220_BIT_DEPTH_REG, MIRA220_BIT_DEPTH_8_BIT);
+			mira220_write(mira220, MIRA220_CSI_DATA_TYPE_REG,
+				MIRA220_CSI_DATA_TYPE_8_BIT);
+			return 0;
+		case MEDIA_BUS_FMT_Y10_1X10:
+		case MEDIA_BUS_FMT_SGRBG10_1X10:
+			printk(KERN_INFO "[MIRA220]: mira220_set_framefmt() write 10 bpp regs.\n");
+			mira220_write(mira220, MIRA220_BIT_DEPTH_REG,MIRA220_BIT_DEPTH_10_BIT);
+			mira220_write(mira220, MIRA220_CSI_DATA_TYPE_REG,
+				MIRA220_CSI_DATA_TYPE_10_BIT);
+			return 0;
+		case MEDIA_BUS_FMT_Y12_1X12:
+		case MEDIA_BUS_FMT_SGRBG12_1X12:
+			printk(KERN_INFO "[MIRA220]: mira220_set_framefmt() write 12 bpp regs.\n");
+			mira220_write(mira220, MIRA220_BIT_DEPTH_REG, MIRA220_BIT_DEPTH_12_BIT);
+			mira220_write(mira220, MIRA220_CSI_DATA_TYPE_REG,
+				MIRA220_CSI_DATA_TYPE_12_BIT);
+			return 0;
+		default:
+			printk(KERN_ERR "Unknown format requested %d", mira220->fmt.code);
+		}
 	}
 
 	return -EINVAL;
@@ -3014,7 +3020,9 @@ static int mira220_start_streaming(struct mira220 *mira220)
 
 	printk(KERN_INFO "[MIRA220]: Entering start streaming function.\n");
 
-	ret = pm_runtime_get_sync(&client->dev);
+	/* Follow examples of other camera driver, here use pm_runtime_resume_and_get */
+	ret = pm_runtime_resume_and_get(&client->dev);
+
 	if (ret < 0) {
 		//printk(KERN_INFO "[MIRA220]: get_sync failed, but continue.\n");
 		pm_runtime_put_noidle(&client->dev);

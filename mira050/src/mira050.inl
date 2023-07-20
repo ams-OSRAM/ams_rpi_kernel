@@ -3108,7 +3108,7 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira050->skip_reset;
 			mira050->skip_reset = 0;
-			pm_runtime_get_sync(&client->dev);
+			pm_runtime_resume_and_get(&client->dev);
 			mira050->skip_reset = tmp_flag;
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_POWER_OFF) {
 			printk(KERN_INFO "[MIRA050]: %s Call power off function mira050_power_off().\n", __func__);
@@ -3643,53 +3643,55 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		return 0;
 	}
 
-	switch (ctrl->id) {
-	case V4L2_CID_ANALOGUE_GAIN:
-		ret = mira050_write_analog_gain_reg(mira050, ctrl->val);
-		break;
-	case V4L2_CID_EXPOSURE:
-		ret = mira050_write_exposure_reg(mira050, ctrl->val * MIRA050_MIN_ROW_LENGTH_US);
-		break;
-	case V4L2_CID_TEST_PATTERN:
-		ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
-		// Fixed data is hard coded to 0xAB.
-		ret = mira050_write(mira050, MIRA050_TRAINING_WORD_REG, 0xAB);
-		// Gradient is hard coded to 45 degree.
-		ret = mira050_write(mira050, MIRA050_DELTA_TEST_IMG_REG, 0x01);
-		ret = mira050_write(mira050, MIRA050_TEST_PATTERN_REG,
-				        mira050_test_pattern_val[ctrl->val]);
-		break;
-	case V4L2_CID_HFLIP:
-		// TODO: HFLIP requires multiple register writes
-		//ret = mira050_write(mira050, MIRA050_HFLIP_REG,
-		//		        ctrl->val);
-		break;
-	case V4L2_CID_VFLIP:
-		// TODO: VFLIP seems not supported in Mira050
-		//ret = mira050_write(mira050, MIRA050_VFLIP_REG,
-		//		        ctrl->val);
-		break;
-	case V4L2_CID_VBLANK:
-		/*
-		 * In libcamera, frame time (== 1/framerate) is controlled by VBLANK:
-		 * TARGET_FRAME_TIME (us) = 1000000 * ((1/PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+VBLANK))
-		 */
-		target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira050->mode->width + mira050->mode->hblank) * (u64)(mira050->mode->height + ctrl->val)) / MIRA050_PIXEL_RATE);
-		// Debug print
-		//printk(KERN_INFO "[MIRA050]: mira050_write_target_frame_time_reg target_frame_time_us = %u.\n",
-		//	target_frame_time_us);
-		//printk(KERN_INFO "[MIRA050]: width %d, hblank %d, height %d, ctrl->val %d.\n",
-		//		mira050->mode->width, mira050->mode->hblank, mira050->mode->height, ctrl->val);
-		ret = mira050_write_target_frame_time_reg(mira050, target_frame_time_us);
-		break;
-	case V4L2_CID_HBLANK:
-		break;
-	default:
-		dev_info(&client->dev,
-			 "ctrl(id:0x%x,val:0x%x) is not handled\n",
-			 ctrl->id, ctrl->val);
-		ret = -EINVAL;
-		break;
+	if (mira050->skip_reg_upload == 0) {
+		switch (ctrl->id) {
+		case V4L2_CID_ANALOGUE_GAIN:
+			ret = mira050_write_analog_gain_reg(mira050, ctrl->val);
+			break;
+		case V4L2_CID_EXPOSURE:
+			ret = mira050_write_exposure_reg(mira050, ctrl->val * MIRA050_MIN_ROW_LENGTH_US);
+			break;
+		case V4L2_CID_TEST_PATTERN:
+			ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+			// Fixed data is hard coded to 0xAB.
+			ret = mira050_write(mira050, MIRA050_TRAINING_WORD_REG, 0xAB);
+			// Gradient is hard coded to 45 degree.
+			ret = mira050_write(mira050, MIRA050_DELTA_TEST_IMG_REG, 0x01);
+			ret = mira050_write(mira050, MIRA050_TEST_PATTERN_REG,
+						mira050_test_pattern_val[ctrl->val]);
+			break;
+		case V4L2_CID_HFLIP:
+			// TODO: HFLIP requires multiple register writes
+			//ret = mira050_write(mira050, MIRA050_HFLIP_REG,
+			//		        ctrl->val);
+			break;
+		case V4L2_CID_VFLIP:
+			// TODO: VFLIP seems not supported in Mira050
+			//ret = mira050_write(mira050, MIRA050_VFLIP_REG,
+			//		        ctrl->val);
+			break;
+		case V4L2_CID_VBLANK:
+			/*
+			 * In libcamera, frame time (== 1/framerate) is controlled by VBLANK:
+			 * TARGET_FRAME_TIME (us) = 1000000 * ((1/PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+VBLANK))
+			 */
+			target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira050->mode->width + mira050->mode->hblank) * (u64)(mira050->mode->height + ctrl->val)) / MIRA050_PIXEL_RATE);
+			// Debug print
+			//printk(KERN_INFO "[MIRA050]: mira050_write_target_frame_time_reg target_frame_time_us = %u.\n",
+			//	target_frame_time_us);
+			//printk(KERN_INFO "[MIRA050]: width %d, hblank %d, height %d, ctrl->val %d.\n",
+			//		mira050->mode->width, mira050->mode->hblank, mira050->mode->height, ctrl->val);
+			ret = mira050_write_target_frame_time_reg(mira050, target_frame_time_us);
+			break;
+		case V4L2_CID_HBLANK:
+			break;
+		default:
+			dev_info(&client->dev,
+				 "ctrl(id:0x%x,val:0x%x) is not handled\n",
+				 ctrl->id, ctrl->val);
+			ret = -EINVAL;
+			break;
+		}
 	}
 
 	pm_runtime_put(&client->dev);
@@ -3719,7 +3721,9 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 		    return ret;
 		}
 	}
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+	ret = pm_runtime_get_if_in_use(&client->dev);
+	// printk(KERN_INFO "[MIRA050]: mira050_s_ctrl() pm_runtime_get_if_in_use(&client->dev) ret : %d.\n", ret);
+	if (ret == 0) {
 	    /* Register writes are buffered, to be applied when start streaming */
 	    struct mira050_v4l2_reg_list *reg_list;
 	    reg_list = &reg_list_s_ctrl_mira050_reg_w_buf;
@@ -4136,7 +4140,8 @@ static int mira050_start_streaming(struct mira050 *mira050)
 
 	printk(KERN_INFO "[MIRA050]: Entering start streaming function.\n");
 
-	ret = pm_runtime_get_sync(&client->dev);
+	/* Follow examples of other camera driver, here use pm_runtime_resume_and_get */
+	ret = pm_runtime_resume_and_get(&client->dev);
 
 	if (ret < 0) {
 		printk(KERN_INFO "[MIRA050]: get_sync failed, but continue.\n");

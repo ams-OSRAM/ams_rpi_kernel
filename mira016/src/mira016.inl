@@ -2268,7 +2268,7 @@ static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira016->skip_reset;
 			mira016->skip_reset = 0;
-			pm_runtime_get_sync(&client->dev);
+			pm_runtime_resume_and_get(&client->dev);
 			mira016->skip_reset = tmp_flag;
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_OFF) {
 			printk(KERN_INFO "[MIRA016]: %s Call power off function mira016_power_off().\n", __func__);
@@ -2676,44 +2676,46 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 		return 0;
 	}
 
-	switch (ctrl->id) {
-	case V4L2_CID_ANALOGUE_GAIN:
-		break;
-	case V4L2_CID_EXPOSURE:
-		ret = mira016_write_exposure_reg(mira016, ctrl->val * MIRA016_MIN_ROW_LENGTH_US);
-		break;
-	case V4L2_CID_TEST_PATTERN:
-		ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
-		// Fixed data is hard coded to 0xAB.
-		ret = mira016_write(mira016, MIRA016_TRAINING_WORD_REG, 0xAB);
-		// Gradient is hard coded to 45 degree.
-		ret = mira016_write(mira016, MIRA016_DELTA_TEST_IMG_REG, 0x01);
-		ret = mira016_write(mira016, MIRA016_TEST_PATTERN_REG,
-				        mira016_test_pattern_val[ctrl->val]);
-		break;
-	case V4L2_CID_HFLIP:
-		// TODO: HFLIP requires multiple register writes
-		//ret = mira016_write(mira016, MIRA016_HFLIP_REG,
-		//		        ctrl->val);
-		break;
-	case V4L2_CID_VFLIP:
-		// TODO: VFLIP seems not supported in Mira016
-		//ret = mira016_write(mira016, MIRA016_VFLIP_REG,
-		//		        ctrl->val);
-		break;
-	case V4L2_CID_VBLANK:
-		// TODO: check whether blanking control is supported in Mira016
-		//ret = mira016_write_be16(mira016, MIRA016_VBLANK_LO_REG,
-		//		        mira016->mode->height + ctrl->val);
-		break;
-	case V4L2_CID_HBLANK:
-		break;
-	default:
-		dev_info(&client->dev,
-			 "ctrl(id:0x%x,val:0x%x) is not handled\n",
-			 ctrl->id, ctrl->val);
-		ret = -EINVAL;
-		break;
+	if (mira016->skip_reg_upload == 0) {
+		switch (ctrl->id) {
+		case V4L2_CID_ANALOGUE_GAIN:
+			break;
+		case V4L2_CID_EXPOSURE:
+			ret = mira016_write_exposure_reg(mira016, ctrl->val * MIRA016_MIN_ROW_LENGTH_US);
+			break;
+		case V4L2_CID_TEST_PATTERN:
+			ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
+			// Fixed data is hard coded to 0xAB.
+			ret = mira016_write(mira016, MIRA016_TRAINING_WORD_REG, 0xAB);
+			// Gradient is hard coded to 45 degree.
+			ret = mira016_write(mira016, MIRA016_DELTA_TEST_IMG_REG, 0x01);
+			ret = mira016_write(mira016, MIRA016_TEST_PATTERN_REG,
+						mira016_test_pattern_val[ctrl->val]);
+			break;
+		case V4L2_CID_HFLIP:
+			// TODO: HFLIP requires multiple register writes
+			//ret = mira016_write(mira016, MIRA016_HFLIP_REG,
+			//		        ctrl->val);
+			break;
+		case V4L2_CID_VFLIP:
+			// TODO: VFLIP seems not supported in Mira016
+			//ret = mira016_write(mira016, MIRA016_VFLIP_REG,
+			//		        ctrl->val);
+			break;
+		case V4L2_CID_VBLANK:
+			// TODO: check whether blanking control is supported in Mira016
+			//ret = mira016_write_be16(mira016, MIRA016_VBLANK_LO_REG,
+			//		        mira016->mode->height + ctrl->val);
+			break;
+		case V4L2_CID_HBLANK:
+			break;
+		default:
+			dev_info(&client->dev,
+				 "ctrl(id:0x%x,val:0x%x) is not handled\n",
+				 ctrl->id, ctrl->val);
+			ret = -EINVAL;
+			break;
+		}
 	}
 
 	pm_runtime_put(&client->dev);
@@ -2743,7 +2745,9 @@ static int mira016_s_ctrl(struct v4l2_ctrl *ctrl)
 		    return ret;
 		}
 	}
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+	ret = pm_runtime_get_if_in_use(&client->dev);
+	// printk(KERN_INFO "[MIRA016]: mira016_s_ctrl() pm_runtime_get_if_in_use(&client->dev) ret : %d.\n", ret);
+	if (ret == 0) {
 	    /* Register writes are buffered, to be applied when start streaming */
 	    struct mira016_v4l2_reg_list *reg_list;
 	    reg_list = &reg_list_s_ctrl_mira016_reg_w_buf;
@@ -3149,7 +3153,8 @@ static int mira016_start_streaming(struct mira016 *mira016)
 
 	printk(KERN_INFO "[MIRA016]: Entering start streaming function.\n");
 
-	ret = pm_runtime_get_sync(&client->dev);
+	/* Follow examples of other camera driver, here use pm_runtime_resume_and_get */
+	ret = pm_runtime_resume_and_get(&client->dev);
 
 	if (ret < 0) {
 		printk(KERN_INFO "[MIRA016]: get_sync failed, but continue.\n");
