@@ -1,3 +1,13 @@
+# Version v0.1.12
+
+New features:
+- Add basic Mira016 driver.
+- Add network-over-usb capability.
+- Enable variable fps for mira050.
+- Special V4L2 commands to access I2C slaves with user-defined I2C address.
+- Experimental: Python interface for mira register access.
+- Experimental: remote access via Python or web interface.
+
 # Version v0.1.11
 
 Bug fixes:
