@@ -277,6 +277,9 @@
 #define MIRA016_OTP_START	0x0064
 #define MIRA016_OTP_BUSY	0x0065
 #define MIRA016_OTP_DOUT	0x006C
+#define MIRA016_OTP_CAL_VALUE_DEFAULT    2250
+#define MIRA016_OTP_CAL_VALUE_MIN        2000
+#define MIRA016_OTP_CAL_VALUE_MAX        2400
 
 enum pad_types {
 	IMAGE_PAD,
@@ -3211,9 +3214,21 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	if (ret) {
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
 		/* Even if OTP reading fails, continue with the rest. */
+		mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
+		printk(KERN_INFO "[MIRA016]: Due to OTP reading failure, use default mira016->otp_cal_val : %u.\n", mira016->otp_cal_val);
 		/* goto err_rpm_put; */
 	} else {
 		printk(KERN_INFO "[MIRA016]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira016->otp_cal_val, otp_cal_val);
+		if ((otp_cal_val & 0xFFFF0000) != 0xFFFF0000) {
+			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
+			printk(KERN_INFO "[MIRA016]: Due to higher 16-bit not all 1, use default mira016->otp_cal_val : %u.\n", mira016->otp_cal_val);
+		} else if (mira016->otp_cal_val < MIRA016_OTP_CAL_VALUE_MIN) {
+			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
+			printk(KERN_INFO "[MIRA016]: Due to extracted value < %u, likely an error, use default mira016->otp_cal_val : %u.\n", MIRA016_OTP_CAL_VALUE_MIN, mira016->otp_cal_val);
+		} else if (mira016->otp_cal_val > MIRA016_OTP_CAL_VALUE_MAX) {
+			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
+			printk(KERN_INFO "[MIRA016]: Due to extracted value > %u, likely an error, use default mira016->otp_cal_val : %u.\n", MIRA016_OTP_CAL_VALUE_MAX, mira016->otp_cal_val);
+		}
 	}
 
 	printk(KERN_INFO "[MIRA016]: Writing start streaming regs.\n");
