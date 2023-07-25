@@ -274,7 +274,9 @@
 #define MIRA050_OTP_START	0x0064
 #define MIRA050_OTP_BUSY	0x0065
 #define MIRA050_OTP_DOUT	0x006C
-#define MIRA050_BLACK_VALUE_DEFAULT    2300
+#define MIRA050_OTP_CAL_VALUE_DEFAULT    2250
+#define MIRA050_OTP_CAL_VALUE_MIN        2000
+#define MIRA050_OTP_CAL_VALUE_MAX        2400
 
 enum pad_types {
 	IMAGE_PAD,
@@ -2976,6 +2978,8 @@ static int mira050_otp_read(struct mira050 *mira050, u8 addr, u32 *val)
 		mira050_read(mira050, MIRA050_OTP_BUSY, &busy_status);
 		if (busy_status == 0) {
 			break;
+		} else {
+			usleep_range(5, 10);
 		}
 	}
 	if (poll_cnt < poll_cnt_max && busy_status == 0) {
@@ -3462,8 +3466,8 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			u8 target_black_level = 32;
 			u16 adc_offset = 1700;
 			int scaled_calibration_value = ((otp_cal_val - 2250) / 4 - target_black_level) * 16 / (gdig_amp + 1);
-			/* Avoid negative scaled_calibration_value, which is likely due to problematic calibration. */
-			u16 offset_clipping = adc_offset + ((scaled_calibration_value < 0) ? 0 : scaled_calibration_value);
+			/* Avoid negative offset_clipping value. */
+			u16 offset_clipping = ((int)(adc_offset + scaled_calibration_value) < 0 ? 0 : (adc_offset + scaled_calibration_value));
 			/* Stop streaming and wait for frame data transmission done */
 			mira050_write_stop_streaming_regs(mira050);
 			usleep_range(wait_us, wait_us+100);
@@ -3491,8 +3495,8 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			u8 target_black_level = 32;
 			u16 adc_offset = 1700;
 			int scaled_calibration_value = ((otp_cal_val - 2250) / 4 - target_black_level) * 16 / (gdig_amp + 1);
-			/* Avoid negative scaled_calibration_value, which is likely due to problematic calibration. */
-			u16 offset_clipping = adc_offset + ((scaled_calibration_value < 0) ? 0 : scaled_calibration_value);
+			/* Avoid negative offset_clipping value. */
+			u16 offset_clipping = ((int)(adc_offset + scaled_calibration_value) < 0 ? 0 : (adc_offset + scaled_calibration_value));
 			/* Stop streaming and wait for frame data transmission done */
 			mira050_write_stop_streaming_regs(mira050);
 			usleep_range(wait_us, wait_us+100);
@@ -4198,9 +4202,21 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	if (ret) {
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
 		/* Even if OTP reading fails, continue with the rest. */
+		mira050->otp_cal_val = MIRA050_OTP_CAL_VALUE_DEFAULT;
+		printk(KERN_INFO "[MIRA050]: Due to OTP reading failure, use default mira050->otp_cal_val : %u.\n", mira050->otp_cal_val);
 		/* goto err_rpm_put; */
 	} else {
 		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_cal_val, otp_cal_val);
+		if ((otp_cal_val & 0xFFFF0000) != 0xFFFF0000) {
+			mira050->otp_cal_val = MIRA050_OTP_CAL_VALUE_DEFAULT;
+			printk(KERN_INFO "[MIRA050]: Due to higher 16-bit not all 1, use default mira050->otp_cal_val : %u.\n", mira050->otp_cal_val);
+		} else if (mira050->otp_cal_val < MIRA050_OTP_CAL_VALUE_MIN) {
+			mira050->otp_cal_val = MIRA050_OTP_CAL_VALUE_DEFAULT;
+			printk(KERN_INFO "[MIRA050]: Due to extracted value < %u, likely an error, use default mira050->otp_cal_val : %u.\n", MIRA050_OTP_CAL_VALUE_MIN, mira050->otp_cal_val);
+		} else if (mira050->otp_cal_val > MIRA050_OTP_CAL_VALUE_MAX) {
+			mira050->otp_cal_val = MIRA050_OTP_CAL_VALUE_DEFAULT;
+			printk(KERN_INFO "[MIRA050]: Due to extracted value > %u, likely an error, use default mira050->otp_cal_val : %u.\n", MIRA050_OTP_CAL_VALUE_MAX, mira050->otp_cal_val);
+		}
 	}
 
 	printk(KERN_INFO "[MIRA050]: Writing start streaming regs.\n");
