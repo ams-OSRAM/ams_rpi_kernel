@@ -3262,16 +3262,17 @@ static void mira016_stop_streaming(struct mira016 *mira016)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	int ret = 0;
 
-	ret = mira016_write_stop_streaming_regs(mira016);
-	if (ret) {
-		dev_err(&client->dev, "Could not write the stream-off sequence");
+	if (mira016->skip_reg_upload == 0) {
+		ret = mira016_write_stop_streaming_regs(mira016);
+		if (ret) {
+			dev_err(&client->dev, "Could not write the stream-off sequence");
+		}
+		/* Unlock controls for vflip and hflip */
+		__v4l2_ctrl_grab(mira016->vflip, false);
+		__v4l2_ctrl_grab(mira016->hflip, false);
+
+		pm_runtime_put(&client->dev);
 	}
-
-	/* Unlock controls for vflip and hflip */
-	__v4l2_ctrl_grab(mira016->vflip, false);
-	__v4l2_ctrl_grab(mira016->hflip, false);
-
-	pm_runtime_put(&client->dev);
 }
 
 static int mira016_set_stream(struct v4l2_subdev *sd, int enable)
