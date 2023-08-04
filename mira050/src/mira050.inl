@@ -2723,6 +2723,8 @@ struct mira050 {
 	u32 skip_reg_upload;
 	/* Whether to reset sensor when stream on/off */
 	u32 skip_reset;
+	/* Whether regulator and clk are powered on */
+	u32 powered;
 
 	/*
 	 * Mutex for serialized access:
@@ -3027,24 +3029,27 @@ static int mira050_power_on(struct device *dev)
 
 	printk(KERN_INFO "[MIRA050]: Entering power on function.\n");
 
-	/* Alway enable regulator even if (skip_reset == 1) */
-	ret = regulator_bulk_enable(MIRA050_NUM_SUPPLIES, mira050->supplies);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable regulators\n",
-			__func__);
-		return ret;
+	if (mira050->powered == 0) {
+		ret = regulator_bulk_enable(MIRA050_NUM_SUPPLIES, mira050->supplies);
+		if (ret) {
+			dev_err(&client->dev, "%s: failed to enable regulators\n",
+				__func__);
+			return ret;
+		}
+
+		ret = clk_prepare_enable(mira050->xclk);
+		if (ret) {
+			dev_err(&client->dev, "%s: failed to enable clock\n",
+				__func__);
+			goto reg_off;
+		}
+
+		usleep_range(MIRA050_XCLR_MIN_DELAY_US,
+			     MIRA050_XCLR_MIN_DELAY_US + MIRA050_XCLR_DELAY_RANGE_US);
+		mira050->powered = 1;
+	} else {
+		printk(KERN_INFO "[MIRA050]: Skip regulator and clk enable, because mira015->powered == %d.\n", mira050->powered);
 	}
-
-	ret = clk_prepare_enable(mira050->xclk);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable clock\n",
-			__func__);
-		goto reg_off;
-	}
-
-	usleep_range(MIRA050_XCLR_MIN_DELAY_US,
-		     MIRA050_XCLR_MIN_DELAY_US + MIRA050_XCLR_DELAY_RANGE_US);
-
 	return 0;
 
 reg_off:
@@ -3061,10 +3066,15 @@ static int mira050_power_off(struct device *dev)
 	printk(KERN_INFO "[MIRA050]: Entering power off function.\n");
 
 	if (mira050->skip_reset == 0) {
-		regulator_bulk_disable(MIRA050_NUM_SUPPLIES, mira050->supplies);
-		clk_disable_unprepare(mira050->xclk);
+		if (mira050->powered == 1) {
+			regulator_bulk_disable(MIRA050_NUM_SUPPLIES, mira050->supplies);
+			clk_disable_unprepare(mira050->xclk);
+			mira050->powered = 0;
+		} else {
+			printk(KERN_INFO "[MIRA050]: Skip disabling regulator and clk due to mira015->powered == %d.\n", mira050->powered);
+		}
 	} else {
-		printk(KERN_INFO "[MIRA050]: Skip disabling regulator at power on due to mira050->skip_reset=%u.\n", mira050->skip_reset);
+		printk(KERN_INFO "[MIRA050]: Skip disabling regulator and clk due to mira050->skip_reset=%u.\n", mira050->skip_reset);
 	}
 
 	return 0;
@@ -3108,14 +3118,14 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira050->skip_reset;
 			mira050->skip_reset = 0;
-			pm_runtime_resume_and_get(&client->dev);
+			mira050_power_on(&client->dev);
 			mira050->skip_reset = tmp_flag;
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_POWER_OFF) {
 			printk(KERN_INFO "[MIRA050]: %s Call power off function mira050_power_off().\n", __func__);
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira050->skip_reset;
 			mira050->skip_reset = 0;
-			pm_runtime_put(&client->dev);
+			mira050_power_off(&client->dev);
 			mira050->skip_reset = tmp_flag;
 		} else {
 			printk(KERN_INFO "[MIRA050]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
@@ -3721,9 +3731,8 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 		    return ret;
 		}
 	}
-	ret = pm_runtime_get_if_in_use(&client->dev);
-	// printk(KERN_INFO "[MIRA050]: mira050_s_ctrl() pm_runtime_get_if_in_use(&client->dev) ret : %d.\n", ret);
-	if (ret == 0) {
+	/* If it is register write, buffer it if sensor is not powered on. */
+	if (mira050->powered == 0) {
 	    /* Register writes are buffered, to be applied when start streaming */
 	    struct mira050_v4l2_reg_list *reg_list;
 	    reg_list = &reg_list_s_ctrl_mira050_reg_w_buf;
@@ -3753,8 +3762,6 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	}
 
-	pm_runtime_put(&client->dev);
-
 	// TODO: FIXIT
 	return ret;
 }
@@ -3772,7 +3779,7 @@ static int mira050_g_ctrl(struct v4l2_ctrl *ctrl)
 	 * Applying V4L2 control value only happens
 	 * when power is up for streaming
 	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+	if (mira050->powered == 0) {
 		dev_info(&client->dev,
                         "device in use, ctrl(id:0x%x) is not handled\n",
                         ctrl->id);
@@ -3791,8 +3798,6 @@ static int mira050_g_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
-
-	pm_runtime_put(&client->dev);
 
 	// TODO: FIXIT
 	return ret;
@@ -4250,14 +4255,18 @@ static void mira050_stop_streaming(struct mira050 *mira050)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	int ret = 0;
 
-	ret = mira050_write_stop_streaming_regs(mira050);
-	if (ret) {
-		dev_err(&client->dev, "Could not write the stream-off sequence");
-	}
-
 	/* Unlock controls for vflip and hflip */
 	__v4l2_ctrl_grab(mira050->vflip, false);
 	__v4l2_ctrl_grab(mira050->hflip, false);
+
+	if (mira050->skip_reset == 0) {
+		ret = mira050_write_stop_streaming_regs(mira050);
+		if (ret) {
+			dev_err(&client->dev, "Could not write the stream-off sequence");
+		}
+	} else {
+		printk(KERN_INFO "[MIRA050]: Skip write_stop_streaming_regs due to mira050->skip_reset == %d.\n", mira050->skip_reset);
+	}
 
 	pm_runtime_put(&client->dev);
 }
