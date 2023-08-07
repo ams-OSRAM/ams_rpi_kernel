@@ -75,7 +75,7 @@
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
-						clock-noncontinuous;
+						// clock-noncontinuous; // mira220 reg seq use continuois clk
 						link-frequencies =
 							/bits/ 64 <456000000>;
 					};
@@ -96,7 +96,7 @@
 					remote-endpoint = <&mira220_0>;
 					clock-lanes = <0>;
 					data-lanes = <1 2>;
-					clock-noncontinuous;
+					// clock-noncontinuous; // mira220 reg seq use continous clk
 				};
 			};
 		};
