@@ -2095,8 +2095,17 @@ static int mira220_power_on(struct device *dev)
 
 	printk(KERN_INFO "[MIRA220]: Entering power on function.\n");
 
-	/* Skip pulling reset to low if (skip_reset == 0) */
-	if (mira220->skip_reset == 0) {
+	/* The mira220_power_on() function is called at three places:
+	 * (1) by mira220_probe when driver is loaded
+	 * (2) by POWER_ON command when manually issued by user
+	 * (3) by mira050_start_streaming when user starts capturing
+	 * Reset must happen at (1).
+	 * Reset must not happen at (3) if user skip_reg_upload,
+	 * because that invalidas user register upload prior to (3).
+	 * Therefore, avoid reset if (skip_reg_upload == 1),
+	 * or if (skip_reset == 1).
+	 */
+	if (mira220->skip_reset == 0 && mira220->skip_reg_upload == 0) {
 		/* Pull reset to low if it is high */
 		if (mira220->powered == 1) {
 			ret = regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
