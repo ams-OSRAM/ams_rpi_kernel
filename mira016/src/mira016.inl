@@ -944,7 +944,7 @@ static const struct mira016_reg full_400_400_60fps_10b_1lane_reg_pre_soft_reset[
 	{0xE004, 0},
 	{0x0026, 0},
 	{0xE004, 0},
-	{0x001C, 0},
+	{0x001C, 1},
 	{0x0019, 0},
 	{0x001A, 7},
 	{0x001B, 83},
@@ -1042,6 +1042,9 @@ static const struct mira016_reg full_400_400_60fps_10b_1lane_reg_pre_soft_reset[
 
 	{0x1df,1} ,//#cp sel
 	{0x0ee,4} ,//#cp trim,	
+        {0xE000,0},
+        {0xE004,0},
+	{0x33D,1}
 };
 
 static const struct mira016_reg full_400_400_60fps_10b_1lane_reg_post_soft_reset[] = {
@@ -1649,7 +1652,7 @@ static const struct mira016_reg full_400_400_60fps_12b_1lane_reg_pre_soft_reset[
 	{0xE004, 0},
 	{0x0026, 0},
 	{0xE004, 0},
-	{0x001C, 0},
+	{0x001C, 1},
 	{0x0019, 0},
 	{0x001A, 7},
 	{0x001B, 83},
@@ -1747,6 +1750,9 @@ static const struct mira016_reg full_400_400_60fps_12b_1lane_reg_pre_soft_reset[
 	{0x1df,1} ,//#cp sel
 	{0x0ee,4} ,//#cp trim,	
 
+        {0xE000,0},
+        {0xE004,0},
+	{0x33D,1}
 };
 
 static const struct mira016_reg full_400_400_60fps_12b_1lane_reg_post_soft_reset[] = {
@@ -1882,7 +1888,8 @@ struct mira016 {
 	u32 skip_reg_upload;
 	/* Whether to reset sensor when stream on/off */
 	u32 skip_reset;
-
+	/* Whether regulator and clk are powered on */
+	u32 powered;
 
 	/*
 	 * Mutex for serialized access:
@@ -2187,23 +2194,26 @@ static int mira016_power_on(struct device *dev)
 
 	printk(KERN_INFO "[MIRA016]: Entering power on function.\n");
 
-	/* Alway enable regulator even if (skip_reset == 1) */
-	ret = regulator_bulk_enable(MIRA016_NUM_SUPPLIES, mira016->supplies);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable regulators\n",
-			__func__);
-		return ret;
-	}
+	if (mira016->powered == 0) {
+		ret = regulator_bulk_enable(MIRA016_NUM_SUPPLIES, mira016->supplies);
+		if (ret) {
+			dev_err(&client->dev, "%s: failed to enable regulators\n",
+				__func__);
+			return ret;
+		}
 
-	ret = clk_prepare_enable(mira016->xclk);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable clock\n",
-			__func__);
-		goto reg_off;
+		ret = clk_prepare_enable(mira016->xclk);
+		if (ret) {
+			dev_err(&client->dev, "%s: failed to enable clock\n",
+				__func__);
+			goto reg_off;
+		}
+		usleep_range(MIRA016_XCLR_MIN_DELAY_US,
+			     MIRA016_XCLR_MIN_DELAY_US + MIRA016_XCLR_DELAY_RANGE_US);
+		mira016->powered = 1;
+	} else {
+		printk(KERN_INFO "[MIRA016]: Skip regulator and clk enable, because mira016->powered == %d.\n", mira016->powered);
 	}
-
-	usleep_range(MIRA016_XCLR_MIN_DELAY_US,
-		     MIRA016_XCLR_MIN_DELAY_US + MIRA016_XCLR_DELAY_RANGE_US);
 
 	return 0;
 
@@ -2221,10 +2231,15 @@ static int mira016_power_off(struct device *dev)
 	printk(KERN_INFO "[MIRA016]: Entering power off function.\n");
 
 	if (mira016->skip_reset == 0) {
-		regulator_bulk_disable(MIRA016_NUM_SUPPLIES, mira016->supplies);
-		clk_disable_unprepare(mira016->xclk);
+		if (mira016->powered == 1) {
+			regulator_bulk_disable(MIRA016_NUM_SUPPLIES, mira016->supplies);
+			clk_disable_unprepare(mira016->xclk);
+			mira016->powered = 0;
+		} else {
+			printk(KERN_INFO "[MIRA016]: Skip disabling regulator and clk due to mira016->powered == %d.\n", mira016->powered);
+		}
 	} else {
-		printk(KERN_INFO "[MIRA016]: Skip disabling regulator at power on due to mira016->skip_reset=%u.\n", mira016->skip_reset);
+		printk(KERN_INFO "[MIRA016]: Skip disabling regulator and clk due to mira016->skip_reset=%u.\n", mira016->skip_reset);
 	}
 
 	return 0;
@@ -2268,14 +2283,14 @@ static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira016->skip_reset;
 			mira016->skip_reset = 0;
-			pm_runtime_get_sync(&client->dev);
+			mira016_power_on(&client->dev);
 			mira016->skip_reset = tmp_flag;
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_OFF) {
 			printk(KERN_INFO "[MIRA016]: %s Call power off function mira016_power_off().\n", __func__);
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira016->skip_reset;
 			mira016->skip_reset = 0;
-			pm_runtime_put(&client->dev);
+			mira016_power_off(&client->dev);
 			mira016->skip_reset = tmp_flag;
 		} else {
 			printk(KERN_INFO "[MIRA016]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
@@ -2676,44 +2691,46 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 		return 0;
 	}
 
-	switch (ctrl->id) {
-	case V4L2_CID_ANALOGUE_GAIN:
-		break;
-	case V4L2_CID_EXPOSURE:
-		ret = mira016_write_exposure_reg(mira016, ctrl->val * MIRA016_MIN_ROW_LENGTH_US);
-		break;
-	case V4L2_CID_TEST_PATTERN:
-		ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
-		// Fixed data is hard coded to 0xAB.
-		ret = mira016_write(mira016, MIRA016_TRAINING_WORD_REG, 0xAB);
-		// Gradient is hard coded to 45 degree.
-		ret = mira016_write(mira016, MIRA016_DELTA_TEST_IMG_REG, 0x01);
-		ret = mira016_write(mira016, MIRA016_TEST_PATTERN_REG,
-				        mira016_test_pattern_val[ctrl->val]);
-		break;
-	case V4L2_CID_HFLIP:
-		// TODO: HFLIP requires multiple register writes
-		//ret = mira016_write(mira016, MIRA016_HFLIP_REG,
-		//		        ctrl->val);
-		break;
-	case V4L2_CID_VFLIP:
-		// TODO: VFLIP seems not supported in Mira016
-		//ret = mira016_write(mira016, MIRA016_VFLIP_REG,
-		//		        ctrl->val);
-		break;
-	case V4L2_CID_VBLANK:
-		// TODO: check whether blanking control is supported in Mira016
-		//ret = mira016_write_be16(mira016, MIRA016_VBLANK_LO_REG,
-		//		        mira016->mode->height + ctrl->val);
-		break;
-	case V4L2_CID_HBLANK:
-		break;
-	default:
-		dev_info(&client->dev,
-			 "ctrl(id:0x%x,val:0x%x) is not handled\n",
-			 ctrl->id, ctrl->val);
-		ret = -EINVAL;
-		break;
+	if (mira016->skip_reg_upload == 0) {
+		switch (ctrl->id) {
+		case V4L2_CID_ANALOGUE_GAIN:
+			break;
+		case V4L2_CID_EXPOSURE:
+			ret = mira016_write_exposure_reg(mira016, ctrl->val * MIRA016_MIN_ROW_LENGTH_US);
+			break;
+		case V4L2_CID_TEST_PATTERN:
+			ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
+			// Fixed data is hard coded to 0xAB.
+			ret = mira016_write(mira016, MIRA016_TRAINING_WORD_REG, 0xAB);
+			// Gradient is hard coded to 45 degree.
+			ret = mira016_write(mira016, MIRA016_DELTA_TEST_IMG_REG, 0x01);
+			ret = mira016_write(mira016, MIRA016_TEST_PATTERN_REG,
+						mira016_test_pattern_val[ctrl->val]);
+			break;
+		case V4L2_CID_HFLIP:
+			// TODO: HFLIP requires multiple register writes
+			//ret = mira016_write(mira016, MIRA016_HFLIP_REG,
+			//		        ctrl->val);
+			break;
+		case V4L2_CID_VFLIP:
+			// TODO: VFLIP seems not supported in Mira016
+			//ret = mira016_write(mira016, MIRA016_VFLIP_REG,
+			//		        ctrl->val);
+			break;
+		case V4L2_CID_VBLANK:
+			// TODO: check whether blanking control is supported in Mira016
+			//ret = mira016_write_be16(mira016, MIRA016_VBLANK_LO_REG,
+			//		        mira016->mode->height + ctrl->val);
+			break;
+		case V4L2_CID_HBLANK:
+			break;
+		default:
+			dev_info(&client->dev,
+				 "ctrl(id:0x%x,val:0x%x) is not handled\n",
+				 ctrl->id, ctrl->val);
+			ret = -EINVAL;
+			break;
+		}
 	}
 
 	pm_runtime_put(&client->dev);
@@ -2743,7 +2760,8 @@ static int mira016_s_ctrl(struct v4l2_ctrl *ctrl)
 		    return ret;
 		}
 	}
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+	/* If it is register write, buffer it if sensor is not powered on. */
+	if (mira016->powered == 0) {
 	    /* Register writes are buffered, to be applied when start streaming */
 	    struct mira016_v4l2_reg_list *reg_list;
 	    reg_list = &reg_list_s_ctrl_mira016_reg_w_buf;
@@ -2773,8 +2791,6 @@ static int mira016_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	}
 
-	pm_runtime_put(&client->dev);
-
 	// TODO: FIXIT
 	return ret;
 }
@@ -2792,7 +2808,7 @@ static int mira016_g_ctrl(struct v4l2_ctrl *ctrl)
 	 * Applying V4L2 control value only happens
 	 * when power is up for streaming
 	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+	if (mira016->powered == 0) {
 		dev_info(&client->dev,
                         "device in use, ctrl(id:0x%x) is not handled\n",
                         ctrl->id);
@@ -2811,8 +2827,6 @@ static int mira016_g_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
-
-	pm_runtime_put(&client->dev);
 
 	// TODO: FIXIT
 	return ret;
@@ -3149,7 +3163,8 @@ static int mira016_start_streaming(struct mira016 *mira016)
 
 	printk(KERN_INFO "[MIRA016]: Entering start streaming function.\n");
 
-	ret = pm_runtime_get_sync(&client->dev);
+	/* Follow examples of other camera driver, here use pm_runtime_resume_and_get */
+	ret = pm_runtime_resume_and_get(&client->dev);
 
 	if (ret < 0) {
 		printk(KERN_INFO "[MIRA016]: get_sync failed, but continue.\n");
@@ -3257,14 +3272,20 @@ static void mira016_stop_streaming(struct mira016 *mira016)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	int ret = 0;
 
-	ret = mira016_write_stop_streaming_regs(mira016);
-	if (ret) {
-		dev_err(&client->dev, "Could not write the stream-off sequence");
-	}
-
 	/* Unlock controls for vflip and hflip */
 	__v4l2_ctrl_grab(mira016->vflip, false);
 	__v4l2_ctrl_grab(mira016->hflip, false);
+
+
+	if (mira016->skip_reset == 0) {
+		ret = mira016_write_stop_streaming_regs(mira016);
+		if (ret) {
+			dev_err(&client->dev, "Could not write the stream-off sequence");
+		}
+	} else {
+		printk(KERN_INFO "[MIRA016]: Skip write_stop_streaming_regs due to mira016->skip_reset == %d.\n", mira016->skip_reset);
+	}
+
 
 	pm_runtime_put(&client->dev);
 }
