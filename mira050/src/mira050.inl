@@ -304,11 +304,6 @@ struct mira050_v4l2_reg {
 	u32 val;
 };
 
-struct mira050_v4l2_reg_list {
-	unsigned int num_of_regs;
-	struct mira050_v4l2_reg *regs;
-};
-
 /* Mode : resolution and related config&values */
 struct mira050_mode {
 	/* Frame width */
@@ -331,14 +326,6 @@ struct mira050_mode {
 
 	/* bit_depth needed for analog gain selection */
 	u8 bit_depth;
-};
-
-// Allocate a buffer to store custom reg write
-#define AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE	2048
-static struct mira050_v4l2_reg s_ctrl_mira050_reg_w_buf[AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE];
-static struct mira050_v4l2_reg_list reg_list_s_ctrl_mira050_reg_w_buf = {
-	.num_of_regs = 0,
-        .regs = s_ctrl_mira050_reg_w_buf,
 };
 
 // 576_768_50fps_12b_1lane
@@ -3019,6 +3006,42 @@ static int mira050pmic_write(struct i2c_client *client, u8 reg, u8 val)
 	return ret;
 }
 
+static int mira050pmic_read(struct i2c_client *client, u8 reg, u8 *val)
+{
+	int ret;
+	unsigned char data_w[1] = { reg & 0xff };
+
+	ret = i2c_master_send(client, data_w, 1);
+	/*
+	 * A negative return code, or sending the wrong number of bytes, both
+	 * count as an error.
+	 */
+	if (ret != 1) {
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+			__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+		return ret;
+	}
+
+	ret = i2c_master_recv(client, val, 1);
+	/*
+	 * The only return value indicating success is 1. Anything else, even
+	 * a non-negative value, indicates something went wrong.
+	 */
+	if (ret == 1) {
+		ret = 0;
+	} else {
+		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+
 /* Power/clock management functions */
 static int mira050_power_on(struct device *dev)
 {
@@ -3221,65 +3244,75 @@ static int mira050_v4l2_reg_r(struct mira050 *mira050, u32 *value) {
 
 	*value = 0;
 
-	if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_USE_BANK){
-		u8 bank;
-		u8 context;
-		// Set conetxt bank 0 or 1
-		if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_BANK) {
-			bank = 1;
-		} else {
-			bank = 0;
+	if ((reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_MIRA) {
+		if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_USE_BANK){
+			u8 bank;
+			u8 context;
+			// Set conetxt bank 0 or 1
+			if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_BANK) {
+				bank = 1;
+			} else {
+				bank = 0;
+			}
+			// printk(KERN_INFO "[MIRA050]: %s select bank: %u.\n", __func__, bank);
+			ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, bank);
+			if (ret) {
+				dev_err(&client->dev, "Error setting BANK_SEL_REG.");
+				return ret;
+			}
+			// Set context bank 1A or bank 1B
+			if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_CONTEXT) {
+				context = 1;
+			} else {
+				context = 0;
+			}
+			// printk(KERN_INFO "[MIRA050]: %s select context: %u.\n", __func__, context);
+			ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, context);
+			if (ret) {
+				dev_err(&client->dev, "Error setting RW_CONTEXT.");
+				return ret;
+			}
 		}
-		// printk(KERN_INFO "[MIRA050]: %s select bank: %u.\n", __func__, bank);
-		ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, bank);
+		ret = mira050_read(mira050, reg_addr, &reg_val);
 		if (ret) {
-			dev_err(&client->dev, "Error setting BANK_SEL_REG.");
-			return ret;
+			dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_R reg_addr %X.\n", reg_addr);
+			return -EINVAL;
 		}
-		// Set context bank 1A or bank 1B
-		if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_CONTEXT) {
-			context = 1;
+	} else if ((reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_TBD) {
+		if (mira050->tbd_client_i2c_addr == MIRA050PMIC_I2C_ADDR) {
+			// Read PMIC. Use pre-allocated mira050->pmic_client.
+			ret = mira050pmic_read(mira050->pmic_client, (u8)(reg_addr & 0xFF), &reg_val);
+			printk(KERN_INFO "[MIRA050]: read pmic_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
+		} else if (mira050->tbd_client_i2c_addr == MIRA050UC_I2C_ADDR) {
+			// Read micro-controller. Use pre-allocated mira050->uc_client.
+			ret = mira050pmic_read(mira050->uc_client, (u8)(reg_addr & 0xFF), &reg_val);
+			printk(KERN_INFO "[MIRA050]: read uc_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
+		} else if (mira050->tbd_client_i2c_addr == MIRA050LED_I2C_ADDR) {
+			// Read LED driver. Use pre-allocated mira050->led_client.
+			ret = mira050pmic_read(mira050->led_client, (u8)(reg_addr & 0xFF), &reg_val);
+			printk(KERN_INFO "[MIRA050]: read led_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
 		} else {
-			context = 0;
-		}
-		// printk(KERN_INFO "[MIRA050]: %s select context: %u.\n", __func__, context);
-		ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, context);
-		if (ret) {
-			dev_err(&client->dev, "Error setting RW_CONTEXT.");
-			return ret;
+			/* Read other TBD I2C address.
+			 * The TBD I2C address is set via AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SET_TBD.
+			 * The TBD I2C address is stored in mira050->tbd_client_i2c_addr.
+			 * A temporary I2C client, tmp_client, is created and then destroyed (unregistered).
+			 */
+			struct i2c_client *tmp_client;
+			tmp_client = i2c_new_dummy_device(client->adapter, mira050->tbd_client_i2c_addr);
+			if (IS_ERR(tmp_client))
+				return PTR_ERR(tmp_client);
+			ret = mira050pmic_read(tmp_client, (u8)(reg_addr & 0xFF), &reg_val);
+			printk(KERN_INFO "[MIRA050]: read tbd_client, i2c_addr %u, reg_addr 0x%X, reg_val 0x%X.\n",
+					mira050->tbd_client_i2c_addr, (u8)(reg_addr & 0xFF), reg_val);
+			i2c_unregister_device(tmp_client);
 		}
 	}
-	ret = mira050_read(mira050, reg_addr, &reg_val);
-	if (ret) {
-		dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_R reg_addr %X.\n", reg_addr);
-		return -EINVAL;
-	}
+
 	// Return 32-bit value that includes flags, addr, and register value
 	*value = ((u32)reg_flag << 24) | ((u32)reg_addr << 8) | (u32)reg_val;
 
 	// printk(KERN_INFO "[MIRA050]: mira050_v4l2_reg_r() reg_flag: 0x%02X; reg_addr: 0x%04X, reg_val: 0x%02X.\n",
 	// 		reg_flag, reg_addr, reg_val);
-
-	return 0;
-}
-
-/* Write a list of v4l2 registers */
-static int mira050_write_v4l2_regs(struct mira050 *mira050,
-				const struct mira050_v4l2_reg *regs, u32 len)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
-	unsigned int i;
-	int ret;
-
-	for (i = 0; i < len; i++) {
-		ret = mira050_v4l2_reg_w(mira050, regs[i].val);
-		if (ret) {
-			dev_err_ratelimited(&client->dev,
-					    "Failed to write v4l2 reg value 0x%8.8x. error = %d\n",
-					    regs[i].val, ret);
-			return ret;
-		}
-	}
 
 	return 0;
 }
@@ -3719,36 +3752,12 @@ static int mira050_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	// printk(KERN_INFO "[MIRA050]: mira050_s_ctrl() id: %X value: %X.\n", ctrl->id, ctrl->val);
 
-	/*
-	 * Applying V4L2 control value only happens
-	 * when power is up for streaming
+	/* Previously, register writes when powered off will be buffered.
+	 * The buffer will be written to sensor when start_streaming.
+	 * Now, register writes happens immediately, even powered off.
+	 * Register writes when powered off will fail.
+	 * Users need to make sure first power on then write register.
 	 */
-	/* If it is special command, immediate apply, no need to buffer */
-	if (ctrl->id == AMS_CAMERA_CID_MIRA_REG_W) {
-	        u8 reg_flag = (ctrl->val >> 24) & 0xFF;
-		if (reg_flag & AMS_CAMERA_CID_MIRA050_REG_FLAG_CMD_SEL) {
-		    ret = mira050_v4l2_reg_w(mira050, ctrl->val);
-		    return ret;
-		}
-	}
-	/* If it is register write, buffer it if sensor is not powered on. */
-	if (mira050->powered == 0) {
-	    /* Register writes are buffered, to be applied when start streaming */
-	    struct mira050_v4l2_reg_list *reg_list;
-	    reg_list = &reg_list_s_ctrl_mira050_reg_w_buf;
-	    if (ctrl->id == AMS_CAMERA_CID_MIRA_REG_W &&
-		reg_list->num_of_regs < AMS_CAMERA_CID_MIRA050_REG_W_BUF_SIZE) {
-		    int buf_idx = reg_list->num_of_regs;
-		    u32 value = ctrl->val;
-		    reg_list->regs[buf_idx].val = value;
-		    reg_list->num_of_regs++;
-	    }
-	    // Below is optional warning
-	    // dev_info(&client->dev,
-	    //         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
-	    //         ctrl->id, ctrl->val);
-	    return 0;
-	}
 
 	switch (ctrl->id) {
 	case AMS_CAMERA_CID_MIRA_REG_W:
@@ -3776,15 +3785,11 @@ static int mira050_g_ctrl(struct v4l2_ctrl *ctrl)
 	// printk(KERN_INFO "[MIRA050]: mira050_g_ctrl() id: %X.\n", ctrl->id);
 
 	/*
-	 * Applying V4L2 control value only happens
-	 * when power is up for streaming
+	 * Ideally, V4L2 register read should happen only when powered on.
+	 * However, perhaps there are use cases that,
+	 * reading other I2C addr is desired when mira sensor is powered off.
+	 * Therefore, the check of "powered" flag is disabled for now.
 	 */
-	if (mira050->powered == 0) {
-		dev_info(&client->dev,
-                        "device in use, ctrl(id:0x%x) is not handled\n",
-                        ctrl->id);
-		return 0;
-	}
 
 	switch (ctrl->id) {
 	case AMS_CAMERA_CID_MIRA_REG_R:
@@ -4139,7 +4144,6 @@ static int mira050_start_streaming(struct mira050 *mira050)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	const struct mira050_reg_list *reg_list;
-	const struct mira050_v4l2_reg_list *reg_v4l2_list;
 	u32 otp_cal_val;
 	int ret;
 
@@ -4195,15 +4199,6 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
 	if (ret)
 		goto err_rpm_put;
-
-	reg_v4l2_list = &reg_list_s_ctrl_mira050_reg_w_buf;
-	printk(KERN_INFO "[MIRA050]: Writing %d regs from AMS_CAMERA_CID_MIRA_REG_W.\n", reg_v4l2_list->num_of_regs);
-	ret = mira050_write_v4l2_regs(mira050, reg_v4l2_list->regs, reg_v4l2_list->num_of_regs);
-        if (ret) {
-                dev_err(&client->dev, "%s failed to set mode\n", __func__);
-                goto err_rpm_put;
-        }
-	reg_list_s_ctrl_mira050_reg_w_buf.num_of_regs = 0;
 
 	/* Read OTP memory for OTP_CALIBRATION_VALUE */
 	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
@@ -4579,41 +4574,6 @@ static int mira050_check_hwcfg(struct device *dev)
 error_out:
 	v4l2_fwnode_endpoint_free(&ep_cfg);
 	fwnode_handle_put(endpoint);
-
-	return ret;
-}
-
-static int mira050pmic_read(struct i2c_client *client, u8 reg, u8 *val)
-{
-	int ret;
-	unsigned char data_w[1] = { reg & 0xff };
-
-	ret = i2c_master_send(client, data_w, 1);
-	/*
-	 * A negative return code, or sending the wrong number of bytes, both
-	 * count as an error.
-	 */
-	if (ret != 1) {
-		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-			__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-		return ret;
-	}
-
-	ret = i2c_master_recv(client, val, 1);
-	/*
-	 * The only return value indicating success is 1. Anything else, even
-	 * a non-negative value, indicates something went wrong.
-	 */
-	if (ret == 1) {
-		ret = 0;
-	} else {
-		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
-				__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-	}
 
 	return ret;
 }
