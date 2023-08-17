@@ -694,7 +694,7 @@ static int mira130_power_off(struct device *dev)
 			clk_disable_unprepare(mira130->xclk);
 			mira130->powered = 0;
 		} else {
-			printk(KERN_INFO "[MIRA130]: Skip disabling regulator and clk due to mira015->powered == %d.\n", mira130->powered);
+			printk(KERN_INFO "[MIRA130]: Skip disabling regulator and clk due to mira130->powered == %d.\n", mira130->powered);
 		}
 	} else {
 		printk(KERN_INFO "[MIRA130]: Skip disabling regulator and clk due to mira130->skip_reset=%u.\n", mira130->skip_reset);
