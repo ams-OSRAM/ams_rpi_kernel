@@ -660,24 +660,23 @@ static int mira130_power_on(struct device *dev)
 				__func__);
 			return ret;
 		}
-
 		ret = clk_prepare_enable(mira130->xclk);
 		if (ret) {
 			dev_err(&client->dev, "%s: failed to enable clock\n",
 				__func__);
 			goto reg_off;
 		}
-
 		usleep_range(MIRA130_XCLR_MIN_DELAY_US,
 			     MIRA130_XCLR_MIN_DELAY_US + MIRA130_XCLR_DELAY_RANGE_US);
 		mira130->powered = 1;
 	} else {
-		printk(KERN_INFO "[MIRA130]: Skip regulator and clk enable, because mira015->powered == %d.\n", mira130->powered);
+		printk(KERN_INFO "[MIRA130]: Skip regulator and clk enable, because mira130->powered == %d.\n", mira130->powered);
 	}
 	return 0;
 
 reg_off:
 	ret = regulator_bulk_disable(MIRA130_NUM_SUPPLIES, mira130->supplies);
+	mira130->powered = 0;
 	return ret;
 }
 
