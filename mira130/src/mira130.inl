@@ -160,6 +160,16 @@
  */
 #define MIRA130_HBLANK_1080x1280_60FPS		1988
 
+/* Set max VBLANK to be 2 fps */
+/*
+ * TARGET_FPS=1/((1/MIRA130_PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+VBLANK))
+ * VBLANK=1/((1/MIRA130_PIXEL_RATE)*TARGET_FPS*(WIDTH+HBLANK))-HEIGHT
+ * Example with TARGET_FPS of 2 fps and HBLANK of 1988
+ * VBLANK=1/((1/257698037)*2*(1080+1988))-1280=40717
+ */
+#define MIRA130_VBLANK_1080x1280_2FPS		40717
+#define MIRA130_MAX_VBLANK			MIRA130_VBLANK_1080x1280_2FPS
+
 #define MIRA130_REG_TEST_PATTERN	0x4501
 #define	MIRA130_TEST_PATTERN_DISABLE	0x00
 #define	MIRA130_TEST_PATTERN_VERTICAL_GRADIENT	0x01
@@ -412,8 +422,6 @@ struct mira130 {
 	u32 skip_reset;
 	/* Whether regulator and clk are powered on */
 	u32 powered;
-	/* A flag to temporarily force power off */
-	u32 force_power_off;
 
 	/*
 	 * Mutex for serialized access:
@@ -645,37 +653,6 @@ static int mira130_power_on(struct device *dev)
 
 	printk(KERN_INFO "[MIRA130]: Entering power on function.\n");
 
-	/* The mira130_power_on() function is called at three places:
-	 * (1) by mira130_probe when driver is loaded
-	 * (2) by POWER_ON command when manually issued by user
-	 * (3) by mira130_start_streaming when user starts capturing
-	 * Reset must happen at (1).
-	 * Reset must not happen at (3) if user skip_reg_upload,
-	 * because that invalidas user register upload prior to (3).
-	 * Therefore, avoid reset if (skip_reg_upload == 1),
-	 * or if (skip_reset == 1).
-	 */
-	if (mira130->skip_reset == 0 && mira130->skip_reg_upload == 0) {
-		/* Pull reset to low if it is high */
-		if (mira130->powered == 1) {
-			ret = regulator_bulk_disable(MIRA130_NUM_SUPPLIES, mira130->supplies);
-			if (ret) {
-				dev_err(&client->dev, "%s: failed to disable regulators\n",
-					__func__);
-				return ret;
-			}
-			clk_disable_unprepare(mira130->xclk);
-			usleep_range(MIRA130_XCLR_MIN_DELAY_US,
-				     MIRA130_XCLR_MIN_DELAY_US + MIRA130_XCLR_DELAY_RANGE_US);
-			mira130->powered = 0;
-		} else {
-			printk(KERN_INFO "[MIRA130]: Skip disabling regulator and clk due to mira130->powered == %d.\n", mira130->powered);
-		}
-	} else {
-		printk(KERN_INFO "[MIRA130]: Skip pulling reset to low due to mira130->skip_reset=%u.\n", mira130->skip_reset);
-	}
-
-	/* Alway enable regulator even if (skip_reset == 1) */
 	if (mira130->powered == 0) {
 		ret = regulator_bulk_enable(MIRA130_NUM_SUPPLIES, mira130->supplies);
 		if (ret) {
@@ -683,25 +660,24 @@ static int mira130_power_on(struct device *dev)
 				__func__);
 			return ret;
 		}
+
 		ret = clk_prepare_enable(mira130->xclk);
 		if (ret) {
 			dev_err(&client->dev, "%s: failed to enable clock\n",
 				__func__);
 			goto reg_off;
 		}
-		// gpiod_set_value_cansleep(mira130->reset_gpio, 1);
+
 		usleep_range(MIRA130_XCLR_MIN_DELAY_US,
 			     MIRA130_XCLR_MIN_DELAY_US + MIRA130_XCLR_DELAY_RANGE_US);
 		mira130->powered = 1;
 	} else {
-		printk(KERN_INFO "[MIRA130]: Skip regulator and clk enable, because mira130->powered == %d.\n", mira130->powered);
+		printk(KERN_INFO "[MIRA130]: Skip regulator and clk enable, because mira015->powered == %d.\n", mira130->powered);
 	}
-
 	return 0;
 
 reg_off:
 	ret = regulator_bulk_disable(MIRA130_NUM_SUPPLIES, mira130->supplies);
-	mira130->powered = 0;
 	return ret;
 }
 
@@ -713,17 +689,16 @@ static int mira130_power_off(struct device *dev)
 
 	printk(KERN_INFO "[MIRA130]: Entering power off function.\n");
 
-	/* Keep reset pin high, due to mira130 consums max power when reset pin is low */
-	if (mira130->force_power_off == 1) {
+	if (mira130->skip_reset == 0) {
 		if (mira130->powered == 1) {
 			regulator_bulk_disable(MIRA130_NUM_SUPPLIES, mira130->supplies);
 			clk_disable_unprepare(mira130->xclk);
 			mira130->powered = 0;
 		} else {
-			printk(KERN_INFO "[MIRA130]: Skip disabling regulator and clk due to mira130->powered == %d.\n", mira130->powered);
+			printk(KERN_INFO "[MIRA130]: Skip disabling regulator and clk due to mira015->powered == %d.\n", mira130->powered);
 		}
 	} else {
-		printk(KERN_INFO "[MIRA130]: Skip disabling regulator and clk due to mira130->force_power_off=%u.\n", mira130->force_power_off);
+		printk(KERN_INFO "[MIRA130]: Skip disabling regulator and clk due to mira130->skip_reset=%u.\n", mira130->skip_reset);
 	}
 
 	return 0;
@@ -808,9 +783,10 @@ static int mira130_v4l2_reg_w(struct mira130 *mira130, u32 value) {
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA130_REG_FLAG_POWER_OFF) {
 			printk(KERN_INFO "[MIRA130]: %s Call power off function mira130_power_off().\n", __func__);
 			/* Temporarily disable skip_reset if manually doing power on/off */
-			mira130->force_power_off = 1;
+			tmp_flag = mira130->skip_reset;
+			mira130->skip_reset = 0;
 			mira130_power_off(&client->dev);
-			mira130->force_power_off = 0;
+			mira130->skip_reset = tmp_flag;
 		} else {
 			printk(KERN_INFO "[MIRA130]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
@@ -1831,7 +1807,7 @@ static int mira130_init_controls(struct mira130 *mira130)
 
 	mira130->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira130_ctrl_ops,
 					   V4L2_CID_VBLANK, MIRA130_MIN_VBLANK,
-					   0xFFFF, 1,
+					   MIRA130_MAX_VBLANK, 1,
 					   mira130->mode->vblank);
 
 	printk(KERN_INFO "[MIRA130]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
