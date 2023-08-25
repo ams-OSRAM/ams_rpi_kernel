@@ -193,7 +193,7 @@
 #define MIRA016_LUT_DEL_008			0
 #define MIRA016_GRAN_TG				50
 // TODO: Check Mira016 data rate in reg sequence
-#define MIRA016_DATA_RATE			1000 // Mbit/s
+#define MIRA016_DATA_RATE			900 // Mbit/s
 // ROW_LENGTH register is 0x0032, with value 1504 (12 bit). Choose larger one for safety.
 #define MIRA016_MIN_ROW_LENGTH			1504
 // Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
@@ -227,7 +227,7 @@
 #define MIRA016_REG_VALUE_16BIT		2
 
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
-// 1.Gb/s * 2 * 1 / 12 = 178956970
+// 1.0Gb/s * 2 * 1 / 12 = 178956970
 #define MIRA016_PIXEL_RATE		(178956970)
 /* Should match device tree link freq */
 #define MIRA016_DEFAULT_LINK_FREQ	456000000
@@ -699,11 +699,11 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	{ 57464, 0},
 	{ 57465, 1},
 	{ 8311, 0},
-	{ 8310, 147},
+	{ 8310, 139},
 	{ 206, 1},
-	{ 112, 6},
-	{ 365, 34},
-	{ 374, 66},
+	{ 112, 5},
+	{ 365, 30},
+	{ 374, 94},
 	{ 57654, 0},
 	{ 57542, 0},
 	{ 57543, 0},
@@ -744,11 +744,11 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	{ 18, 0},
 	{ 19, 24},
 	{ 346, 0},
-	{ 347, 70},
+	{ 347, 76},
 	{ 348, 0},
-	{ 349, 70},
+	{ 349, 76},
 	{ 350, 0},
-	{ 351, 70},
+	{ 351, 76},
 	{ 354, 0},
 	{ 355, 5},
 	{ 356, 4},
@@ -814,7 +814,7 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	//Black Level
 	{ 57344, 0},
 	{ 403, 4},
-	{ 404, 162},
+	{ 404, 22},
 	{ 57344, 0},
 	{ 58156, 1},
 	{ 58157, 1},
@@ -1442,11 +1442,11 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	{ 57464, 0},
 	{ 57465, 1},
 	{ 8311, 0},
-	{ 8310, 147},
+	{ 8310, 139},
 	{ 206, 1},
-	{ 112, 6},
-	{ 365, 34},
-	{ 374, 66},
+	{ 112, 5},
+	{ 365, 30},
+	{ 374, 94},
 	{ 57654, 0},
 	{ 57542, 0},
 	{ 57543, 0},
@@ -1487,11 +1487,11 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	{ 18, 0},
 	{ 19, 24},
 	{ 346, 0},
-	{ 347, 70},
+	{ 347, 76},
 	{ 348, 0},
-	{ 349, 70},
+	{ 349, 76},
 	{ 350, 0},
-	{ 351, 70},
+	{ 351, 76},
 	{ 354, 0},
 	{ 355, 5},
 	{ 356, 4},
@@ -1547,8 +1547,8 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	{ 375, 220},
 	//Black Level
 	{ 57344, 0},
-	{ 403, 10},
-	{ 404, 54},
+	{ 403, 8},
+	{ 404, 3},
 	{ 57344, 0},
 	{ 58156, 1},
 	{ 58157, 1},
@@ -2176,11 +2176,11 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	{ 57464, 0},
 	{ 57465, 1},
 	{ 8311, 0},
-	{ 8310, 147},
+	{ 8310, 139},
 	{ 206, 1},
-	{ 112, 6},
-	{ 365, 34},
-	{ 374, 66},
+	{ 112, 5},
+	{ 365, 30},
+	{ 374, 94},
 	{ 57654, 0},
 	{ 57542, 0},
 	{ 57543, 0},
@@ -2221,11 +2221,11 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	{ 18, 0},
 	{ 19, 24},
 	{ 346, 0},
-	{ 347, 70},
+	{ 347, 76},
 	{ 348, 0},
-	{ 349, 70},
+	{ 349, 76},
 	{ 350, 0},
-	{ 351, 70},
+	{ 351, 76},
 	{ 354, 0},
 	{ 355, 5},
 	{ 356, 4},
@@ -2294,7 +2294,7 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	//Black Level
 	{ 57344, 0},
 	{ 403, 4},
-	{ 404, 62},
+	{ 404, 26},
 	{ 57344, 0},
 	{ 58156, 1},
 	{ 58157, 1},
