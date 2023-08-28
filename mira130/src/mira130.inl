@@ -33,23 +33,27 @@
 #define AMS_CAMERA_CID_MIRA_REG_R	(AMS_CAMERA_CID_BASE+1)
 
 /* Most significant Byte is flag, and most significant bit is unused. */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_FOR_READ    0b00000001
-/* Use bit 5 to indicate special command, bit 2,3,4 for command. */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_CMD_SEL     0b00010000
-/* Special command for sleep. The other 3 Bytes is sleep values in us. */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_SLEEP_US    0b00010000
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_FOR_READ        0b00000001
+/* Use bit 5 to indicate special command, bit 1,2,3,4 for command. */
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_CMD_SEL         0b00010000
+/* Special command for sleep. The other 3 Bytes (addr+val) is sleep values in us. */
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_SLEEP_US        0b00010000
 /* Special command to enable power on (/off) when stream on (/off). */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_RESET_ON    0b00010010
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_RESET_ON        0b00010010
 /* Special command to disable power on (/off) when stream on (/off). */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_RESET_OFF   0b00010100
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_RESET_OFF       0b00010100
 /* Special command to enable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_REG_UP_ON   0b00010110
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_REG_UP_ON       0b00010110
 /* Special command to disable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_REG_UP_OFF  0b00011000
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_REG_UP_OFF      0b00011000
 /* Special command to manually power on */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_POWER_ON    0b00011010
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_POWER_ON        0b00011010
 /* Special command to manually power off */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_POWER_OFF   0b00011100
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_POWER_OFF       0b00011100
+/* Special command to turn illumination trigger on */
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_ILLUM_TRIG_ON   0b00011110
+/* Special command to turn illumination trigger off */
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_ILLUM_TRIG_OFF  0b00010001
 /*
  * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
  * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
@@ -58,10 +62,11 @@
  * then the reg_val will become TBD I2C address.
  * The TBD I2C address is stored in mira130->tbd_client_i2c_addr.
  */
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_I2C_SEL     0b01100000
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_I2C_MIRA    0b00000000
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_I2C_TBD     0b00100000
-#define AMS_CAMERA_CID_MIRA130_REG_FLAG_I2C_SET_TBD 0b01000000
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_I2C_SEL         0b01100000
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_I2C_MIRA        0b00000000
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_I2C_TBD         0b00100000
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_I2C_SET_TBD     0b01000000
+
 
 /* Pre-allocated i2c_client */
 #define MIRA130PMIC_I2C_ADDR 0x2D
@@ -183,6 +188,8 @@
 #define MIRA130_DEFAULT_PIXEL_CLOCK    (24)
 #define MIRA130_DEFAULT_FRAME_LENGTH    (0x0578)
 
+/* Illumination trigger */
+#define MIRA130_EN_TRIG_ILLUM         0x3361
 
 enum pad_types {
 	IMAGE_PAD,
@@ -866,6 +873,30 @@ static int mira130_power_off(struct device *dev)
 	return 0;
 }
 
+static int mira130_write_illum_trig_regs(struct mira130* mira130, u8 enable) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira130->sd);
+	int ret = 0;
+	u8 enable_reg;
+
+	// Enable or disable illumination trigger
+	/* Enable: set bit [7:6] to 0b00. Disable: set bit [7:0] to 0b11. */
+	if (enable != 0) {
+		enable_reg = 0b00000000;
+	} else {
+		enable_reg = 0b11000000;
+	}
+	printk(KERN_INFO "[MIRA130]: Writing EN_TRIG_ILLUM to %d.\n", enable_reg);
+	ret = mira130_write(mira130, MIRA130_EN_TRIG_ILLUM, enable_reg);
+	if (ret) {
+		dev_err(&client->dev, "Error setting EN_TRIG_ILLUM to %d.", enable_reg);
+		return ret;
+	}
+	
+	return ret;
+}
+
+
+
 static int mira130_write_start_streaming_regs(struct mira130* mira130) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira130->sd);
 	int ret = 0;
@@ -949,6 +980,12 @@ static int mira130_v4l2_reg_w(struct mira130 *mira130, u32 value) {
 			mira130->skip_reset = 0;
 			mira130_power_off(&client->dev);
 			mira130->skip_reset = tmp_flag;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA130_REG_FLAG_ILLUM_TRIG_ON) {
+			printk(KERN_INFO "[MIRA130]: %s Enable illumination trigger.\n", __func__);
+			mira130_write_illum_trig_regs(mira130, 1);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA130_REG_FLAG_ILLUM_TRIG_OFF) {
+			printk(KERN_INFO "[MIRA130]: %s Disable illumination trigger.\n", __func__);
+			mira130_write_illum_trig_regs(mira130, 0);
 		} else {
 			printk(KERN_INFO "[MIRA130]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}

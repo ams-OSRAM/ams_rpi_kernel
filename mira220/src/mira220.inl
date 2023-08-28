@@ -33,23 +33,31 @@
 #define AMS_CAMERA_CID_MIRA_REG_R	(AMS_CAMERA_CID_BASE+1)
 
 /* Most significant Byte is flag, and most significant bit is unused. */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_FOR_READ    0b00000001
-/* Use bit 5 to indicate special command, bit 2,3,4 for command. */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_CMD_SEL     0b00010000
-/* Special command for sleep. The other 3 Bytes is sleep values in us. */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_SLEEP_US    0b00010000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_FOR_READ        0b00000001
+/* Use bit 5 to indicate special command, bit 1,2,3,4 for command. */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_CMD_SEL         0b00010000
+/* Special command for sleep. The other 3 Bytes (addr+val) is sleep values in us. */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_SLEEP_US        0b00010000
 /* Special command to enable power on (/off) when stream on (/off). */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_RESET_ON    0b00010010
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_RESET_ON        0b00010010
 /* Special command to disable power on (/off) when stream on (/off). */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_RESET_OFF   0b00010100
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_RESET_OFF       0b00010100
 /* Special command to enable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_REG_UP_ON   0b00010110
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_REG_UP_ON       0b00010110
 /* Special command to disable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_REG_UP_OFF  0b00011000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_REG_UP_OFF      0b00011000
 /* Special command to manually power on */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_POWER_ON    0b00011010
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_POWER_ON        0b00011010
 /* Special command to manually power off */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_POWER_OFF   0b00011100
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_POWER_OFF       0b00011100
+/* Special command to turn illumination trigger on */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_ILLUM_TRIG_ON   0b00011110
+/* Special command to turn illumination trigger off */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_ILLUM_TRIG_OFF  0b00010001
+/* Special command to set ILLUM_WIDTH. The other 3 Bytes (addr+val) is width value. */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_ILLUM_WIDTH     0b00010011
+/* Special command to set ILLUM_DELAY. The other 3 Bytes (addr+val) is width value. */
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_ILLUM_DELAY     0b00010101
 /*
  * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
  * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
@@ -58,10 +66,10 @@
  * then the reg_val will become TBD I2C address.
  * The TBD I2C address is stored in mira220->tbd_client_i2c_addr.
  */
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL     0b01100000
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_MIRA    0b00000000
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_TBD     0b00100000
-#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SET_TBD 0b01000000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SEL         0b01100000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_MIRA        0b00000000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_TBD         0b00100000
+#define AMS_CAMERA_CID_MIRA220_REG_FLAG_I2C_SET_TBD     0b01000000
 
 /* Pre-allocated i2c_client */
 #define MIRA220PMIC_I2C_ADDR 0x2D
@@ -256,6 +264,13 @@
 #define MIRA220_DEFAULT_PIXEL_CLOCK    (160)
 #define MIRA220_DEFAULT_FRAME_LENGTH    (0x07C0)
 
+/* Illumination trigger */
+#define MIRA220_EN_TRIG_ILLUM         0x10D7
+#define MIRA220_ILLUM_WIDTH           0x10D5
+#define MIRA220_ILLUM_DELAY           0x10D2
+#define MIRA220_ILLUM_DELAY_SIGN      0x10D4
+#define MIRA220_ILLUM_WIDTH_DEFAULT   (0)
+#define MIRA220_ILLUM_DELAY_DEFAULT   (0)
 
 enum pad_types {
 	IMAGE_PAD,
@@ -1916,6 +1931,10 @@ struct mira220 {
 	u32 powered;
 	/* A flag to temporarily force power off */
 	u32 force_power_off;
+	/* Illumination trigger width/length. Use [15:0] for 16-bit register, use bit [16] for sign. */
+	u32 illum_width;
+	/* Illumination trigger delay. Use [15:0] for 16-bit register. */
+	u32 illum_delay;
 
 	/*
 	 * Mutex for serialized access:
@@ -2201,6 +2220,51 @@ static int mira220_power_off(struct device *dev)
 	return 0;
 }
 
+static int mira220_write_illum_trig_regs(struct mira220* mira220, u8 enable) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira220->sd);
+	int ret = 0;
+	u16 illum_width_reg;
+	u16 illum_delay_reg;
+	u8 illum_delay_sign;
+
+	// Enable or disable illumination trigger
+	printk(KERN_INFO "[MIRA220]: Writing EN_TRIG_ILLUM to %d.\n", enable);
+	ret = mira220_write(mira220, MIRA220_EN_TRIG_ILLUM, enable);
+	if (ret) {
+		dev_err(&client->dev, "Error setting EN_TRIG_ILLUM to %d.", enable);
+		return ret;
+	}
+	
+	// Set illumination width. Write 16 bits [15:0].
+	illum_width_reg = (u16)(mira220->illum_width & 0x0000FFFF);
+	printk(KERN_INFO "[MIRA220]: Writing ILLUM_WIDTH to %u.\n", illum_width_reg);
+	ret = mira220_write16(mira220, MIRA220_ILLUM_WIDTH, illum_width_reg);
+	if (ret) {
+		dev_err(&client->dev, "Error setting ILLUM_WIDTH to %u.", illum_width_reg);
+		return ret;
+	}
+
+	// Set illumination delay. Write 16 bits [15:0] as absolute delay, and bit [16] as sign.
+	illum_delay_reg = (u16)(mira220->illum_delay & 0x0000FFFF);
+	printk(KERN_INFO "[MIRA220]: Writing ILLUM_DELAY to %u.\n", illum_delay_reg);
+	ret = mira220_write16(mira220, MIRA220_ILLUM_DELAY, illum_delay_reg);
+	if (ret) {
+		dev_err(&client->dev, "Error setting ILLUM_DELAY to %u.", illum_delay_reg);
+		return ret;
+	}
+	// Set illumination delay sign. Extract bit [16] as sign.
+	illum_delay_sign = (u8)((mira220->illum_delay >> 16) & 0x1);
+	printk(KERN_INFO "[MIRA220]: Writing ILLUM_DELAY_SIGN to %u.\n", illum_delay_sign);
+	ret = mira220_write(mira220, MIRA220_ILLUM_DELAY_SIGN, illum_delay_sign);
+	if (ret) {
+		dev_err(&client->dev, "Error setting ILLUM_DELAY_SIGN to %u.", illum_delay_sign);
+		return ret;
+	}
+
+	return ret;
+}
+
+
 static int mira220_write_start_streaming_regs(struct mira220* mira220) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira220->sd);
 	int ret = 0;
@@ -2320,6 +2384,22 @@ static int mira220_v4l2_reg_w(struct mira220 *mira220, u32 value) {
 			mira220->force_power_off = 1;
 			mira220_power_off(&client->dev);
 			mira220->force_power_off = 0;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA220_REG_FLAG_ILLUM_TRIG_ON) {
+			printk(KERN_INFO "[MIRA220]: %s Enable illumination trigger.\n", __func__);
+			mira220_write_illum_trig_regs(mira220, 1);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA220_REG_FLAG_ILLUM_TRIG_OFF) {
+			printk(KERN_INFO "[MIRA220]: %s Disable illumination trigger.\n", __func__);
+			mira220_write_illum_trig_regs(mira220, 0);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA220_REG_FLAG_ILLUM_WIDTH) {
+			// Combine 16 bits, [15:0], of reg_addr and reg_val as ILLUM_WIDTH.
+			u32 illum_width = value & 0x0000FFFF;
+			printk(KERN_INFO "[MIRA220]: %s Set ILLUM_WIDTH to 0x%X.\n", __func__, illum_width);
+			mira220->illum_width = illum_width;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA220_REG_FLAG_ILLUM_DELAY) {
+			// Combine 17 bits, [16:0], of reg_addr and reg_val as ILLUM_DELAY. Bit [16] is sign.
+			u32 illum_delay = value & 0x0001FFFF;
+			printk(KERN_INFO "[MIRA220]: %s Set ILLUM_DELAY with sign bit to 0x%X.\n", __func__, illum_delay);
+			mira220->illum_delay = illum_delay;
 		} else {
 			printk(KERN_INFO "[MIRA220]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
@@ -3663,6 +3743,12 @@ static int mira220_probe(struct i2c_client *client)
 		goto error_power_off;
 
 	printk(KERN_INFO "[MIRA220]: Setting support function.\n");
+
+	/* Initialize default illumination trigger parameters */
+	/* ILLUM_WIDTH (length) is in unit of rows. */
+	mira220->illum_width = MIRA220_ILLUM_WIDTH_DEFAULT;
+	/* ILLUM_DELAY is in unit of rows. */
+	mira220->illum_delay = MIRA220_ILLUM_DELAY_DEFAULT;
 
 	/* Set default mode to max resolution */
 	mira220->mode = &supported_modes[0];

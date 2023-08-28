@@ -33,26 +33,38 @@
 #define AMS_CAMERA_CID_MIRA_REG_R	(AMS_CAMERA_CID_BASE+1)
 
 /* Most significant Byte is flag, and most significant bit is unused. */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_FOR_READ    0b00000001
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_USE_BANK    0b00000010
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_BANK        0b00000100
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_CONTEXT     0b00001000
-/* Use bit 5 to indicate special command, bit 2,3,4 for command. */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_CMD_SEL     0b00010000
-/* Special command for sleep. The other 3 Bytes is sleep values in us. */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_SLEEP_US    0b00010000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_FOR_READ        0b00000001
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_USE_BANK        0b00000010
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_BANK            0b00000100
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_CONTEXT         0b00001000
+/* Use bit 5 to indicate special command, bit 1,2,3,4 for command. */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_CMD_SEL         0b00010000
+/* Special command for sleep. The other 3 Bytes (addr+val) is sleep values in us. */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_SLEEP_US        0b00010000
 /* Special command to enable power on (/off) when stream on (/off). */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_RESET_ON    0b00010010
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_RESET_ON        0b00010010
 /* Special command to disable power on (/off) when stream on (/off). */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_RESET_OFF   0b00010100
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_RESET_OFF       0b00010100
 /* Special command to enable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_REG_UP_ON   0b00010110
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_REG_UP_ON       0b00010110
 /* Special command to disable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_REG_UP_OFF  0b00011000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_REG_UP_OFF      0b00011000
 /* Special command to manually power on */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_POWER_ON    0b00011010
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_POWER_ON        0b00011010
 /* Special command to manually power off */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_POWER_OFF   0b00011100
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_POWER_OFF       0b00011100
+/* Special command to turn illumination trigger on */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_TRIG_ON   0b00011110
+/* Special command to turn illumination trigger off */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_TRIG_OFF  0b00010001
+/* Special command to set ILLUM_WIDTH. The other 3 Bytes (addr+val) is width value. */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_WIDTH     0b00010011
+/* Special command to set ILLUM_DELAY. The other 3 Bytes (addr+val) is width value. */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_DELAY     0b00010101
+/* Special command to enable ILLUM_WIDTH automatically tracking exposure time */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_EXP_T_ON  0b00010111
+/* Special command to disable ILLUM_WIDTH automatically tracking exposure time */
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_EXP_T_OFF 0b00011001
 /*
  * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
  * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
@@ -61,10 +73,11 @@
  * then the reg_val will become TBD I2C address.
  * The TBD I2C address is stored in mira050->tbd_client_i2c_addr.
  */
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL     0b01100000
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_MIRA    0b00000000
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_TBD     0b00100000
-#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SET_TBD 0b01000000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SEL         0b01100000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_MIRA        0b00000000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_TBD         0b00100000
+#define AMS_CAMERA_CID_MIRA050_REG_FLAG_I2C_SET_TBD     0b01000000
+
 
 /* Pre-allocated i2c_client */
 #define MIRA050PMIC_I2C_ADDR 0x2D
@@ -277,6 +290,13 @@
 #define MIRA050_OTP_CAL_VALUE_DEFAULT    2250
 #define MIRA050_OTP_CAL_VALUE_MIN        2000
 #define MIRA050_OTP_CAL_VALUE_MAX        2400
+
+/* Illumination trigger */
+#define MIRA050_EN_TRIG_ILLUM         0x001C
+#define MIRA050_ILLUM_WIDTH           0x0019
+#define MIRA050_ILLUM_DELAY           0x0016
+#define MIRA050_ILLUM_WIDTH_DEFAULT   (MIRA050_DEFAULT_EXPOSURE_US * 1000 / 8)
+#define MIRA050_ILLUM_DELAY_DEFAULT   (1<<19)
 
 enum pad_types {
 	IMAGE_PAD,
@@ -2712,6 +2732,14 @@ struct mira050 {
 	u32 skip_reset;
 	/* Whether regulator and clk are powered on */
 	u32 powered;
+	/* Illumination trigger enable */
+	u8 illum_enable;
+	/* Illumination trigger width. Use [23:0] for 24-bit register. */
+	u32 illum_width;
+	/* Illumination trigger delay. Use [19:0] for 20-bit register */
+	u32 illum_delay;
+	/* Illumination trigger width automatically set to exposure time */
+	u8 illum_width_auto;
 
 	/*
 	 * Mutex for serialized access:
@@ -2838,6 +2866,32 @@ static int mira050_write_be16(struct mira050 *mira050, u16 reg, u16 val)
         * error. Success needs to produce a 0 return code.
         */
        if (ret == 4) {
+               ret = 0;
+       } else {
+               dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+                               __func__, reg);
+               if (ret >= 0)
+                       ret = -EINVAL;
+       }
+
+       return ret;
+}
+
+/*
+ * mira050 is big-endian: msb of val goes to lower reg addr
+ */
+static int mira050_write_be24(struct mira050 *mira050, u16 reg, u32 val)
+{
+       int ret;
+       unsigned char data[5] = { reg >> 8, reg & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
+       struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+
+       ret = i2c_master_send(client, data, 5);
+       /*
+        * Writing the wrong number of bytes also needs to be flagged as an
+        * error. Success needs to produce a 0 return code.
+        */
+       if (ret == 5) {
                ret = 0;
        } else {
                dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
@@ -3103,6 +3157,50 @@ static int mira050_power_off(struct device *dev)
 	return 0;
 }
 
+static int mira050_write_illum_trig_regs(struct mira050* mira050) {
+	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
+	int ret = 0;
+
+	// Set context bank 1A or bank 1B
+	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
+	if (ret) {
+		dev_err(&client->dev, "Error setting RW_CONTEXT.");
+		return ret;
+	}
+
+	// Set conetxt bank 0 or 1
+	ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
+	if (ret) {
+		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
+		return ret;
+	}
+
+	// Enable or disable illumination trigger
+	printk(KERN_INFO "[MIRA050]: Writing EN_TRIG_ILLUM to %d.\n", mira050->illum_enable);
+	ret = mira050_write(mira050, MIRA050_EN_TRIG_ILLUM, mira050->illum_enable);
+	if (ret) {
+		dev_err(&client->dev, "Error setting EN_TRIG_ILLUM to %d.", mira050->illum_enable);
+		return ret;
+	}
+	
+	// Set illumination width. Write 24 bits. All 24 bits are valid.
+	printk(KERN_INFO "[MIRA050]: Writing ILLUM_WIDTH to %u.\n", mira050->illum_width);
+	ret = mira050_write_be24(mira050, MIRA050_ILLUM_WIDTH, mira050->illum_width);
+	if (ret) {
+		dev_err(&client->dev, "Error setting ILLUM_WIDTH to %u.", mira050->illum_width);
+		return ret;
+	}
+
+	// Set illumination delay. Write 24 bits. Only 20 bits, [19:0], are valid.
+	printk(KERN_INFO "[MIRA050]: Writing ILLUM_DELAY to %u.\n", mira050->illum_delay);
+	ret = mira050_write_be24(mira050, MIRA050_ILLUM_DELAY, mira050->illum_delay);
+	if (ret) {
+		dev_err(&client->dev, "Error setting ILLUM_DELAY to %u.", mira050->illum_delay);
+		return ret;
+	}
+	
+	return ret;
+}
 
 static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira050->sd);
@@ -3150,6 +3248,30 @@ static int mira050_v4l2_reg_w(struct mira050 *mira050, u32 value) {
 			mira050->skip_reset = 0;
 			mira050_power_off(&client->dev);
 			mira050->skip_reset = tmp_flag;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_TRIG_ON) {
+			printk(KERN_INFO "[MIRA050]: %s Enable illumination trigger.\n", __func__);
+			mira050->illum_enable = 1;
+			mira050_write_illum_trig_regs(mira050);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_TRIG_OFF) {
+			printk(KERN_INFO "[MIRA050]: %s Disable illumination trigger.\n", __func__);
+			mira050->illum_enable = 0;
+			mira050_write_illum_trig_regs(mira050);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_WIDTH) {
+			// Combine all 24 bits of reg_addr and reg_val as ILLUM_WIDTH.
+			u32 illum_width = value & 0x00FFFFFF;
+			printk(KERN_INFO "[MIRA050]: %s Set ILLUM_WIDTH to 0x%X.\n", __func__, illum_width);
+			mira050->illum_width = illum_width;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_DELAY) {
+			// Combine reg_addr and reg_val, then select 20 bits from [19:0] as ILLUM_DELAY.
+			u32 illum_delay = value & 0x000FFFFF;
+			printk(KERN_INFO "[MIRA050]: %s Set ILLUM_DELAY to 0x%X.\n", __func__, illum_delay);
+			mira050->illum_delay = illum_delay;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_EXP_T_ON) {
+			printk(KERN_INFO "[MIRA050]: %s enable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
+			mira050->illum_width_auto = 1;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA050_REG_FLAG_ILLUM_EXP_T_OFF) {
+			printk(KERN_INFO "[MIRA050]: %s disable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
+			mira050->illum_width_auto = 0;
 		} else {
 			printk(KERN_INFO "[MIRA050]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
@@ -3351,6 +3473,10 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	if (ret) {
 		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", exposure);
 		return -EINVAL;
+	}
+	if (mira050->illum_width_auto == 1) {
+		mira050->illum_width = (exposure / 8) * 1000;
+		mira050_write_illum_trig_regs(mira050);
 	}
 
 	return 0;
@@ -4828,6 +4954,12 @@ static int mira050_probe(struct i2c_client *client)
 		goto error_power_off;
 
 	printk(KERN_INFO "[MIRA050]: Setting support function.\n");
+
+	/* Initialize default illumination trigger parameters */
+	/* ILLUM_WIDTH is in unit of SEQ_TIME_BASE, equal to (8/1000) us. */
+	mira050->illum_width = MIRA050_ILLUM_WIDTH_DEFAULT;
+	/* ILLUM_DELAY is in unit of TIME_UNIT, equal to 1 us. In continuous stream mode, zero delay is 1<<19. */
+	mira050->illum_delay = MIRA050_ILLUM_DELAY_DEFAULT;
 
 	/* Set default mode to max resolution */
 	mira050->mode = &supported_modes[0];
