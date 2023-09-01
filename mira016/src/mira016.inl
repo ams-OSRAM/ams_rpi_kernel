@@ -206,10 +206,12 @@
 #define MIRA016_GRAN_TG				50
 // TODO: Check Mira016 data rate in reg sequence
 #define MIRA016_DATA_RATE			900 // Mbit/s
-// ROW_LENGTH register is 0x0032, with value 1504 (12 bit). Choose larger one for safety.
-#define MIRA016_MIN_ROW_LENGTH			1504
+// ROW_LENGTH register is 0x0032, with value 1052 (8 bit). Choose smaller one for safety.
+#define MIRA016_MIN_ROW_LENGTH			1052
 // Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
 #define MIRA016_MIN_ROW_LENGTH_US		(MIRA016_MIN_ROW_LENGTH * 8 / MIRA016_DATA_RATE)
+// Row time in microsecond is not precise enoughi, e.g., 9.35 becomes 9. Need nanosecond.
+#define MIRA016_MIN_ROW_LENGTH_NS               (MIRA016_MIN_ROW_LENGTH * 1000 * 8 / MIRA016_DATA_RATE)
 // Mira016 EXP_TIME registe is in microsecond. V4L2 exposure value is in row time.
 // Min exposure is set according to Mira016 datasheet, in microsecond.
 #define MIRA016_EXPOSURE_MIN_US			(int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG * 8 / MIRA016_DATA_RATE)
@@ -300,7 +302,7 @@
 #define MIRA016_EN_TRIG_ILLUM         0x001C
 #define MIRA016_ILLUM_WIDTH           0x0019
 #define MIRA016_ILLUM_DELAY           0x0016
-#define MIRA016_ILLUM_WIDTH_DEFAULT   (MIRA016_DEFAULT_EXPOSURE_US * 1000 / 8)
+#define MIRA016_ILLUM_WIDTH_DEFAULT   (MIRA016_DEFAULT_EXPOSURE_US * MIRA016_DATA_RATE / 8)
 #define MIRA016_ILLUM_DELAY_DEFAULT   (1<<19)
 
 enum pad_types {
@@ -3472,7 +3474,7 @@ static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure) {
 		return -EINVAL;
 	}
 	if (mira016->illum_width_auto == 1) {
-		mira016->illum_width = (exposure / 8) * 1000;
+		mira016->illum_width = (exposure / 8) * MIRA016_DATA_RATE;
 		mira016_write_illum_trig_regs(mira016);
 	}
 
@@ -3707,7 +3709,7 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 		case V4L2_CID_ANALOGUE_GAIN:
 			break;
 		case V4L2_CID_EXPOSURE:
-			ret = mira016_write_exposure_reg(mira016, ctrl->val * MIRA016_MIN_ROW_LENGTH_US);
+			ret = mira016_write_exposure_reg(mira016, ctrl->val * MIRA016_MIN_ROW_LENGTH_NS / 1000);
 			break;
 		case V4L2_CID_TEST_PATTERN:
 			ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);

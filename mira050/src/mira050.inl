@@ -203,8 +203,10 @@
 #define MIRA050_DATA_RATE			1000 // Mbit/s
 // ROW_LENGTH register is 0x0032, with value 3069 (12 bit) or 1842 (8 bit). Choose smaller one for safety.
 #define MIRA050_MIN_ROW_LENGTH			1842
-// Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
+// Row time in microsecond is ROW_LENGTH times SEQ_TIME_BASE
 #define MIRA050_MIN_ROW_LENGTH_US		(MIRA050_MIN_ROW_LENGTH * 8 / MIRA050_DATA_RATE)
+// Row time in microsecond is not precise enoughi, e.g., 14.736 becomes 14. Need nanosecond.
+#define MIRA050_MIN_ROW_LENGTH_NS               (MIRA050_MIN_ROW_LENGTH * 1000 * 8 / MIRA050_DATA_RATE)
 // Mira050 EXP_TIME registe is in microsecond. V4L2 exposure value is in row time.
 // Min exposure is set according to Mira050 datasheet, in microsecond.
 #define MIRA050_EXPOSURE_MIN_US			(int)(1 + (151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG * 8 / MIRA050_DATA_RATE)
@@ -295,7 +297,7 @@
 #define MIRA050_EN_TRIG_ILLUM         0x001C
 #define MIRA050_ILLUM_WIDTH           0x0019
 #define MIRA050_ILLUM_DELAY           0x0016
-#define MIRA050_ILLUM_WIDTH_DEFAULT   (MIRA050_DEFAULT_EXPOSURE_US * 1000 / 8)
+#define MIRA050_ILLUM_WIDTH_DEFAULT   (MIRA050_DEFAULT_EXPOSURE_US * MIRA050_DATA_RATE / 8)
 #define MIRA050_ILLUM_DELAY_DEFAULT   (1<<19)
 
 enum pad_types {
@@ -3198,7 +3200,7 @@ static int mira050_write_illum_trig_regs(struct mira050* mira050) {
 		dev_err(&client->dev, "Error setting ILLUM_DELAY to %u.", mira050->illum_delay);
 		return ret;
 	}
-	
+
 	return ret;
 }
 
@@ -3474,8 +3476,9 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", exposure);
 		return -EINVAL;
 	}
+
 	if (mira050->illum_width_auto == 1) {
-		mira050->illum_width = (exposure / 8) * 1000;
+		mira050->illum_width = (exposure / 8) * MIRA050_DATA_RATE;
 		mira050_write_illum_trig_regs(mira050);
 	}
 
@@ -3818,7 +3821,7 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 			ret = mira050_write_analog_gain_reg(mira050, ctrl->val);
 			break;
 		case V4L2_CID_EXPOSURE:
-			ret = mira050_write_exposure_reg(mira050, ctrl->val * MIRA050_MIN_ROW_LENGTH_US);
+			ret = mira050_write_exposure_reg(mira050, ctrl->val * MIRA050_MIN_ROW_LENGTH_NS / 1000);
 			break;
 		case V4L2_CID_TEST_PATTERN:
 			ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
