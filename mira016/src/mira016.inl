@@ -241,8 +241,8 @@
 #define MIRA016_REG_VALUE_16BIT		2
 
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
-// 1.0Gb/s * 2 * 1 / 12 = 178956970
-#define MIRA016_PIXEL_RATE		(178956970)
+// 0.9Gb/s * 2 * 1 / 12 = 157286400
+#define MIRA016_PIXEL_RATE		(157286400)
 /* Should match device tree link freq */
 #define MIRA016_DEFAULT_LINK_FREQ	456000000
 
@@ -251,14 +251,14 @@
 /* Formular in libcamera to derive TARGET_FPS:
  * TARGET_FPS=1/((1/MIRA016_PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+MIRA016_MIN_VBLANK))
  * Example with HBLANK=0 and MIRA016_MIN_VBLANK=12
- * TARGET_FPS=1/((1/178956970)*400*(400+12))=1086
+ * TARGET_FPS=1/((1/157286400)*400*(400+12))=954
  * 
  * Inverse the above formula to derive HBLANK from TARGET_FPS:
  * HBLANK=1/((1/MIRA016_PIXEL_RATE)*TARGET_FPS*(HEIGHT+MIRA016_MIN_VBLANK))-WIDTH
  * Example with TARGET_FPS of 100 fps
- * HBLANK=1/((1/178956970)*100*(400+12))-400=3944
+ * HBLANK=1/((1/157286400)*100*(400+12))-400=3418
  */
-#define MIRA016_HBLANK_100FPS			3944
+#define MIRA016_HBLANK_100FPS			3418
 
 // For test pattern with fixed data
 #define MIRA016_TRAINING_WORD_REG		0x0060
@@ -300,8 +300,8 @@
 
 /* Illumination trigger */
 #define MIRA016_EN_TRIG_ILLUM         0x001C
-#define MIRA016_ILLUM_WIDTH           0x0019
-#define MIRA016_ILLUM_DELAY           0x0016
+#define MIRA016_ILLUM_WIDTH_REG       0x0019
+#define MIRA016_ILLUM_DELAY_REG       0x0016
 #define MIRA016_ILLUM_WIDTH_DEFAULT   (MIRA016_DEFAULT_EXPOSURE_US * MIRA016_DATA_RATE / 8)
 #define MIRA016_ILLUM_DELAY_DEFAULT   (1<<19)
 
@@ -3183,7 +3183,7 @@ static int mira016_write_illum_trig_regs(struct mira016* mira016) {
 	
 	// Set illumination width. Write 24 bits. All 24 bits are valid.
 	printk(KERN_INFO "[MIRA016]: Writing ILLUM_WIDTH to %u.\n", mira016->illum_width);
-	ret = mira016_write_be24(mira016, MIRA016_ILLUM_WIDTH, mira016->illum_width);
+	ret = mira016_write_be24(mira016, MIRA016_ILLUM_WIDTH_REG, mira016->illum_width);
 	if (ret) {
 		dev_err(&client->dev, "Error setting ILLUM_WIDTH to %u.", mira016->illum_width);
 		return ret;
@@ -3191,7 +3191,7 @@ static int mira016_write_illum_trig_regs(struct mira016* mira016) {
 
 	// Set illumination delay. Write 24 bits. Only 20 bits, [19:0], are valid.
 	printk(KERN_INFO "[MIRA016]: Writing ILLUM_DELAY to %u.\n", mira016->illum_delay);
-	ret = mira016_write_be24(mira016, MIRA016_ILLUM_DELAY, mira016->illum_delay);
+	ret = mira016_write_be24(mira016, MIRA016_ILLUM_DELAY_REG, mira016->illum_delay);
 	if (ret) {
 		dev_err(&client->dev, "Error setting ILLUM_DELAY to %u.", mira016->illum_delay);
 		return ret;
@@ -3709,6 +3709,7 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 		case V4L2_CID_ANALOGUE_GAIN:
 			break;
 		case V4L2_CID_EXPOSURE:
+			printk(KERN_INFO "[MIRA016]: exposure line = %u, exposure us = %u.\n", ctrl->val, ctrl->val * MIRA016_MIN_ROW_LENGTH_NS / 1000);
 			ret = mira016_write_exposure_reg(mira016, ctrl->val * MIRA016_MIN_ROW_LENGTH_NS / 1000);
 			break;
 		case V4L2_CID_TEST_PATTERN:
@@ -4841,7 +4842,7 @@ static int mira016_probe(struct i2c_client *client)
 	printk(KERN_INFO "[MIRA016]: Setting support function.\n");
 
 	/* Initialize default illumination trigger parameters */
-	/* ILLUM_WIDTH is in unit of SEQ_TIME_BASE, equal to (8/1000) us. */
+	/* ILLUM_WIDTH is in unit of SEQ_TIME_BASE, equal to (8/MIRA016_DATA_RATE) us. */
 	mira016->illum_width = MIRA016_ILLUM_WIDTH_DEFAULT;
 	/* ILLUM_DELAY is in unit of TIME_UNIT, equal to 1 us. In continuous stream mode, zero delay is 1<<19. */
 	mira016->illum_delay = MIRA016_ILLUM_DELAY_DEFAULT;

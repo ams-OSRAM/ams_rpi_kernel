@@ -265,10 +265,10 @@
 #define MIRA220_DEFAULT_FRAME_LENGTH    (0x07C0)
 
 /* Illumination trigger */
-#define MIRA220_EN_TRIG_ILLUM         0x10D7
-#define MIRA220_ILLUM_WIDTH           0x10D5
-#define MIRA220_ILLUM_DELAY           0x10D2
-#define MIRA220_ILLUM_DELAY_SIGN      0x10D4
+#define MIRA220_EN_TRIG_ILLUM_REG     0x10D7
+#define MIRA220_ILLUM_WIDTH_REG       0x10D5
+#define MIRA220_ILLUM_DELAY_REG       0x10D2
+#define MIRA220_ILLUM_DELAY_SIGN_REG  0x10D4
 #define MIRA220_ILLUM_WIDTH_DEFAULT   (0)
 #define MIRA220_ILLUM_DELAY_DEFAULT   (0)
 
@@ -2229,7 +2229,7 @@ static int mira220_write_illum_trig_regs(struct mira220* mira220, u8 enable) {
 
 	// Enable or disable illumination trigger
 	printk(KERN_INFO "[MIRA220]: Writing EN_TRIG_ILLUM to %d.\n", enable);
-	ret = mira220_write(mira220, MIRA220_EN_TRIG_ILLUM, enable);
+	ret = mira220_write(mira220, MIRA220_EN_TRIG_ILLUM_REG, enable);
 	if (ret) {
 		dev_err(&client->dev, "Error setting EN_TRIG_ILLUM to %d.", enable);
 		return ret;
@@ -2238,7 +2238,7 @@ static int mira220_write_illum_trig_regs(struct mira220* mira220, u8 enable) {
 	// Set illumination width. Write 16 bits [15:0].
 	illum_width_reg = (u16)(mira220->illum_width & 0x0000FFFF);
 	printk(KERN_INFO "[MIRA220]: Writing ILLUM_WIDTH to %u.\n", illum_width_reg);
-	ret = mira220_write16(mira220, MIRA220_ILLUM_WIDTH, illum_width_reg);
+	ret = mira220_write16(mira220, MIRA220_ILLUM_WIDTH_REG, illum_width_reg);
 	if (ret) {
 		dev_err(&client->dev, "Error setting ILLUM_WIDTH to %u.", illum_width_reg);
 		return ret;
@@ -2247,7 +2247,7 @@ static int mira220_write_illum_trig_regs(struct mira220* mira220, u8 enable) {
 	// Set illumination delay. Write 16 bits [15:0] as absolute delay, and bit [16] as sign.
 	illum_delay_reg = (u16)(mira220->illum_delay & 0x0000FFFF);
 	printk(KERN_INFO "[MIRA220]: Writing ILLUM_DELAY to %u.\n", illum_delay_reg);
-	ret = mira220_write16(mira220, MIRA220_ILLUM_DELAY, illum_delay_reg);
+	ret = mira220_write16(mira220, MIRA220_ILLUM_DELAY_REG, illum_delay_reg);
 	if (ret) {
 		dev_err(&client->dev, "Error setting ILLUM_DELAY to %u.", illum_delay_reg);
 		return ret;
@@ -2255,7 +2255,7 @@ static int mira220_write_illum_trig_regs(struct mira220* mira220, u8 enable) {
 	// Set illumination delay sign. Extract bit [16] as sign.
 	illum_delay_sign = (u8)((mira220->illum_delay >> 16) & 0x1);
 	printk(KERN_INFO "[MIRA220]: Writing ILLUM_DELAY_SIGN to %u.\n", illum_delay_sign);
-	ret = mira220_write(mira220, MIRA220_ILLUM_DELAY_SIGN, illum_delay_sign);
+	ret = mira220_write(mira220, MIRA220_ILLUM_DELAY_SIGN_REG, illum_delay_sign);
 	if (ret) {
 		dev_err(&client->dev, "Error setting ILLUM_DELAY_SIGN to %u.", illum_delay_sign);
 		return ret;

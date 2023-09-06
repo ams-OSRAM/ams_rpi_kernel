@@ -189,7 +189,7 @@
 #define MIRA130_DEFAULT_FRAME_LENGTH    (0x0578)
 
 /* Illumination trigger */
-#define MIRA130_EN_TRIG_ILLUM         0x3361
+#define MIRA130_EN_TRIG_ILLUM_REG      0x3361
 
 enum pad_types {
 	IMAGE_PAD,
@@ -886,7 +886,7 @@ static int mira130_write_illum_trig_regs(struct mira130* mira130, u8 enable) {
 		enable_reg = 0b11000000;
 	}
 	printk(KERN_INFO "[MIRA130]: Writing EN_TRIG_ILLUM to %d.\n", enable_reg);
-	ret = mira130_write(mira130, MIRA130_EN_TRIG_ILLUM, enable_reg);
+	ret = mira130_write(mira130, MIRA130_EN_TRIG_ILLUM_REG, enable_reg);
 	if (ret) {
 		dev_err(&client->dev, "Error setting EN_TRIG_ILLUM to %d.", enable_reg);
 		return ret;

@@ -295,8 +295,8 @@
 
 /* Illumination trigger */
 #define MIRA050_EN_TRIG_ILLUM         0x001C
-#define MIRA050_ILLUM_WIDTH           0x0019
-#define MIRA050_ILLUM_DELAY           0x0016
+#define MIRA050_ILLUM_WIDTH_REG       0x0019
+#define MIRA050_ILLUM_DELAY_REG       0x0016
 #define MIRA050_ILLUM_WIDTH_DEFAULT   (MIRA050_DEFAULT_EXPOSURE_US * MIRA050_DATA_RATE / 8)
 #define MIRA050_ILLUM_DELAY_DEFAULT   (1<<19)
 
@@ -3187,7 +3187,7 @@ static int mira050_write_illum_trig_regs(struct mira050* mira050) {
 	
 	// Set illumination width. Write 24 bits. All 24 bits are valid.
 	printk(KERN_INFO "[MIRA050]: Writing ILLUM_WIDTH to %u.\n", mira050->illum_width);
-	ret = mira050_write_be24(mira050, MIRA050_ILLUM_WIDTH, mira050->illum_width);
+	ret = mira050_write_be24(mira050, MIRA050_ILLUM_WIDTH_REG, mira050->illum_width);
 	if (ret) {
 		dev_err(&client->dev, "Error setting ILLUM_WIDTH to %u.", mira050->illum_width);
 		return ret;
@@ -3195,7 +3195,7 @@ static int mira050_write_illum_trig_regs(struct mira050* mira050) {
 
 	// Set illumination delay. Write 24 bits. Only 20 bits, [19:0], are valid.
 	printk(KERN_INFO "[MIRA050]: Writing ILLUM_DELAY to %u.\n", mira050->illum_delay);
-	ret = mira050_write_be24(mira050, MIRA050_ILLUM_DELAY, mira050->illum_delay);
+	ret = mira050_write_be24(mira050, MIRA050_ILLUM_DELAY_REG, mira050->illum_delay);
 	if (ret) {
 		dev_err(&client->dev, "Error setting ILLUM_DELAY to %u.", mira050->illum_delay);
 		return ret;
@@ -3464,6 +3464,8 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 	if (exposure > max_exposure) {
 		exposure = max_exposure;
 	}
+
+	printk(KERN_INFO "[MIRA050]: mira050_write_exposure_reg: exp us = %u.\n", exposure);
 
 	/* Write Bank 1 context 0 */
 	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
@@ -3821,6 +3823,8 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 			ret = mira050_write_analog_gain_reg(mira050, ctrl->val);
 			break;
 		case V4L2_CID_EXPOSURE:
+			printk(KERN_INFO "[MIRA050]: V4L2_CID_EXPOSURE: exp line = %u, exp us = %u.\n",
+					ctrl->val, ctrl->val * MIRA050_MIN_ROW_LENGTH_NS / 1000);
 			ret = mira050_write_exposure_reg(mira050, ctrl->val * MIRA050_MIN_ROW_LENGTH_NS / 1000);
 			break;
 		case V4L2_CID_TEST_PATTERN:
