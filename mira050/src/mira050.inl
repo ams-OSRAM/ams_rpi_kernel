@@ -3465,7 +3465,7 @@ static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure) {
 		exposure = max_exposure;
 	}
 
-	printk(KERN_INFO "[MIRA050]: mira050_write_exposure_reg: exp us = %u.\n", exposure);
+	// printk(KERN_INFO "[MIRA050]: mira050_write_exposure_reg: exp us = %u.\n", exposure);
 
 	/* Write Bank 1 context 0 */
 	ret = mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
@@ -3823,8 +3823,8 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 			ret = mira050_write_analog_gain_reg(mira050, ctrl->val);
 			break;
 		case V4L2_CID_EXPOSURE:
-			printk(KERN_INFO "[MIRA050]: V4L2_CID_EXPOSURE: exp line = %u, exp us = %u.\n",
-					ctrl->val, ctrl->val * MIRA050_MIN_ROW_LENGTH_NS / 1000);
+			//printk(KERN_INFO "[MIRA050]: V4L2_CID_EXPOSURE: exp line = %u, exp us = %u.\n",
+			//		ctrl->val, ctrl->val * MIRA050_MIN_ROW_LENGTH_NS / 1000);
 			ret = mira050_write_exposure_reg(mira050, ctrl->val * MIRA050_MIN_ROW_LENGTH_NS / 1000);
 			break;
 		case V4L2_CID_TEST_PATTERN:
