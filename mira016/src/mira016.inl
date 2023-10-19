@@ -2879,70 +2879,27 @@ static int mira016_write_be16(struct mira016 *mira016, u16 reg, u16 val)
 */
 
 /*
- * mira016 is big-endian: msb of val goes to lower reg addr
+ * mira050 is big-endian: msb of val goes to lower reg addr
  */
-static int mira016_write_be24(struct mira016 *mira016, u16 reg, u32 val)
+static int mira050_write_be24(struct mira050 *mira050, u16 reg, u32 val)
 {
-	int ret;
-	unsigned char data[3];
-	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
+       int ret;
+       unsigned char data[5] = { reg >> 8, reg & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
+       struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 
-	/* First Byte of val to reg */
-	data[0] = (reg >> 8) & 0xff;
-	data[1] = reg & 0xff;
-	data[2] = (val >> 16) & 0xff;
-	ret = i2c_master_send(client, data, 3);
-
-	/*
-	 * Writing the wrong number of bytes also needs to be flagged as an
-	 * error. Success needs to produce a 0 return code.
-	 */
-	if (ret == 3) {
-		ret = 0;
-	} else {
-		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-				__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-	}
-
-	/* Second Byte of val to reg+1 */
-	data[0] = ((reg+1) >> 8) & 0xff;
-	data[1] = (reg+1) & 0xff;
-	data[2] = (val >> 8) & 0xff;
-	ret = i2c_master_send(client, data, 3);
-
-	/*
-	 * Writing the wrong number of bytes also needs to be flagged as an
-	 * error. Success needs to produce a 0 return code.
-	 */
-	if (ret == 3) {
-		ret = 0;
-	} else {
-		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-				__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-	}
-
-	/* Third Byte of val to reg+2 */
-	data[0] = ((reg+2) >> 8) & 0xff;
-	data[1] = (reg+2) & 0xff;
-	data[2] = (val) & 0xff;
-	ret = i2c_master_send(client, data, 3);
-
-	/*
-	 * Writing the wrong number of bytes also needs to be flagged as an
-	 * error. Success needs to produce a 0 return code.
-	 */
-	if (ret == 3) {
-		ret = 0;
-	} else {
-		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-				__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-	}
+       ret = i2c_master_send(client, data, 5);
+       /*
+        * Writing the wrong number of bytes also needs to be flagged as an
+        * error. Success needs to produce a 0 return code.
+        */
+       if (ret == 5) {
+               ret = 0;
+       } else {
+               dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+                               __func__, reg);
+               if (ret >= 0)
+                       ret = -EINVAL;
+       }
 
        return ret;
 }
