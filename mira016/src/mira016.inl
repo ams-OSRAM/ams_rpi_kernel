@@ -1090,7 +1090,8 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 
         {0xE000,0},
         {0xE004,0},
-	{0x33D,1}
+	{0x33D,1},
+	{0x001E,0}//auto_lps disable
 };
 
 static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_post_soft_reset[] = {
@@ -1824,7 +1825,8 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 
         {0xE000,0},
         {0xE004,0},
-	{0x33D,1}
+	{0x33D,1},
+	{0x001E,0}//auto_lps disable
 };
 
 static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_post_soft_reset[] = {
@@ -2570,7 +2572,8 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 
         {0xE000,0},
         {0xE004,0},
-	{0x33D,1}
+	{0x33D,1},
+	{0x001E,0}//auto_lps disable
 };
 
 static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_post_soft_reset[] = {
