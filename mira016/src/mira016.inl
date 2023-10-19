@@ -2882,13 +2882,13 @@ static int mira016_write_be16(struct mira016 *mira016, u16 reg, u16 val)
 */
 
 /*
- * mira050 is big-endian: msb of val goes to lower reg addr
+ * mira016 is big-endian: msb of val goes to lower reg addr
  */
-static int mira050_write_be24(struct mira050 *mira050, u16 reg, u32 val)
+static int mira016_write_be24(struct mira016 *mira016, u16 reg, u32 val)
 {
        int ret;
        unsigned char data[5] = { reg >> 8, reg & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
-       struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
+       struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 
        ret = i2c_master_send(client, data, 5);
        /*
