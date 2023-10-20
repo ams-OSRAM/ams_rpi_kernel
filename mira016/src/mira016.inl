@@ -830,7 +830,7 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	{ 57380, 7},
 	{ 57344, 0},
 	{ 92, 0},
-	{ 93, 48},
+	{ 93, 28},
 	{ 375, 120},
 	//Black Level
 	{ 57344, 0},
@@ -2312,7 +2312,7 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	{ 57380, 1},
 	{ 57344, 0},
 	{ 92, 0},
-	{ 93, 56},
+	{ 93, 16},
 	{ 375, 120},
 	//Black Level
 	{ 57344, 0},
