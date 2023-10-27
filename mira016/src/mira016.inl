@@ -218,7 +218,7 @@
 // Min exposure for V4L2 is in row time.
 #define MIRA016_EXPOSURE_MIN_RT			(int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG / MIRA016_MIN_ROW_LENGTH)
 // Max exposure is set to TARGET_FRAME_TIME (32-bit reg 0x0008), in microsecond.
-#define MIRA016_EXPOSURE_MAX_US			(200000)
+#define MIRA016_EXPOSURE_MAX_US			(1000000)
 // Max exposure for V4L2 is in row time.
 #define MIRA016_EXPOSURE_MAX_RT			(int)(1 + MIRA016_EXPOSURE_MAX_US / MIRA016_MIN_ROW_LENGTH_US)
 // Default exposure register is in microseconds
