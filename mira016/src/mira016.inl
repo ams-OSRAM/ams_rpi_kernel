@@ -741,7 +741,7 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	{ 8309, 0},
 	//Low Power State
 	{ 57344, 0},
-	{ 30, 1},
+	{ 30, 0}, //0 is disable
 	//MIPI
 	{ 57344, 0},
 	{ 8318, 0},
@@ -1090,8 +1090,7 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 
         {0xE000,0},
         {0xE004,0},
-	{0x33D,1},
-	{0x001E,0}//auto_lps disable
+	{0x33D,1}
 };
 
 static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_post_soft_reset[] = {
@@ -1485,7 +1484,7 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	{ 8309, 0},
 	//Low Power State
 	{ 57344, 0},
-	{ 30, 1},
+	{ 30, 0},
 	//MIPI
 	{ 57344, 0},
 	{ 8318, 0},
@@ -1823,10 +1822,9 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	{0x1df,1} ,//#cp sel
 	{0x0ee,4} ,//#cp trim,	
 
-        {0xE000,0},
-        {0xE004,0},
+	{0xE000,0},
+	{0xE004,0},
 	{0x33D,1},
-	{0x001E,0}//auto_lps disable
 };
 
 static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_post_soft_reset[] = {
@@ -2220,7 +2218,7 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	{ 8309, 0},
 	//Low Power State
 	{ 57344, 0},
-	{ 30, 1},
+	{ 30, 0},
 	//MIPI
 	{ 57344, 0},
 	{ 8318, 0},
@@ -2573,7 +2571,6 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
         {0xE000,0},
         {0xE004,0},
 	{0x33D,1},
-	{0x001E,0}//auto_lps disable
 };
 
 static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_post_soft_reset[] = {
