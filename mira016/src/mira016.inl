@@ -304,6 +304,10 @@
 #define MIRA016_ILLUM_DELAY_REG       0x0016
 #define MIRA016_ILLUM_WIDTH_DEFAULT   (MIRA016_DEFAULT_EXPOSURE_US * MIRA016_DATA_RATE / 8)
 #define MIRA016_ILLUM_DELAY_DEFAULT   (1<<19)
+#define MIRA016_ILLUM_ENABLE_DEFAULT   1
+#define MIRA016_ILLUM_SYNC_DEFAULT   1
+
+
 
 enum pad_types {
 	IMAGE_PAD,
@@ -4823,7 +4827,9 @@ static int mira016_probe(struct i2c_client *client)
 
 	dev_err(dev, "[MIRA016] Sleep for 1 second to let PMIC driver complete init.\n");
 	usleep_range(1000000, 1000000+100);
+	//set some defaults
 
+	
 	/*
 	 * The sensor must be powered for mira016_identify_module()
 	 * to be able to read the CHIP_ID register
@@ -4843,9 +4849,12 @@ static int mira016_probe(struct i2c_client *client)
 	/* Initialize default illumination trigger parameters */
 	/* ILLUM_WIDTH is in unit of SEQ_TIME_BASE, equal to (8/MIRA016_DATA_RATE) us. */
 	mira016->illum_width = MIRA016_ILLUM_WIDTH_DEFAULT;
+	/* ILLUM_WIDTH AUTO will match illum to exposure pulse width*/
+	mira016->illum_width_auto = MIRA016_ILLUM_SYNC_DEFAULT;
+	/* ILLUM_ENABLE is True or False, enabling it will activate illum trig. */
+	mira016->illum_enable = MIRA016_ILLUM_ENABLE_DEFAULT;
 	/* ILLUM_DELAY is in unit of TIME_UNIT, equal to 1 us. In continuous stream mode, zero delay is 1<<19. */
 	mira016->illum_delay = MIRA016_ILLUM_DELAY_DEFAULT;
-
 	/* Set default mode to max resolution */
 	mira016->mode = &supported_modes[0];
 
