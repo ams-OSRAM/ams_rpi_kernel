@@ -54,6 +54,10 @@
 #define AMS_CAMERA_CID_MIRA130_REG_FLAG_ILLUM_TRIG_ON   0b00011110
 /* Special command to turn illumination trigger off */
 #define AMS_CAMERA_CID_MIRA130_REG_FLAG_ILLUM_TRIG_OFF  0b00010001
+/* Special command to enable force_stream_ctrl */
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_STREAM_CTRL_ON  0b00011011
+/* Special command to disable force_stream_ctrl */
+#define AMS_CAMERA_CID_MIRA130_REG_FLAG_STREAM_CTRL_OFF 0b00011101
 /*
  * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
  * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
@@ -592,6 +596,9 @@ struct mira130 {
 	u32 skip_reset;
 	/* Whether regulator and clk are powered on */
 	u32 powered;
+	/* A flag to force write_start/stop_streaming_regs even if (skip_reg_upload==1) */
+	u8 force_stream_ctrl;
+
 
 	/*
 	 * Mutex for serialized access:
@@ -986,6 +993,12 @@ static int mira130_v4l2_reg_w(struct mira130 *mira130, u32 value) {
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA130_REG_FLAG_ILLUM_TRIG_OFF) {
 			printk(KERN_INFO "[MIRA130]: %s Disable illumination trigger.\n", __func__);
 			mira130_write_illum_trig_regs(mira130, 0);
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA130_REG_FLAG_STREAM_CTRL_ON) {
+			printk(KERN_INFO "[MIRA130]: %s Force stream control even if (skip_reg_upload == 1).\n", __func__);
+			mira130->force_stream_ctrl = 1;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA130_REG_FLAG_STREAM_CTRL_OFF) {
+			printk(KERN_INFO "[MIRA130]: %s Disable stream control if (skip_reg_upload == 1).\n", __func__);
+			mira130->force_stream_ctrl = 0;
 		} else {
 			printk(KERN_INFO "[MIRA130]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
@@ -1717,16 +1730,16 @@ static int mira130_start_streaming(struct mira130 *mira130)
 		return ret;
 	}
 
-	printk(KERN_INFO "[MIRA130]: Writing stop streaming regs.\n");
-
-	ret = mira130_write_stop_streaming_regs(mira130);
-	if (ret) {
-		dev_err(&client->dev, "Could not write stream-on sequence");
-		goto err_rpm_put;
-	}
-
 	/* Apply default values of current mode */
 	if (mira130->skip_reg_upload == 0) {
+		/* Stop treaming before uploading register sequence */
+		printk(KERN_INFO "[MIRA130]: Writing stop streaming regs.\n");
+		ret = mira130_write_stop_streaming_regs(mira130);
+		if (ret) {
+			dev_err(&client->dev, "Could not write stream-on sequence");
+			goto err_rpm_put;
+		}
+
 		reg_list = &mira130->mode->reg_list;
 		printk(KERN_INFO "[MIRA130]: Write %d regs.\n", reg_list->num_of_regs);
 		ret = mira130_write_regs(mira130, reg_list->regs, reg_list->num_of_regs);
@@ -1754,12 +1767,17 @@ static int mira130_start_streaming(struct mira130 *mira130)
 	if (ret)
 		goto err_rpm_put;
 
-	printk(KERN_INFO "[MIRA130]: Writing start streaming regs.\n");
-
-	ret = mira130_write_start_streaming_regs(mira130);
-	if (ret) {
-		dev_err(&client->dev, "Could not write stream-on sequence");
-		goto err_rpm_put;
+	if (mira130->skip_reg_upload == 0 ||
+		(mira130->skip_reg_upload == 1 && mira130->force_stream_ctrl == 1) ) {
+		printk(KERN_INFO "[MIRA130]: Writing start streaming regs.\n");
+		ret = mira130_write_start_streaming_regs(mira130);
+		if (ret) {
+			dev_err(&client->dev, "Could not write stream-on sequence");
+			goto err_rpm_put;
+		}
+	} else {
+		printk(KERN_INFO "[MIRA130]: Skip write_start_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
+				mira130->skip_reg_upload, mira130->force_stream_ctrl);
 	}
 
 	/* vflip and hflip cannot change during streaming */
@@ -1785,10 +1803,17 @@ static void mira130_stop_streaming(struct mira130 *mira130)
 	__v4l2_ctrl_grab(mira130->hflip, false);
 
 	if (mira130->skip_reset == 0) {
-		ret = mira130_write_stop_streaming_regs(mira130);
-		if (ret) {
-			dev_err(&client->dev, "Could not write the stream-off sequence");
-		}	
+		if (mira130->skip_reg_upload == 0 ||
+			(mira130->skip_reg_upload == 1 && mira130->force_stream_ctrl == 1) ) {
+
+			ret = mira130_write_stop_streaming_regs(mira130);
+			if (ret) {
+				dev_err(&client->dev, "Could not write the stream-off sequence");
+			}
+		} else {
+			printk(KERN_INFO "[MIRA130]: Skip write_stop_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
+					mira130->skip_reg_upload, mira130->force_stream_ctrl);
+		}
 	} else {
 		printk(KERN_INFO "[MIRA130]: Skip write_stop_streaming_regs due to mira130->skip_reset == %d.\n", mira130->skip_reset);
 	}
