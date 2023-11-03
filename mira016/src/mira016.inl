@@ -65,6 +65,10 @@
 #define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_ON  0b00010111
 /* Special command to disable ILLUM_WIDTH automatically tracking exposure time */
 #define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_OFF 0b00011001
+/* Special command to enable force_stream_ctrl */
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_ON  0b00011011
+/* Special command to disable force_stream_ctrl */
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_OFF 0b00011101
 /*
  * Bit 6&7 of flag are combined to specify I2C dev (default is Mira).
  * If bit 6&7 is 0b01, the reg_addr and reg_val are for a TBD I2C address.
@@ -2742,6 +2746,8 @@ struct mira016 {
 	u32 illum_delay;
 	/* Illumination trigger width automatically set to exposure time */
 	u8 illum_width_auto;
+	/* A flag to force write_start/stop_streaming_regs even if (skip_reg_upload==1) */
+	u8 force_stream_ctrl;
 
 	/*
 	 * Mutex for serialized access:
@@ -3274,6 +3280,12 @@ static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_OFF) {
 			printk(KERN_INFO "[MIRA016]: %s disable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
 			mira016->illum_width_auto = 0;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_ON) {
+			printk(KERN_INFO "[MIRA016]: %s Force stream control even if (skip_reg_upload == 1).\n", __func__);
+			mira016->force_stream_ctrl = 1;
+		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_OFF) {
+			printk(KERN_INFO "[MIRA016]: %s Disable stream control if (skip_reg_upload == 1).\n", __func__);
+			mira016->force_stream_ctrl = 0;
 		} else {
 			printk(KERN_INFO "[MIRA016]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
@@ -4237,12 +4249,18 @@ static int mira016_start_streaming(struct mira016 *mira016)
 		}
 	}
 
-	printk(KERN_INFO "[MIRA016]: Writing start streaming regs.\n");
+	if (mira016->skip_reg_upload == 0 ||
+		(mira016->skip_reg_upload == 1 && mira016->force_stream_ctrl == 1) ) {
+		printk(KERN_INFO "[MIRA016]: Writing start streaming regs.\n");
+		ret = mira016_write_start_streaming_regs(mira016);
+		if (ret) {
+			dev_err(&client->dev, "Could not write stream-on sequence");
+			goto err_rpm_put;
+		}
+	} else {
+		printk(KERN_INFO "[MIRA016]: Skip write_start_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
+				mira016->skip_reg_upload, mira016->force_stream_ctrl);
 
-	ret = mira016_write_start_streaming_regs(mira016);
-	if (ret) {
-		dev_err(&client->dev, "Could not write stream-on sequence");
-		goto err_rpm_put;
 	}
 
 	/* vflip and hflip cannot change during streaming */
@@ -4267,16 +4285,22 @@ static void mira016_stop_streaming(struct mira016 *mira016)
 	__v4l2_ctrl_grab(mira016->vflip, false);
 	__v4l2_ctrl_grab(mira016->hflip, false);
 
-
 	if (mira016->skip_reset == 0) {
-		ret = mira016_write_stop_streaming_regs(mira016);
-		if (ret) {
-			dev_err(&client->dev, "Could not write the stream-off sequence");
+		if (mira016->skip_reg_upload == 0 ||
+			(mira016->skip_reg_upload == 1 && mira016->force_stream_ctrl == 1) ) {
+			printk(KERN_INFO "[MIRA016]: Writing stop streaming regs.\n");
+			ret = mira016_write_stop_streaming_regs(mira016);
+			if (ret) {
+				dev_err(&client->dev, "Could not write the stream-off sequence");
+			}
+		} else {
+			printk(KERN_INFO "[MIRA016]: Skip write_stop_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
+					mira016->skip_reg_upload, mira016->force_stream_ctrl);
+
 		}
 	} else {
 		printk(KERN_INFO "[MIRA016]: Skip write_stop_streaming_regs due to mira016->skip_reset == %d.\n", mira016->skip_reset);
 	}
-
 
 	pm_runtime_put(&client->dev);
 }
