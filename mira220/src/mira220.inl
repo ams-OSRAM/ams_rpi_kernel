@@ -231,9 +231,27 @@
 #define MIRA220_REG_VALUE_08BIT		1
 #define MIRA220_REG_VALUE_16BIT		2
 
+// Outdated. See below.
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
-// 1.5Gb/s * 2 * 2 / 12 = 536870912
-#define MIRA220_PIXEL_RATE		(536870912)
+// 1.0Gb/s * 2 * 2 / 12 = 357913941
+// #define MIRA220_PIXEL_RATE		(357913941)
+
+// Mira220 PIXEL_RATE is derived from ROW_LENGTH. See datasheet Section 9.2.
+// ROW_LENGTH is set by registers: 0x102B, 0x102C. Unit is number of CLK_IN cycles.
+// PIXEL_RATE = 1000000000 * WIDTH / (ROW_LENGTH * CLK_IN_PERIOD_NS)
+// ROW_LENGTH_1600x1400_1000GBS=300
+// ROW_LENGTH_640x480_1000GBS=450
+// CLK_IN_PERIOD_NS = 1.0 s / 38.4 Mhz = 26.04 ns
+// MIRA220_PIXEL_RATE_1600x1400_1000GBS = 1000000000 * 1600 / (300 * 26.04) = 204813108
+// MIRA220_PIXEL_RATE_640x480_1000GBS = 1000000000 * 640 / (450 * 26.04) = 54616828
+#define MIRA220_PIXEL_RATE_1600x1400_1000GBS   204813108
+#define MIRA220_PIXEL_RATE_640x480_1000GBS     54616828
+
+// Row time in microseconds. Not used in driver, but used in libcamera cam_helper.
+// ROW_TIME_US = ROW_LENGTH * CLK_IN_PERIOD_NS / 1000
+// MIRA220_ROW_TIME_1600x1400_1000GBS_US=(300*26.04/1000)=7.8us
+// MIRA220_ROW_TIME_640x480_1000GBS_US=(450*26.04/1000)=11.7us
+
 /* Should match device tree link freq */
 #define MIRA220_DEFAULT_LINK_FREQ	456000000
 
@@ -242,19 +260,19 @@
 /* Formular in libcamera to derive TARGET_FPS:
  * TARGET_FPS=1/((1/MIRA220_PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+MIRA220_MIN_VBLANK))
  * Example: 640x480 with HBLANK=0 and MIRA220_MIN_VBLANK=13
- * TARGET_FPS=1/((1/536870912)*640*(480+13))=1701
+ * TARGET_FPS=1/((1/54616828)*640*(480+13))=173
  * Example: 1600x1400 with HBLANK=0 and MIRA220_MIN_VBLANK=13
- * TARGET_FPS=1/((1/536870912)*1600*(1400+13))=237
+ * TARGET_FPS=1/((1/204813108)*1600*(1400+13))=91
  * 
  * Inverse the above formula to derive HBLANK from TARGET_FPS:
  * HBLANK=1/((1/MIRA220_PIXEL_RATE)*TARGET_FPS*(HEIGHT+MIRA220_MIN_VBLANK))-WIDTH
  * Example with TARGET_FPS of 120 fps for 640x480
- * HBLANK=1/((1/536870912)*120*(480+13))-640=8435
+ * HBLANK=1/((1/54616828)*120*(480+13))-640=283
  * Example with TARGET_FPS of 30 fps for 1600x1400
- * HBLANK=1/((1/536870912)*30*(1400+13))-1600=11065
+ * HBLANK=1/((1/204813108)*30*(1400+13))-1600=3232
  */
-#define MIRA220_HBLANK_640x480_120FPS		8435
-#define MIRA220_HBLANK_1600x1400_30FPS		11065
+#define MIRA220_HBLANK_640x480_120FPS		283
+#define MIRA220_HBLANK_1600x1400_30FPS		3232
 
 #define MIRA220_REG_TEST_PATTERN	0x2091
 #define	MIRA220_TEST_PATTERN_DISABLE	0x00
@@ -311,6 +329,7 @@ struct mira220_mode {
 	struct mira220_reg_list reg_list;
 
 	u32 row_length;
+	u32 pixel_rate;
 	u32 vblank;
 	u32 hblank;
 	u32 code;
@@ -1871,7 +1890,8 @@ static const struct mira220_mode supported_modes[] = {
 		},
 		// vblank is ceil(MIRA220_GLOB_NUM_CLK_CYCLES / ROW_LENGTH)  + 11
 		// ROW_LENGTH is configured by register 0x102B, 0x102C.
-		.row_length = 0x012C,
+		.row_length = 0x01C2,
+		.pixel_rate = MIRA220_PIXEL_RATE_640x480_1000GBS,
 		.vblank = 18, // ceil(1928 / 300) + 11
 		.hblank = MIRA220_HBLANK_640x480_120FPS, // TODO
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
@@ -1892,7 +1912,8 @@ static const struct mira220_mode supported_modes[] = {
 		},
 		// vblank is ceil(MIRA220_GLOB_NUM_CLK_CYCLES / ROW_LENGTH)  + 11
 		// ROW_LENGTH is configured by register 0x102B, 0x102C.
-		.row_length = 0x01C2,
+		.row_length = 0x012C,
+		.pixel_rate = MIRA220_PIXEL_RATE_1600x1400_1000GBS,
 		.vblank = 16, // ceil(1928 / 450) + 11
 		.hblank = MIRA220_HBLANK_1600x1400_30FPS, // TODO
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
@@ -3016,6 +3037,21 @@ static int mira220_set_pad_format(struct v4l2_subdev *sd,
 						     max_exposure, 1,
 						     default_exp);
 
+			// Update pixel rate based on new mode.
+			__v4l2_ctrl_modify_range(mira220->pixel_rate,
+						     mira220->mode->pixel_rate,
+						     mira220->mode->pixel_rate, 1,
+						     mira220->mode->pixel_rate);
+			printk(KERN_INFO "[MIRA220]: mira220_set_pad_format() update V4L2_CID_PIXEL_RATE to %u\n", mira220->mode->pixel_rate);
+
+			// Update hblank based on new mode.
+			__v4l2_ctrl_modify_range(mira220->hblank,
+						     mira220->mode->hblank,
+						     mira220->mode->hblank, 1,
+						     mira220->mode->hblank);
+			printk(KERN_INFO "[MIRA220]: mira220_set_pad_format() update V4L2_CID_HBLANK to %u\n", mira220->mode->hblank);
+
+
 			// Set the current vblank value
 			printk(KERN_INFO "[MIRA220]: mira220_set_pad_format() mira220->mode->vblank %d\n",
 					mira220->mode->vblank);
@@ -3427,9 +3463,9 @@ static int mira220_init_controls(struct mira220 *mira220)
 	/* By default, PIXEL_RATE is read only */
 	mira220->pixel_rate = v4l2_ctrl_new_std(ctrl_hdlr, &mira220_ctrl_ops,
 					        V4L2_CID_PIXEL_RATE,
-					        MIRA220_PIXEL_RATE,
-					        MIRA220_PIXEL_RATE, 1,
-					        MIRA220_PIXEL_RATE);
+					        mira220->mode->pixel_rate,
+					        mira220->mode->pixel_rate, 1,
+					        mira220->mode->pixel_rate);
 
 	printk(KERN_INFO "[MIRA220]: %s V4L2_CID_VBLANK %X.\n", __func__, V4L2_CID_VBLANK);
 
