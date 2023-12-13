@@ -836,11 +836,11 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	{ 429, 230},
 	{ 57344, 1},
 	{ 57380, 7},
+	//Black Level
 	{ 57344, 0},
 	{ 92, 0},
-	{ 93, 28},
+	{ 93, 48},
 	{ 375, 120},
-	//Black Level
 	{ 57344, 0},
 	{ 403, 4},
 	{ 404, 22},
@@ -1570,11 +1570,11 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	{ 429, 17},
 	{ 57344, 1},
 	{ 57380, 15},
+	//Black Level
 	{ 57344, 0},
 	{ 92, 0},
-	{ 93, 91},
+	{ 93, 96},
 	{ 375, 220},
-	//Black Level
 	{ 57344, 0},
 	{ 403, 8},
 	{ 404, 3},
@@ -2316,11 +2316,11 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	{ 429, 24},
 	{ 57344, 1},
 	{ 57380, 1},
+	//Black Level
 	{ 57344, 0},
 	{ 92, 0},
-	{ 93, 16},
+	{ 93, 48},
 	{ 375, 120},
-	//Black Level
 	{ 57344, 0},
 	{ 403, 4},
 	{ 404, 26},
