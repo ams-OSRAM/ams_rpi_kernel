@@ -2121,37 +2121,30 @@ static int mira220pmic_write(struct i2c_client *client, u8 reg, u8 val)
 
 static int mira220pmic_read(struct i2c_client *client, u8 reg, u8 *val)
 {
+	struct i2c_msg msgs[2];
+	u8 addr_buf[1] = { reg & 0xff };
+	u8 data_buf[1] = { 0 };
 	int ret;
-	unsigned char data_w[1] = { reg & 0xff };
 
-	ret = i2c_master_send(client, data_w, 1);
-	/*
-	 * A negative return code, or sending the wrong number of bytes, both
-	 * count as an error.
-	 */
-	if (ret != 1) {
-		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-			__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-		return ret;
-	}
+	/* Write register address */
+	msgs[0].addr = client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = ARRAY_SIZE(addr_buf);
+	msgs[0].buf = addr_buf;
 
-	ret = i2c_master_recv(client, val, 1);
-	/*
-	 * The only return value indicating success is 1. Anything else, even
-	 * a non-negative value, indicates something went wrong.
-	 */
-	if (ret == 1) {
-		ret = 0;
-	} else {
-		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
-				__func__, reg);
-		if (ret >= 0)
-			ret = -EINVAL;
-	}
+	/* Read data from register */
+	msgs[1].addr = client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = 1;
+	msgs[1].buf = &data_buf[0];
 
-	return ret;
+	ret = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
+	if (ret != ARRAY_SIZE(msgs))
+		return -EIO;
+
+	*val = (u8)(data_buf[0]);
+
+	return 0;
 }
 
 /* Power/clock management functions */
