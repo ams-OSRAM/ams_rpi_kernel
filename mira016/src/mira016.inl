@@ -2154,6 +2154,244 @@ static const struct mira016_reg partial_analog_gain_x2_12bit[] = {
 
 };
 
+static const struct mira016_reg partial_analog_gain_x1_10bit[] = {
+{ 57344, 0},
+{ 443, 180},
+{ 444, 172},
+{ 208, 0},
+{ 496, 7},
+{ 499, 2},
+{ 366, 125},
+{ 370, 0},
+{ 371, 0},
+{ 367, 254},
+{ 368, 0},
+{ 369, 125},
+{ 372, 0},
+{ 373, 0},
+{ 395, 2},
+{ 396, 14},
+{ 397, 2},
+{ 398, 86},
+{ 399, 6},
+{ 400, 14},
+{ 375, 120},
+{ 494, 27},
+{ 495, 70},
+{ 418, 0},
+{ 419, 1},
+{ 799, 0},
+{ 800, 10},
+{ 422, 0},
+{ 423, 152},
+{ 420, 3},
+{ 421, 167},
+{ 801, 3},
+{ 802, 176},
+{ 424, 4},
+{ 425, 62},
+{ 416, 0},
+{ 417, 200},
+{ 434, 0},
+{ 435, 226},
+{ 432, 0},
+{ 433, 219},
+{ 428, 0},
+{ 429, 230},
+{ 57344, 1},
+{ 57344, 1},
+{ 57380, 7},
+{ 57344, 0},
+{ 57344, 0},
+{ 92, 0},
+{ 93, 48},
+{ 57344, 0},
+{ 403, 4},
+{ 404, 22},
+{ 57348, 0},
+{ 50, 4},
+{ 51, 70},
+
+};
+
+static const struct mira016_reg partial_analog_gain_x2_10bit[] = {
+{ 57344, 0},
+{ 443, 156},
+{ 444, 148},
+{ 208, 0},
+{ 496, 37},
+{ 499, 1},
+{ 366, 125},
+{ 370, 0},
+{ 371, 0},
+{ 367, 126},
+{ 368, 0},
+{ 369, 125},
+{ 372, 0},
+{ 373, 0},
+{ 395, 2},
+{ 396, 14},
+{ 397, 2},
+{ 398, 86},
+{ 399, 4},
+{ 400, 14},
+{ 375, 120},
+{ 494, 27},
+{ 495, 70},
+{ 418, 0},
+{ 419, 1},
+{ 799, 0},
+{ 800, 10},
+{ 422, 0},
+{ 423, 152},
+{ 420, 3},
+{ 421, 39},
+{ 801, 3},
+{ 802, 48},
+{ 424, 3},
+{ 425, 190},
+{ 416, 0},
+{ 417, 200},
+{ 434, 0},
+{ 435, 226},
+{ 432, 0},
+{ 433, 219},
+{ 428, 0},
+{ 429, 230},
+{ 57344, 1},
+{ 57344, 1},
+{ 57380, 15},
+{ 57344, 0},
+{ 57344, 0},
+{ 92, 0},
+{ 93, 24},
+{ 57344, 0},
+{ 403, 4},
+{ 404, 16},
+
+{ 57348, 0},
+{ 50, 4},
+{ 51, 68},
+};
+
+static const struct mira016_reg partial_analog_gain_x1_8bit[] = {
+	{ 57344, 0},
+{ 443, 180},
+{ 444, 172},
+{ 208, 0},
+{ 496, 7},
+{ 499, 2},
+{ 366, 125},
+{ 370, 0},
+{ 371, 0},
+{ 367, 254},
+{ 368, 0},
+{ 369, 125},
+{ 372, 0},
+{ 373, 0},
+{ 395, 2},
+{ 396, 14},
+{ 397, 2},
+{ 398, 86},
+{ 399, 6},
+{ 400, 14},
+{ 375, 120},
+{ 494, 27},
+{ 495, 70},
+{ 418, 0},
+{ 419, 1},
+{ 799, 0},
+{ 800, 10},
+{ 422, 0},
+{ 423, 152},
+{ 420, 3},
+{ 421, 167},
+{ 801, 3},
+{ 802, 176},
+{ 424, 4},
+{ 425, 62},
+{ 416, 0},
+{ 417, 250},
+{ 434, 1},
+{ 435, 20},
+{ 432, 1},
+{ 433, 13},
+{ 428, 1},
+{ 429, 24},
+{ 57344, 1},
+{ 57344, 1},
+{ 57380, 1},
+{ 57344, 0},
+{ 57344, 0},
+{ 92, 0},
+{ 93, 48},
+{ 57344, 0},
+{ 403, 4},
+{ 404, 26},
+{ 57348, 0},
+{ 50, 4},
+{ 51, 18},
+};
+
+static const struct mira016_reg partial_analog_gain_x2_8bit[] = {
+	{ 57344, 0},
+	{ 443, 156},
+	{ 444, 148},
+	{ 208, 2},
+	{ 496, 37},
+	{ 499, 1},
+	{ 366, 125},
+	{ 370, 0},
+	{ 371, 0},
+	{ 367, 126},
+	{ 368, 0},
+	{ 369, 125},
+	{ 372, 0},
+	{ 373, 0},
+	{ 395, 0},
+	{ 396, 139},
+	{ 397, 0},
+	{ 398, 142},
+	{ 399, 1},
+	{ 400, 11},
+	{ 375, 120},
+	{ 494, 27},
+	{ 495, 70},
+	{ 418, 0},
+	{ 419, 1},
+	{ 799, 0},
+	{ 800, 10},
+	{ 422, 0},
+	{ 423, 152},
+	{ 420, 3},
+	{ 421, 39},
+	{ 801, 3},
+	{ 802, 48},
+	{ 424, 3},
+	{ 425, 190},
+	{ 416, 0},
+	{ 417, 250},
+	{ 434, 1},
+	{ 435, 20},
+	{ 432, 1},
+	{ 433, 13},
+	{ 428, 1},
+	{ 429, 24},
+	{ 57344, 1},
+	{ 57344, 1},
+	{ 57380, 15},
+	{ 57344, 0},
+	{ 57344, 0},
+	{ 92, 0},
+	{ 93, 6},
+	{ 57344, 0},
+	{ 403, 1},
+	{ 404, 19},
+
+	{ 57348, 0},
+	{ 50, 3},
+	{ 51, 236},
+};
 
 // converted_Draco_i2c_configuration_sequence_hex_8bit_1x_360fps_Version3
 static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[] = {
@@ -3862,7 +4100,52 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain) {
 			// Other gains are not supported
 			printk(KERN_INFO "[mira016]: Ignore analog gain %u in 12 bit mode", gain);
 		}
-	} else{
+	}
+	else if (mira016->bit_depth == 10) {
+		// Select register sequence according to gain value
+		if (gain == 0) {
+			mira016_write_stop_streaming_regs(mira016);
+			usleep_range(wait_us, wait_us+100);
+			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x1 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_10bit);
+			ret = mira016_write_regs(mira016, partial_analog_gain_x1_10bit, num_of_regs);
+			mira016_write_start_streaming_regs(mira016);
+		} else if (gain == 1) {
+			mira016_write_stop_streaming_regs(mira016);
+			usleep_range(wait_us, wait_us+100);
+			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x2 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_10bit);
+			ret = mira016_write_regs(mira016, partial_analog_gain_x2_10bit, num_of_regs);
+			mira016_write_start_streaming_regs(mira016);
+		} else {
+			// Other gains are not supported
+			printk(KERN_INFO "[mira016]: Ignore analog gain %u in 12 bit mode", gain);
+		}
+	}
+		if (mira016->bit_depth == 8) {
+		// Select register sequence according to gain value
+		if (gain == 0) {
+			mira016_write_stop_streaming_regs(mira016);
+			usleep_range(wait_us, wait_us+100);
+			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x1 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_8bit);
+			ret = mira016_write_regs(mira016, partial_analog_gain_x1_8bit, num_of_regs);
+			mira016_write_start_streaming_regs(mira016);
+		} else if (gain == 1) {
+			mira016_write_stop_streaming_regs(mira016);
+			usleep_range(wait_us, wait_us+100);
+			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x2 in 12 bit mode");
+			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_8bit);
+			ret = mira016_write_regs(mira016, partial_analog_gain_x2_8bit, num_of_regs);
+			mira016_write_start_streaming_regs(mira016);
+		} else {
+			// Other gains are not supported
+			printk(KERN_INFO "[mira016]: Ignore analog gain %u in 8 bit mode", gain);
+		}
+	}
+	
+	
+	else{
 		// Other bit depths are not supported
 		printk(KERN_INFO "[mira016]: Ignore analog gain in %u bit mode", mira016->mode->bit_depth);
 	}
