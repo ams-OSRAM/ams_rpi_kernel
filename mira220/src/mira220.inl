@@ -224,12 +224,7 @@
 #define MIRA220_XCLR_MIN_DELAY_US		100000
 #define MIRA220_XCLR_DELAY_RANGE_US		30
 
-/* Chip ID */
-#define MIRA220_REG_CHIP_ID		0x0000
-#define MIRA220_CHIP_ID			0x0054
 
-#define MIRA220_REG_VALUE_08BIT		1
-#define MIRA220_REG_VALUE_16BIT		2
 
 // Outdated. See below.
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample

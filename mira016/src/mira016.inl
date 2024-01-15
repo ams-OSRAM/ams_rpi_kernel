@@ -101,28 +101,11 @@
 #define MIRA016_ANALOG_GAIN_STEP		1
 #define MIRA016_ANALOG_GAIN_DEFAULT		MIRA016_ANALOG_GAIN_MIN
 
-#define MIRA016_BIT_DEPTH_REG			0x209E
-#define MIRA016_BIT_DEPTH_12_BIT		0x02
-#define MIRA016_BIT_DEPTH_10_BIT		0x04
-#define MIRA016_BIT_DEPTH_8_BIT			0x06
-
-#define MIRA016_CSI_DATA_TYPE_REG		0x208D
-#define MIRA016_CSI_DATA_TYPE_12_BIT	0x04
-#define MIRA016_CSI_DATA_TYPE_10_BIT	0x02
-#define MIRA016_CSI_DATA_TYPE_8_BIT		0x01
 
 #define MIRA016_BANK_SEL_REG			0xE000
 #define MIRA016_RW_CONTEXT_REG			0xE004
 #define MIRA016_CMD_REQ_1_REG			0x000A
 #define MIRA016_CMD_HALT_BLOCK_REG		0x000C
-
-#define MIRA016_NB_OF_FRAMES_LO_REG		0x10F2
-#define MIRA016_NB_OF_FRAMES_HI_REG		0x10F3
-
-#define MIRA016_POWER_MODE_REG			0x0043
-#define MIRA016_POWER_MODE_SLEEP		0x01
-#define MIRA016_POWER_MODE_IDLE			0x02
-#define MIRA016_POWER_MODE_ACTIVE		0x0C
 
 // Exposure time is indicated in us
 #define MIRA016_EXP_TIME_L_REG			0x000E
@@ -131,77 +114,8 @@
 // Target frame time is indicated in us 
 #define MIRA016_TARGET_FRAME_TIME_REG		0x0008
 
-// VBLANK is indicated in number of rows
-#define MIRA016_VBLANK_LO_REG			0x1012
-#define MIRA016_VBLANK_HI_REG			0x1013
-
-#define MIRA016_EXT_EXP_PW_SEL_REG		0x1001
-#define MIRA016_EXT_EXP_PW_SEL_USE_REG		1
-#define MIRA016_EXT_EXP_PW_SEL_USE_EXT		0
-
-// Exposure delay is indicated in number of rows
-#define MIRA016_EXT_EXP_DELAY_LO_REG		0x10D0
-#define MIRA016_EXT_EXP_DELAY_HI_REG		0x10D1
-
-#define MIRA016_VSIZE1_LO_REG			0x1087
-#define MIRA016_VSIZE1_HI_REG			0x1088
-#define MIRA016_VSIZE1_MASK			0x7FF
-
-#define MIRA016_VSTART1_LO_REG			0x107D
-#define MIRA016_VSTART1_HI_REG			0x107E
-#define MIRA016_VSTART1_MASK			0x7FF
-
-// HSIZE units are number of columns / 2
-#define MIRA016_HSIZE_LO_REG			0x2008
-#define MIRA016_HSIZE_HI_REG			0x2009
-#define MIRA016_HSIZE_MASK			0x3FF
-
-// HSTART units are number of columns / 2
-#define MIRA016_HSTART_LO_REG			0x200A
-#define MIRA016_HSTART_HI_REG			0x200B
-#define MIRA016_HSTART_MASK			0x3FF
-
-// MIPI_HSIZE units are number of columns (HSIZE * 2)
-#define MIRA016_MIPI_HSIZE_LO_REG		0x207D
-#define MIRA016_MIPI_HSIZE_HI_REG		0x207E
-#define MIRA016_MIPI_HSIZE_MASK			0xFFFF
-
-#define MIRA016_HFLIP_REG			0x209C
-#define MIRA016_HFLIP_ENABLE_MIRROR		1
-#define MIRA016_HFLIP_DISABLE_MIRROR		0
-
-#define MIRA016_VFLIP_REG			0x1095
-#define MIRA016_VFLIP_ENABLE_FLIP		1
-#define MIRA016_VFLIP_DISABLE_FLIP		0
-
-#define MIRA016_BIT_ORDER_REG			0x2063
-#define MIRA016_BIT_ORDER_NORMAL		0
-#define MIRA016_BIT_ORDER_REVERSED		1
-
-#define MIRA016_BSP_REG				0x4006
-#define MIRA016_BSP_ENABLE			0x08
-#define MIRA016_BSP_DISABLE			0x0F
-
-#define MIRA016_MIPI_SOFT_RESET_REG		0x5004
-#define MIRA016_MIPI_SOFT_RESET_DPHY		0x01
-#define MIRA016_MIPI_SOFT_RESET_NONE		0x00
-
-#define MIRA016_FSYNC_EOF_MAX_CTR_LO_REG	0x2066
-#define MIRA016_FSYNC_EOF_MAX_CTR_HI_REG	0x2067
-
-#define MIRA016_FSYNC_EOF_VEND_ST_LO_REG	0x206E
-#define MIRA016_FSYNC_EOF_VEND_ST_HI_REG	0x206F
-
-#define MIRA016_FSYNC_EOF_HSTART_EMB_ST_LO_REG	0x2076
-#define MIRA016_FSYNC_EOF_HSTART_EMB_ST_HI_REG	0x2077
-
-#define MIRA016_FSYNC_EOF_DSTART_EMB_ST_LO_REG	0x2078
-#define MIRA016_FSYNC_EOF_DSTART_EMB_ST_HI_REG	0x2079
-
-#define MIRA016_FSYNC_EOF_HEND_EMB_ST_LO_REG	0x207A
-#define MIRA016_FSYNC_EOF_HEND_EMB_ST_HI_REG	0x207B
-
-#define MIRA016_GLOB_NUM_CLK_CYCLES		1928
+//glob time is 50.67 us * 24M
+#define MIRA016_GLOB_NUM_CLK_CYCLES		1216
 
 #define MIRA016_SUPPORTED_XCLK_FREQ		24000000
 
@@ -210,8 +124,8 @@
 #define MIRA016_GRAN_TG				50
 // TODO: Check Mira016 data rate in reg sequence
 #define MIRA016_DATA_RATE			1500  // Mbit/s
-// ROW_LENGTH register is 0x0032, with value 1052 (8 bit). Choose smaller one for safety.
-#define MIRA016_MIN_ROW_LENGTH			1052
+// ROW_LENGTH register is 0x0032, with value 1042 (8 bit). Choose smaller one for safety.
+#define MIRA016_MIN_ROW_LENGTH			1042
 // Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
 #define MIRA016_MIN_ROW_LENGTH_US		(MIRA016_MIN_ROW_LENGTH * 8 / MIRA016_DATA_RATE)
 // Row time in microsecond is not precise enoughi, e.g., 9.35 becomes 9. Need nanosecond.
@@ -237,16 +151,13 @@
 #define MIRA016_XCLR_MIN_DELAY_US		150000
 #define MIRA016_XCLR_DELAY_RANGE_US		3000
 
-/* Chip ID */
-#define MIRA016_REG_CHIP_ID		0x0000
-#define MIRA016_CHIP_ID			0x0054
 
-#define MIRA016_REG_VALUE_08BIT		1
-#define MIRA016_REG_VALUE_16BIT		2
+
 
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
 // 0.9Gb/s * 2 * 1 / 12 = 157286400
-#define MIRA016_PIXEL_RATE		(157286400)
+// 1.5 Gbit/s * 2 * 1 / 12 = 250 000 000 
+#define MIRA016_PIXEL_RATE		(250000000)
 /* Should match device tree link freq */
 #define MIRA016_DEFAULT_LINK_FREQ	456000000
 
@@ -263,6 +174,7 @@
  * HBLANK=1/((1/157286400)*100*(400+12))-400=3418
  */
 #define MIRA016_HBLANK_100FPS			3418
+#define MIRA016_HBLANK_360FPS			1285
 
 // For test pattern with fixed data
 #define MIRA016_TRAINING_WORD_REG		0x0060
@@ -1875,15 +1787,16 @@ static const struct mira016_reg partial_analog_gain_x1_12bit[] = {
 	// { 19, 0},
 	// { 20, 0},
 	// { 21, 0},
+	//frame time
 	{ 57348, 0},
 	{ 50, 5},
 	{ 51, 224},
 	{ 57348, 0},
 	{ 7, 1},
-	{ 8, 0},
-	{ 9, 0},
-	{ 10, 19},
-	{ 11, 136},
+	// { 8, 0},
+	// { 9, 0},
+	// { 10, 19},
+	// { 11, 136},
 	{ 57348, 0},
 	{ 49, 0},
 	{ 57348, 0},
@@ -2108,10 +2021,10 @@ static const struct mira016_reg partial_analog_gain_x2_12bit[] = {
 	{ 51, 8},
 	{ 57348, 0},
 	{ 7, 1},
-	{ 8, 0},
-	{ 9, 0},
-	{ 10, 19},
-	{ 11, 136},
+	// { 8, 0},
+	// { 9, 0},
+	// { 10, 19},
+	// { 11, 136},
 	{ 57348, 0},
 	{ 49, 0},
 	{ 57348, 0},
@@ -2997,10 +2910,10 @@ static const struct mira016_reg partial_analog_gain_x2_8bit[] = {
 { 51, 236},
 { 57348, 0},
 { 7, 1},
-{ 8, 0},
-{ 9, 0},
-{ 10, 10},
-{ 11, 217},
+// { 8, 0},
+// { 9, 0},
+// { 10, 10},
+// { 11, 217},
 { 57348, 0},
 { 49, 0},
 { 57348, 0},
@@ -3643,10 +3556,10 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	{ 51, 18},
 	{ 57348, 0},
 	{ 7, 1},
-	{ 8, 0},
-	{ 9, 0},
-	{ 10, 10},
-	{ 11, 217},
+	// { 8, 0},
+	// { 9, 0},
+	// { 10, 10},
+	// { 11, 217},
 	{ 57348, 0},
 	{ 49, 0},
 	{ 57348, 0},
@@ -3772,7 +3685,7 @@ static const struct mira016_mode supported_modes[] = {
 			.regs = full_400_400_100fps_10b_1lane_reg_post_soft_reset,
 		},
 		.vblank = MIRA016_MIN_VBLANK,
-		.hblank = MIRA016_HBLANK_100FPS, // TODO
+		.hblank = MIRA016_HBLANK_360FPS, // TODO
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
 	},
@@ -3795,7 +3708,7 @@ static const struct mira016_mode supported_modes[] = {
 			.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
 		},
 		.vblank = MIRA016_MIN_VBLANK,
-		.hblank = MIRA016_HBLANK_100FPS, // TODO
+		.hblank = MIRA016_HBLANK_360FPS, // TODO
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
@@ -3818,7 +3731,7 @@ static const struct mira016_mode supported_modes[] = {
 			.regs = full_400_400_100fps_8b_1lane_reg_post_soft_reset,
 		},
 		.vblank = MIRA016_MIN_VBLANK,
-		.hblank = MIRA016_HBLANK_100FPS, // TODO
+		.hblank = MIRA016_HBLANK_360FPS, // TODO
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
 	},
@@ -4735,20 +4648,20 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain) {
 		if (gain == 0) {
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us+100);
-			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x1 in 12 bit mode");
+			printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x1 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x1_12bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
 		} else if (gain == 1) {
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us+100);
-			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x2 in 12 bit mode");
+			printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x2 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x2_12bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
 		} else {
 			// Other gains are not supported
-			printk(KERN_INFO "[mira016]: Ignore analog gain %u in 12 bit mode", gain);
+			printk(KERN_INFO "[mira016]: Ignore analog gain %d in 12 bit mode", gain);
 		}
 	}
 	else if (mira016->bit_depth == 10) {
@@ -4769,10 +4682,10 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain) {
 			mira016_write_start_streaming_regs(mira016);
 		} else {
 			// Other gains are not supported
-			printk(KERN_INFO "[mira016]: Ignore analog gain %u in 12 bit mode", gain);
+			printk(KERN_INFO "[mira016]: Ignore analog gain %d in 12 bit mode", gain);
 		}
 	}
-		if (mira016->bit_depth == 8) {
+	else if (mira016->bit_depth == 8) {
 		// Select register sequence according to gain value
 		if (gain == 0) {
 			mira016_write_stop_streaming_regs(mira016);
@@ -4790,16 +4703,15 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain) {
 			mira016_write_start_streaming_regs(mira016);
 		} else {
 			// Other gains are not supported
-			printk(KERN_INFO "[mira016]: Ignore analog gain %u in 8 bit mode", gain);
+			printk(KERN_INFO "[mira016]: Ignore analog gain %d in 8 bit mode", gain);
 		}
 	}
-	
-	
 	else{
 		// Other bit depths are not supported
 		printk(KERN_INFO "[mira016]: Ignore analog gain in %u bit mode", mira016->mode->bit_depth);
 	}
-
+	
+	
 	if (ret) {
 		dev_err(&client->dev, "%s failed to set mode\n", __func__);
 	}
@@ -4960,10 +4872,10 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			 */
 			target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira016->mode->width + mira016->mode->hblank) * (u64)(mira016->mode->height + ctrl->val)) / MIRA016_PIXEL_RATE);
 			// Debug print
-			//printk(KERN_INFO "[MIRA016]: mira016_write_target_frame_time_reg target_frame_time_us = %u.\n",
-			//	target_frame_time_us);
-			//printk(KERN_INFO "[MIRA016]: width %d, hblank %d, height %d, ctrl->val %d.\n",
-			//		mira016->mode->width, mira016->mode->hblank, mira016->mode->height, ctrl->val);
+			printk(KERN_INFO "[MIRA016]: mira016_write_target_frame_time_reg target_frame_time_us = %u.\n",
+				target_frame_time_us);
+			printk(KERN_INFO "[MIRA016]: width %d, hblank %d, height %d, ctrl->val %d.\n",
+					mira016->mode->width, mira016->mode->hblank, mira016->mode->height, ctrl->val);
 			ret = mira016_write_target_frame_time_reg(mira016, target_frame_time_us);
 			break;
 		case V4L2_CID_HBLANK:
