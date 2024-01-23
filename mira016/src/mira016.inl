@@ -28,45 +28,45 @@
  * Introduce new v4l2 control
  */
 #include <linux/v4l2-controls.h>
-#define AMS_CAMERA_CID_BASE		(V4L2_CTRL_CLASS_CAMERA | 0x2000)
-#define AMS_CAMERA_CID_MIRA_REG_W	(AMS_CAMERA_CID_BASE+0)
-#define AMS_CAMERA_CID_MIRA_REG_R	(AMS_CAMERA_CID_BASE+1)
+#define AMS_CAMERA_CID_BASE (V4L2_CTRL_CLASS_CAMERA | 0x2000)
+#define AMS_CAMERA_CID_MIRA_REG_W (AMS_CAMERA_CID_BASE + 0)
+#define AMS_CAMERA_CID_MIRA_REG_R (AMS_CAMERA_CID_BASE + 1)
 
 /* Most significant Byte is flag, and most significant bit is unused. */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_FOR_READ        0b00000001
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_USE_BANK        0b00000010
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_BANK            0b00000100
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_CONTEXT         0b00001000
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_FOR_READ 0b00000001
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_USE_BANK 0b00000010
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_BANK 0b00000100
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_CONTEXT 0b00001000
 /* Use bit 5 to indicate special command, bit 1,2,3,4 for command. */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_CMD_SEL         0b00010000
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_CMD_SEL 0b00010000
 /* Special command for sleep. The other 3 Bytes (addr+val) is sleep values in us. */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_SLEEP_US        0b00010000
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_SLEEP_US 0b00010000
 /* Special command to enable power on (/off) when stream on (/off). */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_RESET_ON        0b00010010
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_RESET_ON 0b00010010
 /* Special command to disable power on (/off) when stream on (/off). */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_RESET_OFF       0b00010100
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_RESET_OFF 0b00010100
 /* Special command to enable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_ON       0b00010110
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_ON 0b00010110
 /* Special command to disable base register sequence upload, overwrite skip-reg-upload in dtoverlay */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_OFF      0b00011000
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_OFF 0b00011000
 /* Special command to manually power on */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_ON        0b00011010
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_ON 0b00011010
 /* Special command to manually power off */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_OFF       0b00011100
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_OFF 0b00011100
 /* Special command to turn illumination trigger on */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_TRIG_ON   0b00011110
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_TRIG_ON 0b00011110
 /* Special command to turn illumination trigger off */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_TRIG_OFF  0b00010001
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_TRIG_OFF 0b00010001
 /* Special command to set ILLUM_WIDTH. The other 3 Bytes (addr+val) is width value. */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_WIDTH     0b00010011
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_WIDTH 0b00010011
 /* Special command to set ILLUM_DELAY. The other 3 Bytes (addr+val) is width value. */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_DELAY     0b00010101
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_DELAY 0b00010101
 /* Special command to enable ILLUM_WIDTH automatically tracking exposure time */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_ON  0b00010111
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_ON 0b00010111
 /* Special command to disable ILLUM_WIDTH automatically tracking exposure time */
 #define AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_OFF 0b00011001
 /* Special command to enable force_stream_ctrl */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_ON  0b00011011
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_ON 0b00011011
 /* Special command to disable force_stream_ctrl */
 #define AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_OFF 0b00011101
 /*
@@ -77,89 +77,94 @@
  * then the reg_val will become TBD I2C address.
  * The TBD I2C address is stored in mira016->tbd_client_i2c_addr.
  */
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL         0b01100000
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_MIRA        0b00000000
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_TBD         0b00100000
-#define AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SET_TBD     0b01000000
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL 0b01100000
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_MIRA 0b00000000
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_TBD 0b00100000
+#define AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SET_TBD 0b01000000
 
 /* Pre-allocated i2c_client */
 #define MIRA016PMIC_I2C_ADDR 0x2D
 #define MIRA016UC_I2C_ADDR 0x0A
 #define MIRA016LED_I2C_ADDR 0x53
 
-#define MIRA016_NATIVE_WIDTH			400U
-#define MIRA016_NATIVE_HEIGHT			400U
+#define MIRA016_NATIVE_WIDTH 400U
+#define MIRA016_NATIVE_HEIGHT 400U
 
-#define MIRA016_PIXEL_ARRAY_LEFT		0U
-#define MIRA016_PIXEL_ARRAY_TOP			0U
-#define MIRA016_PIXEL_ARRAY_WIDTH		400U
-#define MIRA016_PIXEL_ARRAY_HEIGHT		400U
+#define MIRA016_PIXEL_ARRAY_LEFT 0U
+#define MIRA016_PIXEL_ARRAY_TOP 0U
+#define MIRA016_PIXEL_ARRAY_WIDTH 400U
+#define MIRA016_PIXEL_ARRAY_HEIGHT 400U
 
 /* Set analog gain min and max to 0 to avoid user changing it. */
-#define MIRA016_ANALOG_GAIN_MAX			1
-#define MIRA016_ANALOG_GAIN_MIN			0
-#define MIRA016_ANALOG_GAIN_STEP		1
-#define MIRA016_ANALOG_GAIN_DEFAULT		MIRA016_ANALOG_GAIN_MIN
+#define MIRA016_ANALOG_GAIN_MAX 1
+#define MIRA016_ANALOG_GAIN_MIN 0
+#define MIRA016_ANALOG_GAIN_STEP 1
+#define MIRA016_ANALOG_GAIN_DEFAULT MIRA016_ANALOG_GAIN_MIN
 
-
-#define MIRA016_BANK_SEL_REG			0xE000
-#define MIRA016_RW_CONTEXT_REG			0xE004
-#define MIRA016_CMD_REQ_1_REG			0x000A
-#define MIRA016_CMD_HALT_BLOCK_REG		0x000C
+#define MIRA016_BANK_SEL_REG 0xE000
+#define MIRA016_RW_CONTEXT_REG 0xE004
+#define MIRA016_CMD_REQ_1_REG 0x000A
+#define MIRA016_CMD_HALT_BLOCK_REG 0x000C
 
 // Exposure time is indicated in us
-#define MIRA016_EXP_TIME_L_REG			0x000E
-#define MIRA016_EXP_TIME_S_REG			0x0012
+#define MIRA016_EXP_TIME_L_REG 0x000E
+#define MIRA016_EXP_TIME_S_REG 0x0012
 
-// Target frame time is indicated in us 
-#define MIRA016_TARGET_FRAME_TIME_REG		0x0008
+// Target frame time is indicated in us
+#define MIRA016_TARGET_FRAME_TIME_REG 0x0008
 
-//glob time is 50.67 us * 24M
-#define MIRA016_GLOB_NUM_CLK_CYCLES		1216
+#define MIRA016_SUPPORTED_XCLK_FREQ 24000000
 
-#define MIRA016_SUPPORTED_XCLK_FREQ		24000000
+// Some timings
+#define MIRA016_DATA_RATE 1500 // Mbit/s
+#define MIRA016_SEQ_TIME_BASE 8 / MIRA016_DATA_RATE
+#define MIRA016_LPS_CYCLE_TIME 1145
+#define MIRA016_TARGET_FRAME_TIME 5000
+#define MIRA016_GLOB_TIME 68
+#define MIRA016_ROW_LENGTH 1504 // 12b
+#define MIRA016_LPS_DISABLED 0
+#define MIRA016_TROW_US MIRA016_ROW_LENGTH * 8 / MIRA016_DATA_RATE
+
+#define MIRA016_READOUT_TIME MIRA016_TROW_US * (11 + MIRA016_PIXEL_ARRAY_HEIGHT)
 
 // Default exposure is adjusted to 1 ms
-#define MIRA016_LUT_DEL_008			0
-#define MIRA016_GRAN_TG				50
+#define MIRA016_LUT_DEL_008 0
+#define MIRA016_GRAN_TG 1500 * 50 / MIRA016_DATA_RATE
 // TODO: Check Mira016 data rate in reg sequence
-#define MIRA016_DATA_RATE			1500  // Mbit/s
 // ROW_LENGTH register is 0x0032, with value 1042 (8 bit). Choose smaller one for safety.
-#define MIRA016_MIN_ROW_LENGTH			1042
+#define MIRA016_MIN_ROW_LENGTH MIRA016_ROW_LENGTH // 1042 for 8 bit
 // Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
-#define MIRA016_MIN_ROW_LENGTH_US		(MIRA016_MIN_ROW_LENGTH * 8 / MIRA016_DATA_RATE)
+#define MIRA016_MIN_ROW_LENGTH_US (MIRA016_MIN_ROW_LENGTH * 8 / MIRA016_DATA_RATE)
 // Row time in microsecond is not precise enoughi, e.g., 9.35 becomes 9. Need nanosecond.
-#define MIRA016_MIN_ROW_LENGTH_NS               (MIRA016_MIN_ROW_LENGTH * 1000 * 8 / MIRA016_DATA_RATE)
+#define MIRA016_MIN_ROW_LENGTH_NS (MIRA016_MIN_ROW_LENGTH * 1000 * 8 / MIRA016_DATA_RATE)
 // Mira016 EXP_TIME registe is in microsecond. V4L2 exposure value is in row time.
 // Min exposure is set according to Mira016 datasheet, in microsecond.
-#define MIRA016_EXPOSURE_MIN_US			(int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG * 8 / MIRA016_DATA_RATE)
+#define MIRA016_EXPOSURE_MIN_US (int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG * 8 / MIRA016_DATA_RATE)
 // Min exposure for V4L2 is in row time.
-#define MIRA016_EXPOSURE_MIN_RT			(int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG / MIRA016_MIN_ROW_LENGTH)
+#define MIRA016_EXPOSURE_MIN_RT (int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG / MIRA016_MIN_ROW_LENGTH)
 // Max exposure is set to TARGET_FRAME_TIME (32-bit reg 0x0008), in microsecond.
-#define MIRA016_EXPOSURE_MAX_US			(1000000)
+#define MIRA016_EXPOSURE_MAX_US (1000000)
 // Max exposure for V4L2 is in row time.
-#define MIRA016_EXPOSURE_MAX_RT			(int)(1 + MIRA016_EXPOSURE_MAX_US / MIRA016_MIN_ROW_LENGTH_US)
+#define MIRA016_EXPOSURE_MAX_RT (int)(1 + MIRA016_EXPOSURE_MAX_US / MIRA016_MIN_ROW_LENGTH_US)
 // Default exposure register is in microseconds
-#define MIRA016_DEFAULT_EXPOSURE_US		1000
+#define MIRA016_DEFAULT_EXPOSURE_US 1000
 // Default exposure for V4L2 is in row time
-#define MIRA016_DEFAULT_EXPOSURE_RT		(int)(1 + MIRA016_DEFAULT_EXPOSURE_US / MIRA016_MIN_ROW_LENGTH_US)
+#define MIRA016_DEFAULT_EXPOSURE_RT (int)(1 + MIRA016_DEFAULT_EXPOSURE_US / MIRA016_MIN_ROW_LENGTH_US)
 
-#define MIRA016_MIN_VBLANK			(11 + MIRA016_GLOB_NUM_CLK_CYCLES \
-						    / MIRA016_MIN_ROW_LENGTH)
+// #define MIRA016_MIN_VBLANK 11 // for 10b or 8b, 360fps
+#define MIRA016_MIN_VBLANK 340 //200 fps
+
 
 // Power on function timing
-#define MIRA016_XCLR_MIN_DELAY_US		150000
-#define MIRA016_XCLR_DELAY_RANGE_US		3000
-
-
-
+#define MIRA016_XCLR_MIN_DELAY_US 150000
+#define MIRA016_XCLR_DELAY_RANGE_US 3000
 
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
 // 0.9Gb/s * 2 * 1 / 12 = 157286400
-// 1.5 Gbit/s * 2 * 1 / 12 = 250 000 000 
-#define MIRA016_PIXEL_RATE		(250000000)
+// 1.5 Gbit/s * 2 * 1 / 12 = 250 000 000
+#define MIRA016_PIXEL_RATE (250000000)
 /* Should match device tree link freq */
-#define MIRA016_DEFAULT_LINK_FREQ	456000000
+#define MIRA016_DEFAULT_LINK_FREQ 456000000
 
 /* Trick the libcamera with achievable fps via hblank */
 
@@ -167,92 +172,99 @@
  * TARGET_FPS=1/((1/MIRA016_PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+MIRA016_MIN_VBLANK))
  * Example with HBLANK=0 and MIRA016_MIN_VBLANK=12
  * TARGET_FPS=1/((1/157286400)*400*(400+12))=954
- * 
+ *
  * Inverse the above formula to derive HBLANK from TARGET_FPS:
  * HBLANK=1/((1/MIRA016_PIXEL_RATE)*TARGET_FPS*(HEIGHT+MIRA016_MIN_VBLANK))-WIDTH
  * Example with TARGET_FPS of 100 fps
  * HBLANK=1/((1/157286400)*100*(400+12))-400=3418
  */
-#define MIRA016_HBLANK_100FPS			3418
-#define MIRA016_HBLANK_360FPS			1285
+#define MIRA016_HBLANK_100FPS 3418
+#define MIRA016_HBLANK_360FPS 1290
+#define MIRA016_HBLANK_200FPS 2650
+
+
 
 // For test pattern with fixed data
-#define MIRA016_TRAINING_WORD_REG		0x0060
+#define MIRA016_TRAINING_WORD_REG 0x0060
 // For test pattern with 2D gradiant
-#define MIRA016_DELTA_TEST_IMG_REG		0x0056
+#define MIRA016_DELTA_TEST_IMG_REG 0x0056
 // For setting test pattern type
-#define MIRA016_TEST_PATTERN_REG		0x0062
-#define	MIRA016_TEST_PATTERN_DISABLE		0x00
-#define	MIRA016_TEST_PATTERN_FIXED_DATA		0x01
-#define	MIRA016_TEST_PATTERN_2D_GRADIENT	0x02
+#define MIRA016_TEST_PATTERN_REG 0x0062
+#define MIRA016_TEST_PATTERN_DISABLE 0x00
+#define MIRA016_TEST_PATTERN_FIXED_DATA 0x01
+#define MIRA016_TEST_PATTERN_2D_GRADIENT 0x02
 
 /* Embedded metadata stream structure */
 #define MIRA016_EMBEDDED_LINE_WIDTH 16384
 #define MIRA016_NUM_EMBEDDED_LINES 1
 
 /* From Jetson driver */
-#define MIRA016_DEFAULT_LINE_LENGTH    (0xA80)
-#define MIRA016_DEFAULT_PIXEL_CLOCK    (160)
-#define MIRA016_DEFAULT_FRAME_LENGTH    (0x07C0)
+#define MIRA016_DEFAULT_LINE_LENGTH (0xA80)
+#define MIRA016_DEFAULT_PIXEL_CLOCK (160)
+#define MIRA016_DEFAULT_FRAME_LENGTH (0x07C0)
 
-#define MIRA016_PLL_LOCKED_REG			0x207C
-#define MIRA016_CSI2_TX_HS_ACTIVE_REG		0x209A
+#define MIRA016_PLL_LOCKED_REG 0x207C
+#define MIRA016_CSI2_TX_HS_ACTIVE_REG 0x209A
 
-#define MIRA016_CURRENT_ACTIVE_CONTEXT	0x4002
+#define MIRA016_CURRENT_ACTIVE_CONTEXT 0x4002
 
-#define MIRA016_GDIG_AMP		0x0024
-#define MIRA016_BIAS_RG_ADCGAIN		0x01F0
-#define MIRA016_BIAS_RG_MULT		0x01F3
-#define MIRA016_OFFSET_CLIPPING		0x0193
+#define MIRA016_GDIG_AMP 0x0024
+#define MIRA016_BIAS_RG_ADCGAIN 0x01F0
+#define MIRA016_BIAS_RG_MULT 0x01F3
+#define MIRA016_OFFSET_CLIPPING 0x0193
 
-#define MIRA016_OTP_COMMAND	0x0066
-#define MIRA016_OTP_ADDR	0x0067
-#define MIRA016_OTP_START	0x0064
-#define MIRA016_OTP_BUSY	0x0065
-#define MIRA016_OTP_DOUT	0x006C
-#define MIRA016_OTP_CAL_VALUE_DEFAULT    2250
-#define MIRA016_OTP_CAL_VALUE_MIN        2000
-#define MIRA016_OTP_CAL_VALUE_MAX        2400
+#define MIRA016_OTP_COMMAND 0x0066
+#define MIRA016_OTP_ADDR 0x0067
+#define MIRA016_OTP_START 0x0064
+#define MIRA016_OTP_BUSY 0x0065
+#define MIRA016_OTP_DOUT 0x006C
+#define MIRA016_OTP_CAL_VALUE_DEFAULT 2250
+#define MIRA016_OTP_CAL_VALUE_MIN 2000
+#define MIRA016_OTP_CAL_VALUE_MAX 2400
 
 /* Illumination trigger */
-#define MIRA016_EN_TRIG_ILLUM         0x001C
-#define MIRA016_ILLUM_WIDTH_REG       0x0019
-#define MIRA016_ILLUM_DELAY_REG       0x0016
-#define MIRA016_ILLUM_WIDTH_DEFAULT   (MIRA016_DEFAULT_EXPOSURE_US * MIRA016_DATA_RATE / 8)
-#define MIRA016_ILLUM_DELAY_DEFAULT   (1<<19)
-#define MIRA016_ILLUM_ENABLE_DEFAULT   1
-#define MIRA016_ILLUM_SYNC_DEFAULT   1
+#define MIRA016_EN_TRIG_ILLUM 0x001C
+#define MIRA016_ILLUM_WIDTH_REG 0x0019
+#define MIRA016_ILLUM_DELAY_REG 0x0016
+#define MIRA016_ILLUM_WIDTH_DEFAULT (MIRA016_DEFAULT_EXPOSURE_US * MIRA016_DATA_RATE / 8)
+#define MIRA016_ILLUM_DELAY_DEFAULT (1 << 19)
+#define MIRA016_ILLUM_ENABLE_DEFAULT 1
+#define MIRA016_ILLUM_SYNC_DEFAULT 1
 
-
-
-enum pad_types {
+enum pad_types
+{
 	IMAGE_PAD,
 	METADATA_PAD,
 	NUM_PADS
 };
 
-struct mira016_reg {
+struct mira016_reg
+{
 	u16 address;
 	u8 val;
 };
 
-struct mira016_fine_gain_lut {
+struct mira016_fine_gain_lut
+{
 	u8 gdig_amp;
 	u8 rg_adcgain;
 	u8 rg_mult;
 };
 
-struct mira016_reg_list {
+struct mira016_reg_list
+{
 	unsigned int num_of_regs;
 	const struct mira016_reg *regs;
 };
 
-struct mira016_v4l2_reg {
+struct mira016_v4l2_reg
+{
 	u32 val;
 };
 
 /* Mode : resolution and related config&values */
-struct mira016_mode {
+struct mira016_mode
+{
 	/* Frame width */
 	unsigned int width;
 	/* Frame height */
@@ -277,590 +289,590 @@ struct mira016_mode {
 
 // converted_Draco_i2c_configuration_sequence_hex_10bit_1x_360fps_Version3
 static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset[] = {
-	//Sensor Operating Mode
-	{ 57344, 0},
-	{ 57726, 1},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 484, 0},
-	{ 485, 19},
-	{ 482, 23},
-	{ 483, 168},
-	{ 486, 0},
-	{ 487, 202},
-	{ 364, 1},
-	{ 363, 1},
-	{ 520, 1},
-	{ 521, 240},
-	{ 522, 3},
-	{ 523, 77},
-	{ 524, 2},
-	{ 525, 16},
-	{ 526, 3},
-	{ 527, 1},
-	{ 528, 0},
-	{ 529, 19},
-	{ 530, 0},
-	{ 531, 3},
-	{ 532, 3},
-	{ 533, 239},
-	{ 534, 3},
-	{ 535, 243},
-	{ 536, 3},
-	{ 537, 244},
-	{ 538, 0},
-	{ 539, 1},
-	{ 540, 3},
-	{ 541, 248},
-	{ 542, 0},
-	{ 543, 2},
-	{ 544, 1},
-	{ 545, 242},
-	{ 546, 3},
-	{ 547, 27},
-	{ 548, 0},
-	{ 549, 33},
-	{ 550, 3},
-	{ 551, 240},
-	{ 552, 3},
-	{ 553, 241},
-	{ 554, 3},
-	{ 555, 242},
-	{ 556, 3},
-	{ 557, 245},
-	{ 558, 3},
-	{ 559, 246},
-	{ 560, 0},
-	{ 561, 193},
-	{ 562, 0},
-	{ 563, 2},
-	{ 564, 1},
-	{ 565, 242},
-	{ 566, 3},
-	{ 567, 107},
-	{ 568, 3},
-	{ 569, 255},
-	{ 570, 3},
-	{ 571, 49},
-	{ 572, 1},
-	{ 573, 240},
-	{ 574, 3},
-	{ 575, 135},
-	{ 576, 0},
-	{ 577, 10},
-	{ 578, 0},
-	{ 579, 11},
-	{ 580, 1},
-	{ 581, 249},
-	{ 582, 3},
-	{ 583, 13},
-	{ 584, 0},
-	{ 585, 7},
-	{ 586, 3},
-	{ 587, 239},
-	{ 588, 3},
-	{ 589, 243},
-	{ 590, 3},
-	{ 591, 244},
-	{ 592, 3},
-	{ 593, 0},
-	{ 594, 0},
-	{ 595, 7},
-	{ 596, 0},
-	{ 597, 12},
-	{ 598, 1},
-	{ 599, 241},
-	{ 600, 3},
-	{ 601, 67},
-	{ 602, 1},
-	{ 603, 248},
-	{ 604, 3},
-	{ 605, 16},
-	{ 606, 0},
-	{ 607, 7},
-	{ 608, 3},
-	{ 609, 240},
-	{ 610, 3},
-	{ 611, 241},
-	{ 612, 3},
-	{ 613, 242},
-	{ 614, 3},
-	{ 615, 245},
-	{ 616, 3},
-	{ 617, 246},
-	{ 618, 3},
-	{ 619, 0},
-	{ 620, 2},
-	{ 621, 135},
-	{ 622, 0},
-	{ 623, 1},
-	{ 624, 3},
-	{ 625, 255},
-	{ 626, 3},
-	{ 627, 0},
-	{ 628, 3},
-	{ 629, 255},
-	{ 630, 2},
-	{ 631, 135},
-	{ 632, 3},
-	{ 633, 2},
-	{ 634, 3},
-	{ 635, 15},
-	{ 636, 3},
-	{ 637, 247},
-	{ 638, 0},
-	{ 639, 22},
-	{ 640, 0},
-	{ 641, 51},
-	{ 642, 0},
-	{ 643, 4},
-	{ 644, 0},
-	{ 645, 17},
-	{ 646, 3},
-	{ 647, 9},
-	{ 648, 0},
-	{ 649, 2},
-	{ 650, 0},
-	{ 651, 32},
-	{ 652, 0},
-	{ 653, 181},
-	{ 654, 0},
-	{ 655, 229},
-	{ 656, 0},
-	{ 657, 18},
-	{ 658, 0},
-	{ 659, 181},
-	{ 660, 0},
-	{ 661, 229},
-	{ 662, 0},
-	{ 663, 16},
-	{ 664, 0},
-	{ 665, 2},
-	{ 666, 0},
-	{ 667, 32},
-	{ 668, 0},
-	{ 669, 181},
-	{ 670, 0},
-	{ 671, 229},
-	{ 672, 0},
-	{ 673, 18},
-	{ 674, 0},
-	{ 675, 181},
-	{ 676, 0},
-	{ 677, 229},
-	{ 678, 0},
-	{ 679, 0},
-	{ 680, 0},
-	{ 681, 18},
-	{ 682, 0},
-	{ 683, 18},
-	{ 684, 0},
-	{ 685, 32},
-	{ 686, 0},
-	{ 687, 181},
-	{ 688, 0},
-	{ 689, 229},
-	{ 690, 0},
-	{ 691, 0},
-	{ 692, 0},
-	{ 693, 18},
-	{ 694, 0},
-	{ 695, 18},
-	{ 696, 0},
-	{ 697, 32},
-	{ 698, 0},
-	{ 699, 71},
-	{ 700, 0},
-	{ 701, 39},
-	{ 702, 0},
-	{ 703, 181},
-	{ 704, 0},
-	{ 705, 229},
-	{ 706, 0},
-	{ 707, 0},
-	{ 708, 0},
-	{ 709, 4},
-	{ 710, 0},
-	{ 711, 67},
-	{ 712, 0},
-	{ 713, 1},
-	{ 714, 3},
-	{ 715, 2},
-	{ 716, 0},
-	{ 717, 8},
-	{ 718, 3},
-	{ 719, 255},
-	{ 720, 2},
-	{ 721, 135},
-	{ 722, 3},
-	{ 723, 199},
-	{ 724, 3},
-	{ 725, 247},
-	{ 726, 0},
-	{ 727, 119},
-	{ 728, 0},
-	{ 729, 23},
-	{ 730, 0},
-	{ 731, 8},
-	{ 732, 3},
-	{ 733, 255},
-	{ 734, 0},
-	{ 735, 56},
-	{ 736, 0},
-	{ 737, 23},
-	{ 738, 0},
-	{ 739, 8},
-	{ 740, 3},
-	{ 741, 255},
-	{ 742, 3},
-	{ 743, 255},
-	{ 744, 3},
-	{ 745, 255},
-	{ 746, 3},
-	{ 747, 255},
-	{ 748, 3},
-	{ 749, 255},
-	{ 750, 3},
-	{ 751, 255},
-	{ 752, 3},
-	{ 753, 255},
-	{ 754, 3},
-	{ 755, 255},
-	{ 756, 3},
-	{ 757, 255},
-	{ 758, 3},
-	{ 759, 255},
-	{ 760, 3},
-	{ 761, 255},
-	{ 762, 3},
-	{ 763, 255},
-	{ 764, 3},
-	{ 765, 255},
-	{ 766, 3},
-	{ 767, 255},
-	{ 768, 3},
-	{ 769, 255},
-	{ 770, 3},
-	{ 771, 255},
-	{ 489, 0},
-	{ 488, 25},
-	{ 490, 53},
-	{ 491, 55},
-	{ 492, 100},
-	{ 493, 107},
-	{ 504, 15},
-	{ 472, 1},
-	{ 476, 1},
-	{ 478, 1},
-	{ 393, 1},
-	{ 439, 1},
-	{ 449, 7},
-	{ 450, 246},
-	{ 451, 255},
-	{ 457, 7},
-	{ 805, 0},
-	{ 57689, 0},
-	{ 826, 0},
-	{ 440, 1},
-	{ 442, 51},
-	{ 446, 116},
-	{ 447, 54},
-	{ 448, 83},
-	{ 239, 0},
-	{ 806, 0},
-	{ 240, 0},
-	{ 241, 0},
-	{ 807, 0},
-	{ 242, 0},
-	{ 113, 1},
-	{ 436, 1},
-	{ 437, 1},
-	{ 497, 1},
-	{ 500, 1},
-	{ 501, 1},
-	{ 788, 1},
-	{ 789, 1},
-	{ 790, 1},
-	{ 519, 0},
-	{ 16903, 2},
-	{ 8711, 2},
-	{ 57480, 1},
-	{ 57485, 0},
-	{ 57486, 48},
-	{ 57487, 212},
-	{ 57481, 86},
-	{ 57482, 16},
-	{ 57483, 31},
-	{ 57484, 15},
-	{ 57510, 0},
-	{ 57513, 16},
-	{ 57514, 0},
-	{ 57517, 10},
-	{ 57512, 48},
-	{ 57511, 15},
-	{ 57516, 16},
-	{ 57515, 15},
-	{ 8349, 0},
-	{ 808, 0},
-	{ 99, 1},
-	{ 503, 15},
-	{ 57571, 1},
-	{ 57575, 3},
-	{ 58171, 0},
-	{ 58166, 0},
-	{ 58167, 0},
-	{ 58168, 0},
-	{ 58169, 0},
-	{ 233, 1},
-	{ 234, 254},
-	{ 777, 3},
-	{ 778, 2},
-	{ 779, 2},
-	{ 780, 5},
-	{ 782, 21},
-	{ 781, 20},
-	{ 783, 1},
-	{ 784, 13},
-	{ 464, 31},
-	{ 465, 31},
-	{ 461, 17},
-	{ 22, 0},
-	{ 23, 5},
-	{ 232, 3},
-	{ 498, 0},
-	{ 362, 1},
-	{ 57536, 0},
-	{ 57537, 16},
-	{ 57538, 0},
-	{ 57539, 16},
-	{ 360, 43},
-	{ 8192, 0},
-	{ 57344, 0},
-	{ 57506, 0},
-	{ 57467, 0},
-	{ 57464, 0},
-	{ 57465, 1},
-	{ 8311, 0},
-	{ 8310, 189},
-	{ 206, 1},
-	{ 112, 9},
-	{ 365, 50},
-	{ 374, 0},
-	{ 57654, 0},
-	{ 57542, 0},
-	{ 57543, 0},
-	{ 57544, 1},
-	{ 57545, 0},
-	{ 57546, 0},
-	{ 57547, 1},
-	{ 57548, 128},
-	{ 57549, 128},
-	{ 57534, 2},
-	{ 57535, 2},
-	{ 57540, 8},
-	{ 57541, 8},
-	{ 8309, 0},
-	{ 8192, 0},
-	{ 57344, 0},
-	{ 30, 1},
-	{ 57344, 0},
-	{ 8318, 0},
-	{ 57476, 0},
-	{ 57477, 0},
-	{ 57478, 1},
-	{ 57479, 0},
-	{ 8319, 0},
-	{ 8320, 0},
-	{ 8321, 3},
-	{ 8322, 0},
-	{ 8323, 2},
-	{ 144, 0},
-	{ 8343, 0},
-	{ 57344, 0},
-	{ 17, 3},
-	{ 285, 1},
-	{ 57344, 0},
-	{ 18, 0},
-	{ 19, 24},
-	{ 346, 0},
-	{ 347, 68},
-	{ 348, 0},
-	{ 349, 68},
-	{ 350, 0},
-	{ 351, 68},
-	{ 354, 0},
-	{ 355, 5},
-	{ 356, 4},
-	{ 357, 121},
-	{ 358, 4},
-	{ 359, 121},
-	{ 57344, 0},
-	{ 443, 180},
-	{ 444, 172},
-	{ 208, 0},
-	{ 496, 7},
-	{ 499, 2},
-	{ 366, 125},
-	{ 370, 0},
-	{ 371, 0},
-	{ 367, 254},
-	{ 368, 0},
-	{ 369, 125},
-	{ 372, 0},
-	{ 373, 0},
-	{ 395, 2},
-	{ 396, 14},
-	{ 397, 2},
-	{ 398, 86},
-	{ 399, 6},
-	{ 400, 14},
-	{ 375, 120},
-	{ 494, 27},
-	{ 495, 70},
-	{ 418, 0},
-	{ 419, 1},
-	{ 799, 0},
-	{ 800, 10},
-	{ 422, 0},
-	{ 423, 152},
-	{ 420, 3},
-	{ 421, 167},
-	{ 801, 3},
-	{ 802, 176},
-	{ 424, 4},
-	{ 425, 62},
-	{ 416, 0},
-	{ 417, 200},
-	{ 434, 0},
-	{ 435, 226},
-	{ 432, 0},
-	{ 433, 219},
-	{ 428, 0},
-	{ 429, 230},
-	{ 57344, 1},
-	{ 57344, 1},
-	{ 57380, 7},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 92, 0},
-	{ 93, 48},
-	{ 57344, 0},
-	{ 403, 4},
-	{ 404, 22},
-	{ 57344, 0},
-	{ 57353, 1},
-	{ 8495, 1},
-	{ 8496, 1},
-	{ 8497, 1},
-	{ 8498, 1},
-	{ 8499, 1},
-	{ 8500, 1},
-	{ 8501, 1},
-	{ 57569, 1},
-	{ 394, 1},
-	{ 224, 1},
-	{ 58158, 1},
-	{ 58176, 1},
-	{ 57344, 0},
-	{ 57817, 1},
-	{ 57344, 0},
-	{ 57579, 16},
-	{ 57344, 0},
-	{ 57821, 1},
-	{ 57344, 0},
-	{ 57581, 14},
-	{ 57344, 0},
-	{ 57823, 1},
-	{ 57344, 0},
-	{ 57582, 4},
-	{ 57344, 0},
-	{ 58165, 1},
-	{ 57344, 0},
-	{ 58148, 42},
-	{ 57344, 0},
-	{ 57850, 1},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57348, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 31, 0},
-	{ 32, 0},
-	{ 35, 0},
-	{ 36, 1},
-	{ 37, 144},
-	{ 38, 0},
-	{ 39, 14},
-	{ 40, 0},
-	{ 41, 1},
-	{ 42, 144},
-	{ 43, 0},
-	{ 44, 14},
-	{ 45, 0},
-	{ 46, 0},
-	{ 47, 0},
-	{ 48, 0},
-	{ 49, 0},
-	{ 50, 0},
-	{ 51, 0},
-	{ 52, 0},
-	{ 53, 0},
-	{ 54, 0},
-	{ 55, 0},
-	{ 56, 0},
-	{ 57, 0},
-	{ 58, 0},
-	{ 59, 0},
-	{ 60, 0},
-	{ 61, 0},
-	{ 62, 0},
-	{ 63, 0},
-	{ 64, 0},
-	{ 65, 0},
-	{ 66, 0},
-	{ 67, 0},
-	{ 68, 0},
-	{ 69, 0},
-	{ 70, 0},
-	{ 71, 0},
-	{ 72, 0},
-	{ 73, 0},
-	{ 74, 0},
-	{ 75, 0},
-	{ 76, 0},
-	{ 77, 0},
-	{ 78, 0},
-	{ 79, 0},
-	{ 80, 0},
-	{ 81, 0},
-	{ 82, 0},
-	{ 83, 0},
-	{ 84, 0},
-	{ 85, 0},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 57388, 0},
-	{ 57389, 14},
-	{ 57390, 1},
-	{ 57391, 157},
-	{ 57392, 0},
-	{ 57381, 0},
-	{ 57386, 0},
-	{ 8233, 40},
-	{ 52, 0},
-	{ 53, 200},
-	{ 57348, 0},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
+	// Sensor Operating Mode
+	{57344, 0},
+	{57726, 1},
+	{57344, 0},
+	{57344, 0},
+	{484, 0},
+	{485, 19},
+	{482, 23},
+	{483, 168},
+	{486, 0},
+	{487, 202},
+	{364, 1},
+	{363, 1},
+	{520, 1},
+	{521, 240},
+	{522, 3},
+	{523, 77},
+	{524, 2},
+	{525, 16},
+	{526, 3},
+	{527, 1},
+	{528, 0},
+	{529, 19},
+	{530, 0},
+	{531, 3},
+	{532, 3},
+	{533, 239},
+	{534, 3},
+	{535, 243},
+	{536, 3},
+	{537, 244},
+	{538, 0},
+	{539, 1},
+	{540, 3},
+	{541, 248},
+	{542, 0},
+	{543, 2},
+	{544, 1},
+	{545, 242},
+	{546, 3},
+	{547, 27},
+	{548, 0},
+	{549, 33},
+	{550, 3},
+	{551, 240},
+	{552, 3},
+	{553, 241},
+	{554, 3},
+	{555, 242},
+	{556, 3},
+	{557, 245},
+	{558, 3},
+	{559, 246},
+	{560, 0},
+	{561, 193},
+	{562, 0},
+	{563, 2},
+	{564, 1},
+	{565, 242},
+	{566, 3},
+	{567, 107},
+	{568, 3},
+	{569, 255},
+	{570, 3},
+	{571, 49},
+	{572, 1},
+	{573, 240},
+	{574, 3},
+	{575, 135},
+	{576, 0},
+	{577, 10},
+	{578, 0},
+	{579, 11},
+	{580, 1},
+	{581, 249},
+	{582, 3},
+	{583, 13},
+	{584, 0},
+	{585, 7},
+	{586, 3},
+	{587, 239},
+	{588, 3},
+	{589, 243},
+	{590, 3},
+	{591, 244},
+	{592, 3},
+	{593, 0},
+	{594, 0},
+	{595, 7},
+	{596, 0},
+	{597, 12},
+	{598, 1},
+	{599, 241},
+	{600, 3},
+	{601, 67},
+	{602, 1},
+	{603, 248},
+	{604, 3},
+	{605, 16},
+	{606, 0},
+	{607, 7},
+	{608, 3},
+	{609, 240},
+	{610, 3},
+	{611, 241},
+	{612, 3},
+	{613, 242},
+	{614, 3},
+	{615, 245},
+	{616, 3},
+	{617, 246},
+	{618, 3},
+	{619, 0},
+	{620, 2},
+	{621, 135},
+	{622, 0},
+	{623, 1},
+	{624, 3},
+	{625, 255},
+	{626, 3},
+	{627, 0},
+	{628, 3},
+	{629, 255},
+	{630, 2},
+	{631, 135},
+	{632, 3},
+	{633, 2},
+	{634, 3},
+	{635, 15},
+	{636, 3},
+	{637, 247},
+	{638, 0},
+	{639, 22},
+	{640, 0},
+	{641, 51},
+	{642, 0},
+	{643, 4},
+	{644, 0},
+	{645, 17},
+	{646, 3},
+	{647, 9},
+	{648, 0},
+	{649, 2},
+	{650, 0},
+	{651, 32},
+	{652, 0},
+	{653, 181},
+	{654, 0},
+	{655, 229},
+	{656, 0},
+	{657, 18},
+	{658, 0},
+	{659, 181},
+	{660, 0},
+	{661, 229},
+	{662, 0},
+	{663, 16},
+	{664, 0},
+	{665, 2},
+	{666, 0},
+	{667, 32},
+	{668, 0},
+	{669, 181},
+	{670, 0},
+	{671, 229},
+	{672, 0},
+	{673, 18},
+	{674, 0},
+	{675, 181},
+	{676, 0},
+	{677, 229},
+	{678, 0},
+	{679, 0},
+	{680, 0},
+	{681, 18},
+	{682, 0},
+	{683, 18},
+	{684, 0},
+	{685, 32},
+	{686, 0},
+	{687, 181},
+	{688, 0},
+	{689, 229},
+	{690, 0},
+	{691, 0},
+	{692, 0},
+	{693, 18},
+	{694, 0},
+	{695, 18},
+	{696, 0},
+	{697, 32},
+	{698, 0},
+	{699, 71},
+	{700, 0},
+	{701, 39},
+	{702, 0},
+	{703, 181},
+	{704, 0},
+	{705, 229},
+	{706, 0},
+	{707, 0},
+	{708, 0},
+	{709, 4},
+	{710, 0},
+	{711, 67},
+	{712, 0},
+	{713, 1},
+	{714, 3},
+	{715, 2},
+	{716, 0},
+	{717, 8},
+	{718, 3},
+	{719, 255},
+	{720, 2},
+	{721, 135},
+	{722, 3},
+	{723, 199},
+	{724, 3},
+	{725, 247},
+	{726, 0},
+	{727, 119},
+	{728, 0},
+	{729, 23},
+	{730, 0},
+	{731, 8},
+	{732, 3},
+	{733, 255},
+	{734, 0},
+	{735, 56},
+	{736, 0},
+	{737, 23},
+	{738, 0},
+	{739, 8},
+	{740, 3},
+	{741, 255},
+	{742, 3},
+	{743, 255},
+	{744, 3},
+	{745, 255},
+	{746, 3},
+	{747, 255},
+	{748, 3},
+	{749, 255},
+	{750, 3},
+	{751, 255},
+	{752, 3},
+	{753, 255},
+	{754, 3},
+	{755, 255},
+	{756, 3},
+	{757, 255},
+	{758, 3},
+	{759, 255},
+	{760, 3},
+	{761, 255},
+	{762, 3},
+	{763, 255},
+	{764, 3},
+	{765, 255},
+	{766, 3},
+	{767, 255},
+	{768, 3},
+	{769, 255},
+	{770, 3},
+	{771, 255},
+	{489, 0},
+	{488, 25},
+	{490, 53},
+	{491, 55},
+	{492, 100},
+	{493, 107},
+	{504, 15},
+	{472, 1},
+	{476, 1},
+	{478, 1},
+	{393, 1},
+	{439, 1},
+	{449, 7},
+	{450, 246},
+	{451, 255},
+	{457, 7},
+	{805, 0},
+	{57689, 0},
+	{826, 0},
+	{440, 1},
+	{442, 51},
+	{446, 116},
+	{447, 54},
+	{448, 83},
+	{239, 0},
+	{806, 0},
+	{240, 0},
+	{241, 0},
+	{807, 0},
+	{242, 0},
+	{113, 1},
+	{436, 1},
+	{437, 1},
+	{497, 1},
+	{500, 1},
+	{501, 1},
+	{788, 1},
+	{789, 1},
+	{790, 1},
+	{519, 0},
+	{16903, 2},
+	{8711, 2},
+	{57480, 1},
+	{57485, 0},
+	{57486, 48},
+	{57487, 212},
+	{57481, 86},
+	{57482, 16},
+	{57483, 31},
+	{57484, 15},
+	{57510, 0},
+	{57513, 16},
+	{57514, 0},
+	{57517, 10},
+	{57512, 48},
+	{57511, 15},
+	{57516, 16},
+	{57515, 15},
+	{8349, 0},
+	{808, 0},
+	{99, 1},
+	{503, 15},
+	{57571, 1},
+	{57575, 3},
+	{58171, 0},
+	{58166, 0},
+	{58167, 0},
+	{58168, 0},
+	{58169, 0},
+	{233, 1},
+	{234, 254},
+	{777, 3},
+	{778, 2},
+	{779, 2},
+	{780, 5},
+	{782, 21},
+	{781, 20},
+	{783, 1},
+	{784, 13},
+	{464, 31},
+	{465, 31},
+	{461, 17},
+	{22, 0},
+	{23, 5},
+	{232, 3},
+	{498, 0},
+	{362, 1},
+	{57536, 0},
+	{57537, 16},
+	{57538, 0},
+	{57539, 16},
+	{360, 43},
+	{8192, 0},
+	{57344, 0},
+	{57506, 0},
+	{57467, 0},
+	{57464, 0},
+	{57465, 1},
+	{8311, 0},
+	{8310, 189},
+	{206, 1},
+	{112, 9},
+	{365, 50},
+	{374, 0},
+	{57654, 0},
+	{57542, 0},
+	{57543, 0},
+	{57544, 1},
+	{57545, 0},
+	{57546, 0},
+	{57547, 1},
+	{57548, 128},
+	{57549, 128},
+	{57534, 2},
+	{57535, 2},
+	{57540, 8},
+	{57541, 8},
+	{8309, 0},
+	{8192, 0},
+	{57344, 0},
+	{30, 1},
+	{57344, 0},
+	{8318, 0},
+	{57476, 0},
+	{57477, 0},
+	{57478, 1},
+	{57479, 0},
+	{8319, 0},
+	{8320, 0},
+	{8321, 3},
+	{8322, 0},
+	{8323, 2},
+	{144, 0},
+	{8343, 0},
+	{57344, 0},
+	{17, 3},
+	{285, 1},
+	{57344, 0},
+	{18, 0},
+	{19, 24},
+	{346, 0},
+	{347, 68},
+	{348, 0},
+	{349, 68},
+	{350, 0},
+	{351, 68},
+	{354, 0},
+	{355, 5},
+	{356, 4},
+	{357, 121},
+	{358, 4},
+	{359, 121},
+	{57344, 0},
+	{443, 180},
+	{444, 172},
+	{208, 0},
+	{496, 7},
+	{499, 2},
+	{366, 125},
+	{370, 0},
+	{371, 0},
+	{367, 254},
+	{368, 0},
+	{369, 125},
+	{372, 0},
+	{373, 0},
+	{395, 2},
+	{396, 14},
+	{397, 2},
+	{398, 86},
+	{399, 6},
+	{400, 14},
+	{375, 120},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 3},
+	{421, 167},
+	{801, 3},
+	{802, 176},
+	{424, 4},
+	{425, 62},
+	{416, 0},
+	{417, 200},
+	{434, 0},
+	{435, 226},
+	{432, 0},
+	{433, 219},
+	{428, 0},
+	{429, 230},
+	{57344, 1},
+	{57344, 1},
+	{57380, 7},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 48},
+	{57344, 0},
+	{403, 4},
+	{404, 22},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
 	// { 57348, 0},
 	// { 14, 0},
 	// { 15, 0},
@@ -870,20 +882,20 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	// { 19, 0},
 	// { 20, 0},
 	// { 21, 0},
-	{ 57348, 0},
-	{ 50, 4},
-	{ 51, 68},
-	{ 57348, 0},
-	{ 7, 1},
-	{ 8, 0},
-	{ 9, 0},
-	{ 10, 10},
-	{ 11, 217},
-	{ 57348, 0},
-	{ 49, 0},
-	{ 57348, 0},
-	{ 38, 0},
-	{ 57348, 0},
+	{57348, 0},
+	{50, 4},
+	{51, 68},
+	{57348, 0},
+	{7, 1},
+	{8, 0},
+	{9, 0},
+	{10, 10},
+	{11, 217},
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
 	// { 28, 0},
 	// { 25, 0},
 	// { 26, 7},
@@ -891,666 +903,665 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	// { 22, 8},
 	// { 23, 0},
 	// { 24, 0},
-	{ 57348, 0},
+	{57348, 0},
 	// { 29, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 58156, 1},
-	{ 57344, 0},
-	{ 58157, 1},
-	{ 57344, 0},
-	{ 57678, 0},
-	{ 57344, 0},
-	{ 58130, 127},
-	{ 57344, 0},
-	{ 58153, 3},
-	{ 57344, 0},
-	{ 58155, 0},
-	{ 57344, 0},
-	{ 58161, 15},
-	{ 57344, 0},
-	{ 58162, 0},
-	{ 57344, 0},
-	{ 58154, 0},
-	{ 57344, 0},
-	{ 57630, 1},
-	{ 0, 0},
-	{ 0, 0},
-	{ 434, 0},
-	{ 435, 234},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 0},
+	{435, 234},
 
 	// Below are manually added after reg seq txt
-	{0x0335,1} ,//iref sel
-	{0x0324 , 43}, //iref val
+	{0x0335, 1},  // iref sel
+	{0x0324, 43}, // iref val
 
-	{0x1d9 , 1},// #vddana sel
-	{0x0EB,15} ,//#vddana val trim
+	{0x1d9, 1},	 // #vddana sel
+	{0x0EB, 15}, // #vddana val trim
 
-	{0x1dd ,1} ,//# vsspc sel
-	{0x1ed , 14} ,//# vsspc val
+	{0x1dd, 1},	 // # vsspc sel
+	{0x1ed, 14}, // # vsspc val
 
-	{0x1df,1} ,//#cp sel
-	{0x0ee,4} ,//#cp trim,	
+	{0x1df, 1}, // #cp sel
+	{0x0ee, 4}, // #cp trim,
 
-        {0xE000,0},
-        {0xE004,0},
-	{0x33D,1}
-};
+	{0xE000, 0},
+	{0xE004, 0},
+	{0x33D, 1}};
 
 static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_post_soft_reset[] = {
 	// Release Soft Reset
-	{57344,  0},
+	{57344, 0},
 };
 
 // converted_Draco_i2c_configuration_sequence_hex_12bit_1x_200fps_Version3
 static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset[] = {
-	//Sensor Operating Mode
-	{ 57344, 0},
-	{ 57726, 1},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 484, 0},
-	{ 485, 19},
-	{ 482, 23},
-	{ 483, 168},
-	{ 486, 0},
-	{ 487, 202},
-	{ 364, 1},
-	{ 363, 1},
-	{ 520, 1},
-	{ 521, 240},
-	{ 522, 3},
-	{ 523, 77},
-	{ 524, 2},
-	{ 525, 16},
-	{ 526, 3},
-	{ 527, 1},
-	{ 528, 0},
-	{ 529, 19},
-	{ 530, 0},
-	{ 531, 3},
-	{ 532, 3},
-	{ 533, 239},
-	{ 534, 3},
-	{ 535, 243},
-	{ 536, 3},
-	{ 537, 244},
-	{ 538, 0},
-	{ 539, 1},
-	{ 540, 3},
-	{ 541, 248},
-	{ 542, 0},
-	{ 543, 2},
-	{ 544, 1},
-	{ 545, 242},
-	{ 546, 3},
-	{ 547, 27},
-	{ 548, 0},
-	{ 549, 33},
-	{ 550, 3},
-	{ 551, 240},
-	{ 552, 3},
-	{ 553, 241},
-	{ 554, 3},
-	{ 555, 242},
-	{ 556, 3},
-	{ 557, 245},
-	{ 558, 3},
-	{ 559, 246},
-	{ 560, 0},
-	{ 561, 193},
-	{ 562, 0},
-	{ 563, 2},
-	{ 564, 1},
-	{ 565, 242},
-	{ 566, 3},
-	{ 567, 107},
-	{ 568, 3},
-	{ 569, 255},
-	{ 570, 3},
-	{ 571, 49},
-	{ 572, 1},
-	{ 573, 240},
-	{ 574, 3},
-	{ 575, 135},
-	{ 576, 0},
-	{ 577, 10},
-	{ 578, 0},
-	{ 579, 11},
-	{ 580, 1},
-	{ 581, 249},
-	{ 582, 3},
-	{ 583, 13},
-	{ 584, 0},
-	{ 585, 7},
-	{ 586, 3},
-	{ 587, 239},
-	{ 588, 3},
-	{ 589, 243},
-	{ 590, 3},
-	{ 591, 244},
-	{ 592, 3},
-	{ 593, 0},
-	{ 594, 0},
-	{ 595, 7},
-	{ 596, 0},
-	{ 597, 12},
-	{ 598, 1},
-	{ 599, 241},
-	{ 600, 3},
-	{ 601, 67},
-	{ 602, 1},
-	{ 603, 248},
-	{ 604, 3},
-	{ 605, 16},
-	{ 606, 0},
-	{ 607, 7},
-	{ 608, 3},
-	{ 609, 240},
-	{ 610, 3},
-	{ 611, 241},
-	{ 612, 3},
-	{ 613, 242},
-	{ 614, 3},
-	{ 615, 245},
-	{ 616, 3},
-	{ 617, 246},
-	{ 618, 3},
-	{ 619, 0},
-	{ 620, 2},
-	{ 621, 135},
-	{ 622, 0},
-	{ 623, 1},
-	{ 624, 3},
-	{ 625, 255},
-	{ 626, 3},
-	{ 627, 0},
-	{ 628, 3},
-	{ 629, 255},
-	{ 630, 2},
-	{ 631, 135},
-	{ 632, 3},
-	{ 633, 2},
-	{ 634, 3},
-	{ 635, 15},
-	{ 636, 3},
-	{ 637, 247},
-	{ 638, 0},
-	{ 639, 22},
-	{ 640, 0},
-	{ 641, 51},
-	{ 642, 0},
-	{ 643, 4},
-	{ 644, 0},
-	{ 645, 17},
-	{ 646, 3},
-	{ 647, 9},
-	{ 648, 0},
-	{ 649, 2},
-	{ 650, 0},
-	{ 651, 32},
-	{ 652, 0},
-	{ 653, 181},
-	{ 654, 0},
-	{ 655, 229},
-	{ 656, 0},
-	{ 657, 18},
-	{ 658, 0},
-	{ 659, 181},
-	{ 660, 0},
-	{ 661, 229},
-	{ 662, 0},
-	{ 663, 16},
-	{ 664, 0},
-	{ 665, 2},
-	{ 666, 0},
-	{ 667, 32},
-	{ 668, 0},
-	{ 669, 181},
-	{ 670, 0},
-	{ 671, 229},
-	{ 672, 0},
-	{ 673, 18},
-	{ 674, 0},
-	{ 675, 181},
-	{ 676, 0},
-	{ 677, 229},
-	{ 678, 0},
-	{ 679, 0},
-	{ 680, 0},
-	{ 681, 18},
-	{ 682, 0},
-	{ 683, 18},
-	{ 684, 0},
-	{ 685, 32},
-	{ 686, 0},
-	{ 687, 181},
-	{ 688, 0},
-	{ 689, 229},
-	{ 690, 0},
-	{ 691, 0},
-	{ 692, 0},
-	{ 693, 18},
-	{ 694, 0},
-	{ 695, 18},
-	{ 696, 0},
-	{ 697, 32},
-	{ 698, 0},
-	{ 699, 71},
-	{ 700, 0},
-	{ 701, 39},
-	{ 702, 0},
-	{ 703, 181},
-	{ 704, 0},
-	{ 705, 229},
-	{ 706, 0},
-	{ 707, 0},
-	{ 708, 0},
-	{ 709, 4},
-	{ 710, 0},
-	{ 711, 67},
-	{ 712, 0},
-	{ 713, 1},
-	{ 714, 3},
-	{ 715, 2},
-	{ 716, 0},
-	{ 717, 8},
-	{ 718, 3},
-	{ 719, 255},
-	{ 720, 2},
-	{ 721, 135},
-	{ 722, 3},
-	{ 723, 199},
-	{ 724, 3},
-	{ 725, 247},
-	{ 726, 0},
-	{ 727, 119},
-	{ 728, 0},
-	{ 729, 23},
-	{ 730, 0},
-	{ 731, 8},
-	{ 732, 3},
-	{ 733, 255},
-	{ 734, 0},
-	{ 735, 56},
-	{ 736, 0},
-	{ 737, 23},
-	{ 738, 0},
-	{ 739, 8},
-	{ 740, 3},
-	{ 741, 255},
-	{ 742, 3},
-	{ 743, 255},
-	{ 744, 3},
-	{ 745, 255},
-	{ 746, 3},
-	{ 747, 255},
-	{ 748, 3},
-	{ 749, 255},
-	{ 750, 3},
-	{ 751, 255},
-	{ 752, 3},
-	{ 753, 255},
-	{ 754, 3},
-	{ 755, 255},
-	{ 756, 3},
-	{ 757, 255},
-	{ 758, 3},
-	{ 759, 255},
-	{ 760, 3},
-	{ 761, 255},
-	{ 762, 3},
-	{ 763, 255},
-	{ 764, 3},
-	{ 765, 255},
-	{ 766, 3},
-	{ 767, 255},
-	{ 768, 3},
-	{ 769, 255},
-	{ 770, 3},
-	{ 771, 255},
-	{ 489, 0},
-	{ 488, 25},
-	{ 490, 53},
-	{ 491, 55},
-	{ 492, 100},
-	{ 493, 107},
-	{ 504, 15},
-	{ 472, 1},
-	{ 476, 1},
-	{ 478, 1},
-	{ 393, 1},
-	{ 439, 1},
-	{ 449, 7},
-	{ 450, 246},
-	{ 451, 255},
-	{ 457, 7},
-	{ 805, 0},
-	{ 57689, 0},
-	{ 826, 0},
-	{ 440, 1},
-	{ 442, 51},
-	{ 446, 116},
-	{ 447, 54},
-	{ 448, 83},
-	{ 239, 0},
-	{ 806, 0},
-	{ 240, 0},
-	{ 241, 0},
-	{ 807, 0},
-	{ 242, 0},
-	{ 113, 1},
-	{ 436, 1},
-	{ 437, 1},
-	{ 497, 1},
-	{ 500, 1},
-	{ 501, 1},
-	{ 788, 1},
-	{ 789, 1},
-	{ 790, 1},
-	{ 519, 0},
-	{ 16903, 2},
-	{ 8711, 2},
-	{ 57480, 1},
-	{ 57485, 0},
-	{ 57486, 48},
-	{ 57487, 212},
-	{ 57481, 86},
-	{ 57482, 16},
-	{ 57483, 31},
-	{ 57484, 15},
-	{ 57510, 0},
-	{ 57513, 16},
-	{ 57514, 0},
-	{ 57517, 10},
-	{ 57512, 48},
-	{ 57511, 15},
-	{ 57516, 16},
-	{ 57515, 15},
-	{ 8349, 0},
-	{ 808, 0},
-	{ 99, 1},
-	{ 503, 15},
-	{ 57571, 1},
-	{ 57575, 3},
-	{ 58171, 0},
-	{ 58166, 0},
-	{ 58167, 0},
-	{ 58168, 0},
-	{ 58169, 0},
-	{ 233, 1},
-	{ 234, 254},
-	{ 777, 3},
-	{ 778, 2},
-	{ 779, 2},
-	{ 780, 5},
-	{ 782, 21},
-	{ 781, 20},
-	{ 783, 1},
-	{ 784, 13},
-	{ 464, 31},
-	{ 465, 31},
-	{ 461, 17},
-	{ 22, 0},
-	{ 23, 5},
-	{ 232, 3},
-	{ 498, 0},
-	{ 362, 2},
-	{ 57536, 0},
-	{ 57537, 32},
-	{ 57538, 0},
-	{ 57539, 32},
-	{ 360, 44},
-	{ 8192, 0},
-	{ 57344, 0},
-	{ 57506, 0},
-	{ 57467, 0},
-	{ 57464, 0},
-	{ 57465, 1},
-	{ 8311, 0},
-	{ 8310, 189},
-	{ 206, 1},
-	{ 112, 9},
-	{ 365, 50},
-	{ 374, 0},
-	{ 57654, 0},
-	{ 57542, 0},
-	{ 57543, 0},
-	{ 57544, 1},
-	{ 57545, 0},
-	{ 57546, 0},
-	{ 57547, 1},
-	{ 57548, 128},
-	{ 57549, 128},
-	{ 57534, 2},
-	{ 57535, 2},
-	{ 57540, 8},
-	{ 57541, 8},
-	{ 8309, 0},
-	{ 8192, 0},
-	{ 57344, 0},
-	{ 30, 1},
-	{ 57344, 0},
-	{ 8318, 0},
-	{ 57476, 0},
-	{ 57477, 0},
-	{ 57478, 1},
-	{ 57479, 0},
-	{ 8319, 0},
-	{ 8320, 0},
-	{ 8321, 3},
-	{ 8322, 0},
-	{ 8323, 2},
-	{ 144, 0},
-	{ 8343, 0},
-	{ 57344, 0},
-	{ 17, 3},
-	{ 285, 1},
-	{ 57344, 0},
-	{ 18, 0},
-	{ 19, 24},
-	{ 346, 0},
-	{ 347, 68},
-	{ 348, 0},
-	{ 349, 68},
-	{ 350, 0},
-	{ 351, 68},
-	{ 354, 0},
-	{ 355, 5},
-	{ 356, 4},
-	{ 357, 121},
-	{ 358, 4},
-	{ 359, 121},
-	{ 57344, 0},
-	{ 443, 180},
-	{ 444, 172},
-	{ 208, 0},
-	{ 496, 7},
-	{ 499, 1},
-	{ 366, 253},
-	{ 370, 0},
-	{ 371, 0},
-	{ 367, 255},
-	{ 368, 255},
-	{ 369, 253},
-	{ 372, 0},
-	{ 373, 0},
-	{ 395, 4},
-	{ 396, 14},
-	{ 397, 2},
-	{ 398, 86},
-	{ 399, 12},
-	{ 400, 14},
-	{ 375, 220},
-	{ 494, 27},
-	{ 495, 70},
-	{ 418, 0},
-	{ 419, 1},
-	{ 799, 0},
-	{ 800, 10},
-	{ 422, 0},
-	{ 423, 152},
-	{ 420, 5},
-	{ 421, 167},
-	{ 801, 5},
-	{ 802, 176},
-	{ 424, 6},
-	{ 425, 62},
-	{ 416, 0},
-	{ 417, 243},
-	{ 434, 1},
-	{ 435, 13},
-	{ 432, 1},
-	{ 433, 6},
-	{ 428, 1},
-	{ 429, 17},
-	{ 57344, 1},
-	{ 57344, 1},
-	{ 57380, 15},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 92, 0},
-	{ 93, 96},
-	{ 57344, 0},
-	{ 403, 8},
-	{ 404, 3},
-	{ 57344, 0},
-	{ 57353, 1},
-	{ 8495, 1},
-	{ 8496, 1},
-	{ 8497, 1},
-	{ 8498, 1},
-	{ 8499, 1},
-	{ 8500, 1},
-	{ 8501, 1},
-	{ 57569, 1},
-	{ 394, 1},
-	{ 224, 1},
-	{ 58158, 1},
-	{ 58176, 1},
-	{ 57344, 0},
-	{ 57817, 1},
-	{ 57344, 0},
-	{ 57579, 16},
-	{ 57344, 0},
-	{ 57821, 1},
-	{ 57344, 0},
-	{ 57581, 14},
-	{ 57344, 0},
-	{ 57823, 1},
-	{ 57344, 0},
-	{ 57582, 4},
-	{ 57344, 0},
-	{ 58165, 1},
-	{ 57344, 0},
-	{ 58148, 42},
-	{ 57344, 0},
-	{ 57850, 1},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57348, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 31, 0},
-	{ 32, 0},
-	{ 35, 0},
-	{ 36, 1},
-	{ 37, 144},
-	{ 38, 0},
-	{ 39, 14},
-	{ 40, 0},
-	{ 41, 1},
-	{ 42, 144},
-	{ 43, 0},
-	{ 44, 14},
-	{ 45, 0},
-	{ 46, 0},
-	{ 47, 0},
-	{ 48, 0},
-	{ 49, 0},
-	{ 50, 0},
-	{ 51, 0},
-	{ 52, 0},
-	{ 53, 0},
-	{ 54, 0},
-	{ 55, 0},
-	{ 56, 0},
-	{ 57, 0},
-	{ 58, 0},
-	{ 59, 0},
-	{ 60, 0},
-	{ 61, 0},
-	{ 62, 0},
-	{ 63, 0},
-	{ 64, 0},
-	{ 65, 0},
-	{ 66, 0},
-	{ 67, 0},
-	{ 68, 0},
-	{ 69, 0},
-	{ 70, 0},
-	{ 71, 0},
-	{ 72, 0},
-	{ 73, 0},
-	{ 74, 0},
-	{ 75, 0},
-	{ 76, 0},
-	{ 77, 0},
-	{ 78, 0},
-	{ 79, 0},
-	{ 80, 0},
-	{ 81, 0},
-	{ 82, 0},
-	{ 83, 0},
-	{ 84, 0},
-	{ 85, 0},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 57388, 0},
-	{ 57389, 14},
-	{ 57390, 1},
-	{ 57391, 157},
-	{ 57392, 0},
-	{ 57381, 0},
-	{ 57386, 0},
-	{ 8233, 40},
-	{ 52, 0},
-	{ 53, 200},
-	{ 57348, 0},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57348, 0},
-	{ 14, 0},
-	{ 15, 0},
-	{ 16, 3},
-	{ 17, 232},
-	{ 18, 0},
-	{ 19, 0},
-	{ 20, 0},
-	{ 21, 0},
-	{ 57348, 0},
-	{ 50, 5},
-	{ 51, 224},
-	{ 57348, 0},
-	{ 7, 1},
-	{ 8, 0},
-	{ 9, 0},
-	{ 10, 19},
-	{ 11, 136},
-	{ 57348, 0},
-	{ 49, 0},
-	{ 57348, 0},
-	{ 38, 0},
-	{ 57348, 0},
+	// Sensor Operating Mode
+	{57344, 0},
+	{57726, 1},
+	{57344, 0},
+	{57344, 0},
+	{484, 0},
+	{485, 19},
+	{482, 23},
+	{483, 168},
+	{486, 0},
+	{487, 202},
+	{364, 1},
+	{363, 1},
+	{520, 1},
+	{521, 240},
+	{522, 3},
+	{523, 77},
+	{524, 2},
+	{525, 16},
+	{526, 3},
+	{527, 1},
+	{528, 0},
+	{529, 19},
+	{530, 0},
+	{531, 3},
+	{532, 3},
+	{533, 239},
+	{534, 3},
+	{535, 243},
+	{536, 3},
+	{537, 244},
+	{538, 0},
+	{539, 1},
+	{540, 3},
+	{541, 248},
+	{542, 0},
+	{543, 2},
+	{544, 1},
+	{545, 242},
+	{546, 3},
+	{547, 27},
+	{548, 0},
+	{549, 33},
+	{550, 3},
+	{551, 240},
+	{552, 3},
+	{553, 241},
+	{554, 3},
+	{555, 242},
+	{556, 3},
+	{557, 245},
+	{558, 3},
+	{559, 246},
+	{560, 0},
+	{561, 193},
+	{562, 0},
+	{563, 2},
+	{564, 1},
+	{565, 242},
+	{566, 3},
+	{567, 107},
+	{568, 3},
+	{569, 255},
+	{570, 3},
+	{571, 49},
+	{572, 1},
+	{573, 240},
+	{574, 3},
+	{575, 135},
+	{576, 0},
+	{577, 10},
+	{578, 0},
+	{579, 11},
+	{580, 1},
+	{581, 249},
+	{582, 3},
+	{583, 13},
+	{584, 0},
+	{585, 7},
+	{586, 3},
+	{587, 239},
+	{588, 3},
+	{589, 243},
+	{590, 3},
+	{591, 244},
+	{592, 3},
+	{593, 0},
+	{594, 0},
+	{595, 7},
+	{596, 0},
+	{597, 12},
+	{598, 1},
+	{599, 241},
+	{600, 3},
+	{601, 67},
+	{602, 1},
+	{603, 248},
+	{604, 3},
+	{605, 16},
+	{606, 0},
+	{607, 7},
+	{608, 3},
+	{609, 240},
+	{610, 3},
+	{611, 241},
+	{612, 3},
+	{613, 242},
+	{614, 3},
+	{615, 245},
+	{616, 3},
+	{617, 246},
+	{618, 3},
+	{619, 0},
+	{620, 2},
+	{621, 135},
+	{622, 0},
+	{623, 1},
+	{624, 3},
+	{625, 255},
+	{626, 3},
+	{627, 0},
+	{628, 3},
+	{629, 255},
+	{630, 2},
+	{631, 135},
+	{632, 3},
+	{633, 2},
+	{634, 3},
+	{635, 15},
+	{636, 3},
+	{637, 247},
+	{638, 0},
+	{639, 22},
+	{640, 0},
+	{641, 51},
+	{642, 0},
+	{643, 4},
+	{644, 0},
+	{645, 17},
+	{646, 3},
+	{647, 9},
+	{648, 0},
+	{649, 2},
+	{650, 0},
+	{651, 32},
+	{652, 0},
+	{653, 181},
+	{654, 0},
+	{655, 229},
+	{656, 0},
+	{657, 18},
+	{658, 0},
+	{659, 181},
+	{660, 0},
+	{661, 229},
+	{662, 0},
+	{663, 16},
+	{664, 0},
+	{665, 2},
+	{666, 0},
+	{667, 32},
+	{668, 0},
+	{669, 181},
+	{670, 0},
+	{671, 229},
+	{672, 0},
+	{673, 18},
+	{674, 0},
+	{675, 181},
+	{676, 0},
+	{677, 229},
+	{678, 0},
+	{679, 0},
+	{680, 0},
+	{681, 18},
+	{682, 0},
+	{683, 18},
+	{684, 0},
+	{685, 32},
+	{686, 0},
+	{687, 181},
+	{688, 0},
+	{689, 229},
+	{690, 0},
+	{691, 0},
+	{692, 0},
+	{693, 18},
+	{694, 0},
+	{695, 18},
+	{696, 0},
+	{697, 32},
+	{698, 0},
+	{699, 71},
+	{700, 0},
+	{701, 39},
+	{702, 0},
+	{703, 181},
+	{704, 0},
+	{705, 229},
+	{706, 0},
+	{707, 0},
+	{708, 0},
+	{709, 4},
+	{710, 0},
+	{711, 67},
+	{712, 0},
+	{713, 1},
+	{714, 3},
+	{715, 2},
+	{716, 0},
+	{717, 8},
+	{718, 3},
+	{719, 255},
+	{720, 2},
+	{721, 135},
+	{722, 3},
+	{723, 199},
+	{724, 3},
+	{725, 247},
+	{726, 0},
+	{727, 119},
+	{728, 0},
+	{729, 23},
+	{730, 0},
+	{731, 8},
+	{732, 3},
+	{733, 255},
+	{734, 0},
+	{735, 56},
+	{736, 0},
+	{737, 23},
+	{738, 0},
+	{739, 8},
+	{740, 3},
+	{741, 255},
+	{742, 3},
+	{743, 255},
+	{744, 3},
+	{745, 255},
+	{746, 3},
+	{747, 255},
+	{748, 3},
+	{749, 255},
+	{750, 3},
+	{751, 255},
+	{752, 3},
+	{753, 255},
+	{754, 3},
+	{755, 255},
+	{756, 3},
+	{757, 255},
+	{758, 3},
+	{759, 255},
+	{760, 3},
+	{761, 255},
+	{762, 3},
+	{763, 255},
+	{764, 3},
+	{765, 255},
+	{766, 3},
+	{767, 255},
+	{768, 3},
+	{769, 255},
+	{770, 3},
+	{771, 255},
+	{489, 0},
+	{488, 25},
+	{490, 53},
+	{491, 55},
+	{492, 100},
+	{493, 107},
+	{504, 15},
+	{472, 1},
+	{476, 1},
+	{478, 1},
+	{393, 1},
+	{439, 1},
+	{449, 7},
+	{450, 246},
+	{451, 255},
+	{457, 7},
+	{805, 0},
+	{57689, 0},
+	{826, 0},
+	{440, 1},
+	{442, 51},
+	{446, 116},
+	{447, 54},
+	{448, 83},
+	{239, 0},
+	{806, 0},
+	{240, 0},
+	{241, 0},
+	{807, 0},
+	{242, 0},
+	{113, 1},
+	{436, 1},
+	{437, 1},
+	{497, 1},
+	{500, 1},
+	{501, 1},
+	{788, 1},
+	{789, 1},
+	{790, 1},
+	{519, 0},
+	{16903, 2},
+	{8711, 2},
+	{57480, 1},
+	{57485, 0},
+	{57486, 48},
+	{57487, 212},
+	{57481, 86},
+	{57482, 16},
+	{57483, 31},
+	{57484, 15},
+	{57510, 0},
+	{57513, 16},
+	{57514, 0},
+	{57517, 10},
+	{57512, 48},
+	{57511, 15},
+	{57516, 16},
+	{57515, 15},
+	{8349, 0},
+	{808, 0},
+	{99, 1},
+	{503, 15},
+	{57571, 1},
+	{57575, 3},
+	{58171, 0},
+	{58166, 0},
+	{58167, 0},
+	{58168, 0},
+	{58169, 0},
+	{233, 1},
+	{234, 254},
+	{777, 3},
+	{778, 2},
+	{779, 2},
+	{780, 5},
+	{782, 21},
+	{781, 20},
+	{783, 1},
+	{784, 13},
+	{464, 31},
+	{465, 31},
+	{461, 17},
+	{22, 0},
+	{23, 5},
+	{232, 3},
+	{498, 0},
+	{362, 2},
+	{57536, 0},
+	{57537, 32},
+	{57538, 0},
+	{57539, 32},
+	{360, 44},
+	{8192, 0},
+	{57344, 0},
+	{57506, 0},
+	{57467, 0},
+	{57464, 0},
+	{57465, 1},
+	{8311, 0},
+	{8310, 189},
+	{206, 1},
+	{112, 9},
+	{365, 50},
+	{374, 0},
+	{57654, 0},
+	{57542, 0},
+	{57543, 0},
+	{57544, 1},
+	{57545, 0},
+	{57546, 0},
+	{57547, 1},
+	{57548, 128},
+	{57549, 128},
+	{57534, 2},
+	{57535, 2},
+	{57540, 8},
+	{57541, 8},
+	{8309, 0},
+	{8192, 0},
+	{57344, 0},
+	{30, 1},
+	{57344, 0},
+	{8318, 0},
+	{57476, 0},
+	{57477, 0},
+	{57478, 1},
+	{57479, 0},
+	{8319, 0},
+	{8320, 0},
+	{8321, 3},
+	{8322, 0},
+	{8323, 2},
+	{144, 0},
+	{8343, 0},
+	{57344, 0},
+	{17, 3},
+	{285, 1},
+	{57344, 0},
+	{18, 0},
+	{19, 24},
+	{346, 0},
+	{347, 68},
+	{348, 0},
+	{349, 68},
+	{350, 0},
+	{351, 68},
+	{354, 0},
+	{355, 5},
+	{356, 4},
+	{357, 121},
+	{358, 4},
+	{359, 121},
+	{57344, 0},
+	{443, 180},
+	{444, 172},
+	{208, 0},
+	{496, 7},
+	{499, 1},
+	{366, 253},
+	{370, 0},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 253},
+	{372, 0},
+	{373, 0},
+	{395, 4},
+	{396, 14},
+	{397, 2},
+	{398, 86},
+	{399, 12},
+	{400, 14},
+	{375, 220},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 5},
+	{421, 167},
+	{801, 5},
+	{802, 176},
+	{424, 6},
+	{425, 62},
+	{416, 0},
+	{417, 243},
+	{434, 1},
+	{435, 13},
+	{432, 1},
+	{433, 6},
+	{428, 1},
+	{429, 17},
+	{57344, 1},
+	{57344, 1},
+	{57380, 15},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 96},
+	{57344, 0},
+	{403, 8},
+	{404, 3},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 0},
+	{14, 0},
+	{15, 0},
+	{16, 3},
+	{17, 232},
+	{18, 0},
+	{19, 0},
+	{20, 0},
+	{21, 0},
+	{57348, 0},
+	{50, 5},
+	{51, 224},
+	{57348, 0},
+	{7, 1},
+	{8, 0},
+	{9, 0},
+	{10, 19},
+	{11, 136},
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
 	// { 28, 0},
 	// { 25, 0},
 	// { 26, 7},
@@ -1560,224 +1571,223 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	// { 24, 0},
 	// { 57348, 0},
 	// { 29, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 58156, 1},
-	{ 57344, 0},
-	{ 58157, 1},
-	{ 57344, 0},
-	{ 57678, 0},
-	{ 57344, 0},
-	{ 58130, 127},
-	{ 57344, 0},
-	{ 58153, 3},
-	{ 57344, 0},
-	{ 58155, 0},
-	{ 57344, 0},
-	{ 58161, 15},
-	{ 57344, 0},
-	{ 58162, 0},
-	{ 57344, 0},
-	{ 58154, 0},
-	{ 57344, 0},
-	{ 57630, 1},
-	{ 0, 0},
-	{ 0, 0},
-	{ 434, 1},
-	{ 435, 21},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 1},
+	{435, 21},
 
 	// Below are manually added after reg seq txt
-	{0x0335,1} ,//iref sel
-	{0x0324 , 43}, //iref val
+	{0x0335, 1},  // iref sel
+	{0x0324, 43}, // iref val
 
-	{0x1d9 , 1},// #vddana sel
-	{0x0EB,15} ,//#vddana val trim
+	{0x1d9, 1},	 // #vddana sel
+	{0x0EB, 15}, // #vddana val trim
 
-	{0x1dd ,1} ,//# vsspc sel
-	{0x1ed , 14} ,//# vsspc val
+	{0x1dd, 1},	 // # vsspc sel
+	{0x1ed, 14}, // # vsspc val
 
-	{0x1df,1} ,//#cp sel
-	{0x0ee,4} ,//#cp trim,	
+	{0x1df, 1}, // #cp sel
+	{0x0ee, 4}, // #cp trim,
 
-	{0xE000,0},
-	{0xE004,0},
-	{0x33D,1},
+	{0xE000, 0},
+	{0xE004, 0},
+	{0x33D, 1},
 };
 
 static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_post_soft_reset[] = {
 	// Release Soft Reset
-	{57344,  0},
+	{57344, 0},
 };
 
-
 static const struct mira016_reg partial_analog_gain_x1_12bit[] = {
-	{ 57344, 0},
-	{ 443, 180},
-	{ 444, 172},
-	{ 208, 0},
-	{ 496, 7},
-	{ 499, 1},
-	{ 366, 253},
-	{ 370, 0},
-	{ 371, 0},
-	{ 367, 255},
-	{ 368, 255},
-	{ 369, 253},
-	{ 372, 0},
-	{ 373, 0},
-	{ 395, 4},
-	{ 396, 14},
-	{ 397, 2},
-	{ 398, 86},
-	{ 399, 12},
-	{ 400, 14},
-	{ 375, 220},
-	{ 494, 27},
-	{ 495, 70},
-	{ 418, 0},
-	{ 419, 1},
-	{ 799, 0},
-	{ 800, 10},
-	{ 422, 0},
-	{ 423, 152},
-	{ 420, 5},
-	{ 421, 167},
-	{ 801, 5},
-	{ 802, 176},
-	{ 424, 6},
-	{ 425, 62},
-	{ 416, 0},
-	{ 417, 243},
-	{ 434, 1},
-	{ 435, 13},
-	{ 432, 1},
-	{ 433, 6},
-	{ 428, 1},
-	{ 429, 17},
-	{ 57344, 1},
-	{ 57344, 1},
-	{ 57380, 15},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 92, 0},
-	{ 93, 96},
-	{ 57344, 0},
-	{ 403, 8},
-	{ 404, 3},
-	{ 57344, 0},
-	{ 57353, 1},
-	{ 8495, 1},
-	{ 8496, 1},
-	{ 8497, 1},
-	{ 8498, 1},
-	{ 8499, 1},
-	{ 8500, 1},
-	{ 8501, 1},
-	{ 57569, 1},
-	{ 394, 1},
-	{ 224, 1},
-	{ 58158, 1},
-	{ 58176, 1},
-	{ 57344, 0},
-	{ 57817, 1},
-	{ 57344, 0},
-	{ 57579, 16},
-	{ 57344, 0},
-	{ 57821, 1},
-	{ 57344, 0},
-	{ 57581, 14},
-	{ 57344, 0},
-	{ 57823, 1},
-	{ 57344, 0},
-	{ 57582, 4},
-	{ 57344, 0},
-	{ 58165, 1},
-	{ 57344, 0},
-	{ 58148, 42},
-	{ 57344, 0},
-	{ 57850, 1},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57348, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 31, 0},
-	{ 32, 0},
-	{ 35, 0},
-	{ 36, 1},
-	{ 37, 144},
-	{ 38, 0},
-	{ 39, 14},
-	{ 40, 0},
-	{ 41, 1},
-	{ 42, 144},
-	{ 43, 0},
-	{ 44, 14},
-	{ 45, 0},
-	{ 46, 0},
-	{ 47, 0},
-	{ 48, 0},
-	{ 49, 0},
-	{ 50, 0},
-	{ 51, 0},
-	{ 52, 0},
-	{ 53, 0},
-	{ 54, 0},
-	{ 55, 0},
-	{ 56, 0},
-	{ 57, 0},
-	{ 58, 0},
-	{ 59, 0},
-	{ 60, 0},
-	{ 61, 0},
-	{ 62, 0},
-	{ 63, 0},
-	{ 64, 0},
-	{ 65, 0},
-	{ 66, 0},
-	{ 67, 0},
-	{ 68, 0},
-	{ 69, 0},
-	{ 70, 0},
-	{ 71, 0},
-	{ 72, 0},
-	{ 73, 0},
-	{ 74, 0},
-	{ 75, 0},
-	{ 76, 0},
-	{ 77, 0},
-	{ 78, 0},
-	{ 79, 0},
-	{ 80, 0},
-	{ 81, 0},
-	{ 82, 0},
-	{ 83, 0},
-	{ 84, 0},
-	{ 85, 0},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 57388, 0},
-	{ 57389, 14},
-	{ 57390, 1},
-	{ 57391, 157},
-	{ 57392, 0},
-	{ 57381, 0},
-	{ 57386, 0},
-	{ 8233, 40},
-	{ 52, 0},
-	{ 53, 200},
-	{ 57348, 0},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
+	{57344, 0},
+	{443, 180},
+	{444, 172},
+	{208, 0},
+	{496, 7},
+	{499, 1},
+	{366, 253},
+	{370, 0},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 253},
+	{372, 0},
+	{373, 0},
+	{395, 4},
+	{396, 14},
+	{397, 2},
+	{398, 86},
+	{399, 12},
+	{400, 14},
+	{375, 220},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 5},
+	{421, 167},
+	{801, 5},
+	{802, 176},
+	{424, 6},
+	{425, 62},
+	{416, 0},
+	{417, 243},
+	{434, 1},
+	{435, 13},
+	{432, 1},
+	{433, 6},
+	{428, 1},
+	{429, 17},
+	{57344, 1},
+	{57344, 1},
+	{57380, 15},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 96},
+	{57344, 0},
+	{403, 8},
+	{404, 3},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
 	// { 57348, 0},
 	// { 14, 0},
 	// { 15, 0},
@@ -1787,21 +1797,21 @@ static const struct mira016_reg partial_analog_gain_x1_12bit[] = {
 	// { 19, 0},
 	// { 20, 0},
 	// { 21, 0},
-	//frame time
-	{ 57348, 0},
-	{ 50, 5},
-	{ 51, 224},
-	{ 57348, 0},
-	{ 7, 1},
+	// frame time
+	{57348, 0},
+	{50, 5},
+	{51, 224},
+	{57348, 0},
+	{7, 1},
 	// { 8, 0},
 	// { 9, 0},
 	// { 10, 19},
 	// { 11, 136},
-	{ 57348, 0},
-	{ 49, 0},
-	{ 57348, 0},
-	{ 38, 0},
-	{ 57348, 0},
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
 	// { 28, 0},
 	// { 25, 0},
 	// { 26, 7},
@@ -1809,204 +1819,204 @@ static const struct mira016_reg partial_analog_gain_x1_12bit[] = {
 	// { 22, 8},
 	// { 23, 0},
 	// { 24, 0},
-	{ 57348, 0},
+	{57348, 0},
 	// { 29, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 58156, 1},
-	{ 57344, 0},
-	{ 58157, 1},
-	{ 57344, 0},
-	{ 57678, 0},
-	{ 57344, 0},
-	{ 58130, 127},
-	{ 57344, 0},
-	{ 58153, 3},
-	{ 57344, 0},
-	{ 58155, 0},
-	{ 57344, 0},
-	{ 58161, 15},
-	{ 57344, 0},
-	{ 58162, 0},
-	{ 57344, 0},
-	{ 58154, 0},
-	{ 57344, 0},
-	{ 57630, 1},
-	{ 0, 0},
-	{ 0, 0},
-	{ 434, 1},
-	{ 435, 21},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 1},
+	{435, 21},
 
 };
 
 static const struct mira016_reg partial_analog_gain_x2_12bit[] = {
-	{ 57344, 0},
-	{ 443, 156},
-	{ 444, 148},
-	{ 208, 0},
-	{ 496, 7},
-	{ 499, 0},
-	{ 366, 255},
-	{ 370, 254},
-	{ 371, 0},
-	{ 367, 255},
-	{ 368, 255},
-	{ 369, 255},
-	{ 372, 254},
-	{ 373, 0},
-	{ 395, 8},
-	{ 396, 14},
-	{ 397, 2},
-	{ 398, 86},
-	{ 399, 16},
-	{ 400, 14},
-	{ 375, 220},
-	{ 494, 27},
-	{ 495, 70},
-	{ 418, 0},
-	{ 419, 1},
-	{ 799, 0},
-	{ 800, 10},
-	{ 422, 0},
-	{ 423, 152},
-	{ 420, 7},
-	{ 421, 167},
-	{ 801, 7},
-	{ 802, 176},
-	{ 424, 8},
-	{ 425, 62},
-	{ 416, 1},
-	{ 417, 72},
-	{ 434, 1},
-	{ 435, 98},
-	{ 432, 1},
-	{ 433, 91},
-	{ 428, 1},
-	{ 429, 102},
-	{ 57344, 1},
-	{ 57344, 1},
-	{ 57380, 15},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 92, 0},
-	{ 93, 96},
-	{ 57344, 0},
-	{ 403, 15},
-	{ 404, 234},
-	{ 57344, 0},
-	{ 57353, 1},
-	{ 8495, 1},
-	{ 8496, 1},
-	{ 8497, 1},
-	{ 8498, 1},
-	{ 8499, 1},
-	{ 8500, 1},
-	{ 8501, 1},
-	{ 57569, 1},
-	{ 394, 1},
-	{ 224, 1},
-	{ 58158, 1},
-	{ 58176, 1},
-	{ 57344, 0},
-	{ 57817, 1},
-	{ 57344, 0},
-	{ 57579, 16},
-	{ 57344, 0},
-	{ 57821, 1},
-	{ 57344, 0},
-	{ 57581, 14},
-	{ 57344, 0},
-	{ 57823, 1},
-	{ 57344, 0},
-	{ 57582, 4},
-	{ 57344, 0},
-	{ 58165, 1},
-	{ 57344, 0},
-	{ 58148, 42},
-	{ 57344, 0},
-	{ 57850, 1},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57348, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 31, 0},
-	{ 32, 0},
-	{ 35, 0},
-	{ 36, 1},
-	{ 37, 144},
-	{ 38, 0},
-	{ 39, 14},
-	{ 40, 0},
-	{ 41, 1},
-	{ 42, 144},
-	{ 43, 0},
-	{ 44, 14},
-	{ 45, 0},
-	{ 46, 0},
-	{ 47, 0},
-	{ 48, 0},
-	{ 49, 0},
-	{ 50, 0},
-	{ 51, 0},
-	{ 52, 0},
-	{ 53, 0},
-	{ 54, 0},
-	{ 55, 0},
-	{ 56, 0},
-	{ 57, 0},
-	{ 58, 0},
-	{ 59, 0},
-	{ 60, 0},
-	{ 61, 0},
-	{ 62, 0},
-	{ 63, 0},
-	{ 64, 0},
-	{ 65, 0},
-	{ 66, 0},
-	{ 67, 0},
-	{ 68, 0},
-	{ 69, 0},
-	{ 70, 0},
-	{ 71, 0},
-	{ 72, 0},
-	{ 73, 0},
-	{ 74, 0},
-	{ 75, 0},
-	{ 76, 0},
-	{ 77, 0},
-	{ 78, 0},
-	{ 79, 0},
-	{ 80, 0},
-	{ 81, 0},
-	{ 82, 0},
-	{ 83, 0},
-	{ 84, 0},
-	{ 85, 0},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 57388, 0},
-	{ 57389, 14},
-	{ 57390, 1},
-	{ 57391, 157},
-	{ 57392, 0},
-	{ 57381, 0},
-	{ 57386, 0},
-	{ 8233, 40},
-	{ 52, 0},
-	{ 53, 200},
-	{ 57348, 0},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
+	{57344, 0},
+	{443, 156},
+	{444, 148},
+	{208, 0},
+	{496, 7},
+	{499, 0},
+	{366, 255},
+	{370, 254},
+	{371, 0},
+	{367, 255},
+	{368, 255},
+	{369, 255},
+	{372, 254},
+	{373, 0},
+	{395, 8},
+	{396, 14},
+	{397, 2},
+	{398, 86},
+	{399, 16},
+	{400, 14},
+	{375, 220},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 7},
+	{421, 167},
+	{801, 7},
+	{802, 176},
+	{424, 8},
+	{425, 62},
+	{416, 1},
+	{417, 72},
+	{434, 1},
+	{435, 98},
+	{432, 1},
+	{433, 91},
+	{428, 1},
+	{429, 102},
+	{57344, 1},
+	{57344, 1},
+	{57380, 15},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 96},
+	{57344, 0},
+	{403, 15},
+	{404, 234},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
 	// { 57348, 0},
 	// { 14, 0},
 	// { 15, 0},
@@ -2016,20 +2026,20 @@ static const struct mira016_reg partial_analog_gain_x2_12bit[] = {
 	// { 19, 0},
 	// { 20, 0},
 	// { 21, 0},
-	{ 57348, 0},
-	{ 50, 8},
-	{ 51, 8},
-	{ 57348, 0},
-	{ 7, 1},
+	{57348, 0},
+	{50, 8},
+	{51, 8},
+	{57348, 0},
+	{7, 1},
 	// { 8, 0},
 	// { 9, 0},
 	// { 10, 19},
 	// { 11, 136},
-	{ 57348, 0},
-	{ 49, 0},
-	{ 57348, 0},
-	{ 38, 0},
-	{ 57348, 0},
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
 	// { 28, 0},
 	// { 25, 0},
 	// { 26, 7},
@@ -2037,1511 +2047,204 @@ static const struct mira016_reg partial_analog_gain_x2_12bit[] = {
 	// { 22, 8},
 	// { 23, 0},
 	// { 24, 0},
-	{ 57348, 0},
+	{57348, 0},
 	// { 29, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 58156, 1},
-	{ 57344, 0},
-	{ 58157, 1},
-	{ 57344, 0},
-	{ 57678, 0},
-	{ 57344, 0},
-	{ 58130, 127},
-	{ 57344, 0},
-	{ 58153, 3},
-	{ 57344, 0},
-	{ 58155, 0},
-	{ 57344, 0},
-	{ 58161, 15},
-	{ 57344, 0},
-	{ 58162, 0},
-	{ 57344, 0},
-	{ 58154, 0},
-	{ 57344, 0},
-	{ 57630, 1},
-	{ 0, 0},
-	{ 0, 0},
-	{ 434, 1},
-	{ 435, 106},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 1},
+	{435, 106},
 
 };
 
 static const struct mira016_reg partial_analog_gain_x1_10bit[] = {
-{ 57344, 0},
-{ 443, 180},
-{ 444, 172},
-{ 208, 0},
-{ 496, 7},
-{ 499, 2},
-{ 366, 125},
-{ 370, 0},
-{ 371, 0},
-{ 367, 254},
-{ 368, 0},
-{ 369, 125},
-{ 372, 0},
-{ 373, 0},
-{ 395, 2},
-{ 396, 14},
-{ 397, 2},
-{ 398, 86},
-{ 399, 6},
-{ 400, 14},
-{ 375, 120},
-{ 494, 27},
-{ 495, 70},
-{ 418, 0},
-{ 419, 1},
-{ 799, 0},
-{ 800, 10},
-{ 422, 0},
-{ 423, 152},
-{ 420, 3},
-{ 421, 167},
-{ 801, 3},
-{ 802, 176},
-{ 424, 4},
-{ 425, 62},
-{ 416, 0},
-{ 417, 200},
-{ 434, 0},
-{ 435, 226},
-{ 432, 0},
-{ 433, 219},
-{ 428, 0},
-{ 429, 230},
-{ 57344, 1},
-{ 57344, 1},
-{ 57380, 7},
-{ 57344, 0},
-{ 57344, 0},
-{ 92, 0},
-{ 93, 48},
-{ 57344, 0},
-{ 403, 4},
-{ 404, 22},
-{ 57344, 0},
-{ 57353, 1},
-{ 8495, 1},
-{ 8496, 1},
-{ 8497, 1},
-{ 8498, 1},
-{ 8499, 1},
-{ 8500, 1},
-{ 8501, 1},
-{ 57569, 1},
-{ 394, 1},
-{ 224, 1},
-{ 58158, 1},
-{ 58176, 1},
-{ 57344, 0},
-{ 57817, 1},
-{ 57344, 0},
-{ 57579, 16},
-{ 57344, 0},
-{ 57821, 1},
-{ 57344, 0},
-{ 57581, 14},
-{ 57344, 0},
-{ 57823, 1},
-{ 57344, 0},
-{ 57582, 4},
-{ 57344, 0},
-{ 58165, 1},
-{ 57344, 0},
-{ 58148, 42},
-{ 57344, 0},
-{ 57850, 1},
-{ 57344, 1},
-{ 57348, 0},
-{ 57344, 1},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-{ 57348, 1},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-{ 57344, 0},
-{ 57344, 0},
-{ 31, 0},
-{ 32, 0},
-{ 35, 0},
-{ 36, 1},
-{ 37, 144},
-{ 38, 0},
-{ 39, 14},
-{ 40, 0},
-{ 41, 1},
-{ 42, 144},
-{ 43, 0},
-{ 44, 14},
-{ 45, 0},
-{ 46, 0},
-{ 47, 0},
-{ 48, 0},
-{ 49, 0},
-{ 50, 0},
-{ 51, 0},
-{ 52, 0},
-{ 53, 0},
-{ 54, 0},
-{ 55, 0},
-{ 56, 0},
-{ 57, 0},
-{ 58, 0},
-{ 59, 0},
-{ 60, 0},
-{ 61, 0},
-{ 62, 0},
-{ 63, 0},
-{ 64, 0},
-{ 65, 0},
-{ 66, 0},
-{ 67, 0},
-{ 68, 0},
-{ 69, 0},
-{ 70, 0},
-{ 71, 0},
-{ 72, 0},
-{ 73, 0},
-{ 74, 0},
-{ 75, 0},
-{ 76, 0},
-{ 77, 0},
-{ 78, 0},
-{ 79, 0},
-{ 80, 0},
-{ 81, 0},
-{ 82, 0},
-{ 83, 0},
-{ 84, 0},
-{ 85, 0},
-{ 57344, 1},
-{ 57348, 0},
-{ 57344, 1},
-{ 57388, 0},
-{ 57389, 14},
-{ 57390, 1},
-{ 57391, 157},
-{ 57392, 0},
-{ 57381, 0},
-{ 57386, 0},
-{ 8233, 40},
-{ 52, 0},
-{ 53, 200},
-{ 57348, 0},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-// { 57348, 0},
-// { 14, 0},
-// { 15, 0},
-// { 16, 3},
-// { 17, 232},
-// { 18, 0},
-// { 19, 0},
-// { 20, 0},
-// { 21, 0},
-{ 57348, 0},
-{ 50, 4},
-{ 51, 68},
-
-{ 57348, 0},
-{ 49, 0},
-{ 57348, 0},
-{ 38, 0},
-{ 57348, 0},
-// { 28, 0},
-// { 25, 0},
-// { 26, 7},
-// { 27, 83},
-// { 22, 8},
-// { 23, 0},
-// { 24, 0},
-{ 57348, 0},
-// { 29, 0},
-{ 57344, 0},
-{ 57344, 0},
-{ 58156, 1},
-{ 57344, 0},
-{ 58157, 1},
-{ 57344, 0},
-{ 57678, 0},
-{ 57344, 0},
-{ 58130, 127},
-{ 57344, 0},
-{ 58153, 3},
-{ 57344, 0},
-{ 58155, 0},
-{ 57344, 0},
-{ 58161, 15},
-{ 57344, 0},
-{ 58162, 0},
-{ 57344, 0},
-{ 58154, 0},
-{ 57344, 0},
-{ 57630, 1},
-{ 0, 0},
-{ 0, 0},
-{ 434, 0},
-{ 435, 234},
-
-};
-
-static const struct mira016_reg partial_analog_gain_x2_10bit[] = {
-{ 57344, 0},
-{ 443, 156},
-{ 444, 148},
-{ 208, 0},
-{ 496, 37},
-{ 499, 1},
-{ 366, 125},
-{ 370, 0},
-{ 371, 0},
-{ 367, 126},
-{ 368, 0},
-{ 369, 125},
-{ 372, 0},
-{ 373, 0},
-{ 395, 2},
-{ 396, 14},
-{ 397, 2},
-{ 398, 86},
-{ 399, 4},
-{ 400, 14},
-{ 375, 120},
-{ 494, 27},
-{ 495, 70},
-{ 418, 0},
-{ 419, 1},
-{ 799, 0},
-{ 800, 10},
-{ 422, 0},
-{ 423, 152},
-{ 420, 3},
-{ 421, 39},
-{ 801, 3},
-{ 802, 48},
-{ 424, 3},
-{ 425, 190},
-{ 416, 0},
-{ 417, 200},
-{ 434, 0},
-{ 435, 226},
-{ 432, 0},
-{ 433, 219},
-{ 428, 0},
-{ 429, 230},
-{ 57344, 1},
-{ 57344, 1},
-{ 57380, 15},
-{ 57344, 0},
-{ 57344, 0},
-{ 92, 0},
-{ 93, 24},
-{ 57344, 0},
-{ 403, 4},
-{ 404, 16},
-{ 57344, 0},
-{ 57353, 1},
-{ 8495, 1},
-{ 8496, 1},
-{ 8497, 1},
-{ 8498, 1},
-{ 8499, 1},
-{ 8500, 1},
-{ 8501, 1},
-{ 57569, 1},
-{ 394, 1},
-{ 224, 1},
-{ 58158, 1},
-{ 58176, 1},
-{ 57344, 0},
-{ 57817, 1},
-{ 57344, 0},
-{ 57579, 16},
-{ 57344, 0},
-{ 57821, 1},
-{ 57344, 0},
-{ 57581, 14},
-{ 57344, 0},
-{ 57823, 1},
-{ 57344, 0},
-{ 57582, 4},
-{ 57344, 0},
-{ 58165, 1},
-{ 57344, 0},
-{ 58148, 42},
-{ 57344, 0},
-{ 57850, 1},
-{ 57344, 1},
-{ 57348, 0},
-{ 57344, 1},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-{ 57348, 1},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-{ 57344, 0},
-{ 57344, 0},
-{ 31, 0},
-{ 32, 0},
-{ 35, 0},
-{ 36, 1},
-{ 37, 144},
-{ 38, 0},
-{ 39, 14},
-{ 40, 0},
-{ 41, 1},
-{ 42, 144},
-{ 43, 0},
-{ 44, 14},
-{ 45, 0},
-{ 46, 0},
-{ 47, 0},
-{ 48, 0},
-{ 49, 0},
-{ 50, 0},
-{ 51, 0},
-{ 52, 0},
-{ 53, 0},
-{ 54, 0},
-{ 55, 0},
-{ 56, 0},
-{ 57, 0},
-{ 58, 0},
-{ 59, 0},
-{ 60, 0},
-{ 61, 0},
-{ 62, 0},
-{ 63, 0},
-{ 64, 0},
-{ 65, 0},
-{ 66, 0},
-{ 67, 0},
-{ 68, 0},
-{ 69, 0},
-{ 70, 0},
-{ 71, 0},
-{ 72, 0},
-{ 73, 0},
-{ 74, 0},
-{ 75, 0},
-{ 76, 0},
-{ 77, 0},
-{ 78, 0},
-{ 79, 0},
-{ 80, 0},
-{ 81, 0},
-{ 82, 0},
-{ 83, 0},
-{ 84, 0},
-{ 85, 0},
-{ 57344, 1},
-{ 57348, 0},
-{ 57344, 1},
-{ 57388, 0},
-{ 57389, 14},
-{ 57390, 1},
-{ 57391, 157},
-{ 57392, 0},
-{ 57381, 0},
-{ 57386, 0},
-{ 8233, 40},
-{ 52, 0},
-{ 53, 200},
-{ 57348, 0},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-
-{ 57348, 0},
-{ 50, 4},
-{ 51, 70},
-{ 57348, 0},
-{ 49, 0},
-{ 57348, 0},
-{ 38, 0},
-{ 57348, 0},
-// { 28, 0},
-// { 25, 0},
-// { 26, 7},
-// { 27, 83},
-// { 22, 8},
-// { 23, 0},
-// { 24, 0},
-{ 57348, 0},
-// { 29, 0},
-{ 57344, 0},
-{ 57344, 0},
-{ 58156, 1},
-{ 57344, 0},
-{ 58157, 1},
-{ 57344, 0},
-{ 57678, 0},
-{ 57344, 0},
-{ 58130, 127},
-{ 57344, 0},
-{ 58153, 3},
-{ 57344, 0},
-{ 58155, 0},
-{ 57344, 0},
-{ 58161, 15},
-{ 57344, 0},
-{ 58162, 0},
-{ 57344, 0},
-{ 58154, 0},
-{ 57344, 0},
-{ 57630, 1},
-{ 0, 0},
-{ 0, 0},
-{ 434, 0},
-{ 435, 234},
-
-};
-
-static const struct mira016_reg partial_analog_gain_x1_8bit[] = {
-{ 57344, 0},
-{ 443, 180},
-{ 444, 172},
-{ 208, 0},
-{ 496, 7},
-{ 499, 2},
-{ 366, 125},
-{ 370, 0},
-{ 371, 0},
-{ 367, 254},
-{ 368, 0},
-{ 369, 125},
-{ 372, 0},
-{ 373, 0},
-{ 395, 2},
-{ 396, 14},
-{ 397, 2},
-{ 398, 86},
-{ 399, 6},
-{ 400, 14},
-{ 375, 120},
-{ 494, 27},
-{ 495, 70},
-{ 418, 0},
-{ 419, 1},
-{ 799, 0},
-{ 800, 10},
-{ 422, 0},
-{ 423, 152},
-{ 420, 3},
-{ 421, 167},
-{ 801, 3},
-{ 802, 176},
-{ 424, 4},
-{ 425, 62},
-{ 416, 0},
-{ 417, 250},
-{ 434, 1},
-{ 435, 20},
-{ 432, 1},
-{ 433, 13},
-{ 428, 1},
-{ 429, 24},
-{ 57344, 1},
-{ 57344, 1},
-{ 57380, 1},
-{ 57344, 0},
-{ 57344, 0},
-{ 92, 0},
-{ 93, 48},
-{ 57344, 0},
-{ 403, 4},
-{ 404, 26},
-{ 57344, 0},
-{ 57353, 1},
-{ 8495, 1},
-{ 8496, 1},
-{ 8497, 1},
-{ 8498, 1},
-{ 8499, 1},
-{ 8500, 1},
-{ 8501, 1},
-{ 57569, 1},
-{ 394, 1},
-{ 224, 1},
-{ 58158, 1},
-{ 58176, 1},
-{ 57344, 0},
-{ 57817, 1},
-{ 57344, 0},
-{ 57579, 16},
-{ 57344, 0},
-{ 57821, 1},
-{ 57344, 0},
-{ 57581, 14},
-{ 57344, 0},
-{ 57823, 1},
-{ 57344, 0},
-{ 57582, 4},
-{ 57344, 0},
-{ 58165, 1},
-{ 57344, 0},
-{ 58148, 42},
-{ 57344, 0},
-{ 57850, 1},
-{ 57344, 1},
-{ 57348, 0},
-{ 57344, 1},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-{ 57348, 1},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-{ 57344, 0},
-{ 57344, 0},
-{ 31, 0},
-{ 32, 0},
-{ 35, 0},
-{ 36, 1},
-{ 37, 144},
-{ 38, 0},
-{ 39, 14},
-{ 40, 0},
-{ 41, 1},
-{ 42, 144},
-{ 43, 0},
-{ 44, 14},
-{ 45, 0},
-{ 46, 0},
-{ 47, 0},
-{ 48, 0},
-{ 49, 0},
-{ 50, 0},
-{ 51, 0},
-{ 52, 0},
-{ 53, 0},
-{ 54, 0},
-{ 55, 0},
-{ 56, 0},
-{ 57, 0},
-{ 58, 0},
-{ 59, 0},
-{ 60, 0},
-{ 61, 0},
-{ 62, 0},
-{ 63, 0},
-{ 64, 0},
-{ 65, 0},
-{ 66, 0},
-{ 67, 0},
-{ 68, 0},
-{ 69, 0},
-{ 70, 0},
-{ 71, 0},
-{ 72, 0},
-{ 73, 0},
-{ 74, 0},
-{ 75, 0},
-{ 76, 0},
-{ 77, 0},
-{ 78, 0},
-{ 79, 0},
-{ 80, 0},
-{ 81, 0},
-{ 82, 0},
-{ 83, 0},
-{ 84, 0},
-{ 85, 0},
-{ 57344, 1},
-{ 57348, 0},
-{ 57344, 1},
-{ 57388, 0},
-{ 57389, 14},
-{ 57390, 1},
-{ 57391, 157},
-{ 57392, 0},
-{ 57381, 0},
-{ 57386, 0},
-{ 8233, 40},
-{ 52, 0},
-{ 53, 200},
-{ 57348, 0},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-// { 57348, 0},
-// { 14, 0},
-// { 15, 0},
-// { 16, 3},
-// { 17, 232},
-// { 18, 0},
-// { 19, 0},
-// { 20, 0},
-// { 21, 0},
-{ 57348, 0},
-{ 50, 4},
-{ 51, 18},
-
-{ 57348, 0},
-{ 49, 0},
-{ 57348, 0},
-{ 38, 0},
-{ 57348, 0},
-// { 28, 0},
-// { 25, 0},
-// { 26, 7},
-// { 27, 83},
-// { 22, 8},
-// { 23, 0},
-// { 24, 0},
-{ 57348, 0},
-// { 29, 0},
-{ 57344, 0},
-{ 57344, 0},
-{ 58156, 1},
-{ 57344, 0},
-{ 58157, 1},
-{ 57344, 0},
-{ 57678, 0},
-{ 57344, 0},
-{ 58130, 127},
-{ 57344, 0},
-{ 58153, 3},
-{ 57344, 0},
-{ 58155, 0},
-{ 57344, 0},
-{ 58161, 15},
-{ 57344, 0},
-{ 58162, 0},
-{ 57344, 0},
-{ 58154, 0},
-{ 57344, 0},
-{ 57630, 1},
-{ 0, 0},
-{ 0, 0},
-{ 434, 1},
-{ 435, 28},
-
-
-};
-
-static const struct mira016_reg partial_analog_gain_x2_8bit[] = {
-{ 57344, 0},
-{ 443, 156},
-{ 444, 148},
-{ 208, 2},
-{ 496, 37},
-{ 499, 1},
-{ 366, 125},
-{ 370, 0},
-{ 371, 0},
-{ 367, 126},
-{ 368, 0},
-{ 369, 125},
-{ 372, 0},
-{ 373, 0},
-{ 395, 0},
-{ 396, 139},
-{ 397, 0},
-{ 398, 142},
-{ 399, 1},
-{ 400, 11},
-{ 375, 120},
-{ 494, 27},
-{ 495, 70},
-{ 418, 0},
-{ 419, 1},
-{ 799, 0},
-{ 800, 10},
-{ 422, 0},
-{ 423, 152},
-{ 420, 3},
-{ 421, 39},
-{ 801, 3},
-{ 802, 48},
-{ 424, 3},
-{ 425, 190},
-{ 416, 0},
-{ 417, 250},
-{ 434, 1},
-{ 435, 20},
-{ 432, 1},
-{ 433, 13},
-{ 428, 1},
-{ 429, 24},
-{ 57344, 1},
-{ 57344, 1},
-{ 57380, 15},
-{ 57344, 0},
-{ 57344, 0},
-{ 92, 0},
-{ 93, 6},
-{ 57344, 0},
-{ 403, 1},
-{ 404, 19},
-{ 57344, 0},
-{ 57353, 1},
-{ 8495, 1},
-{ 8496, 1},
-{ 8497, 1},
-{ 8498, 1},
-{ 8499, 1},
-{ 8500, 1},
-{ 8501, 1},
-{ 57569, 1},
-{ 394, 1},
-{ 224, 1},
-{ 58158, 1},
-{ 58176, 1},
-{ 57344, 0},
-{ 57817, 1},
-{ 57344, 0},
-{ 57579, 16},
-{ 57344, 0},
-{ 57821, 1},
-{ 57344, 0},
-{ 57581, 14},
-{ 57344, 0},
-{ 57823, 1},
-{ 57344, 0},
-{ 57582, 4},
-{ 57344, 0},
-{ 58165, 1},
-{ 57344, 0},
-{ 58148, 42},
-{ 57344, 0},
-{ 57850, 1},
-{ 57344, 1},
-{ 57348, 0},
-{ 57344, 1},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-{ 57348, 1},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-{ 57344, 0},
-{ 57344, 0},
-{ 31, 0},
-{ 32, 0},
-{ 35, 0},
-{ 36, 1},
-{ 37, 144},
-{ 38, 0},
-{ 39, 14},
-{ 40, 0},
-{ 41, 1},
-{ 42, 144},
-{ 43, 0},
-{ 44, 14},
-{ 45, 0},
-{ 46, 0},
-{ 47, 0},
-{ 48, 0},
-{ 49, 0},
-{ 50, 0},
-{ 51, 0},
-{ 52, 0},
-{ 53, 0},
-{ 54, 0},
-{ 55, 0},
-{ 56, 0},
-{ 57, 0},
-{ 58, 0},
-{ 59, 0},
-{ 60, 0},
-{ 61, 0},
-{ 62, 0},
-{ 63, 0},
-{ 64, 0},
-{ 65, 0},
-{ 66, 0},
-{ 67, 0},
-{ 68, 0},
-{ 69, 0},
-{ 70, 0},
-{ 71, 0},
-{ 72, 0},
-{ 73, 0},
-{ 74, 0},
-{ 75, 0},
-{ 76, 0},
-{ 77, 0},
-{ 78, 0},
-{ 79, 0},
-{ 80, 0},
-{ 81, 0},
-{ 82, 0},
-{ 83, 0},
-{ 84, 0},
-{ 85, 0},
-{ 57344, 1},
-{ 57348, 0},
-{ 57344, 1},
-{ 57388, 0},
-{ 57389, 14},
-{ 57390, 1},
-{ 57391, 157},
-{ 57392, 0},
-{ 57381, 0},
-{ 57386, 0},
-{ 8233, 40},
-{ 52, 0},
-{ 53, 200},
-{ 57348, 0},
-{ 30, 0},
-{ 31, 2},
-{ 43, 0},
-// { 57348, 0},
-// { 14, 0},
-// { 15, 0},
-// { 16, 3},
-// { 17, 232},
-// { 18, 0},
-// { 19, 0},
-// { 20, 0},
-// { 21, 0},
-{ 57348, 0},
-{ 50, 3},
-{ 51, 236},
-{ 57348, 0},
-{ 7, 1},
-// { 8, 0},
-// { 9, 0},
-// { 10, 10},
-// { 11, 217},
-{ 57348, 0},
-{ 49, 0},
-{ 57348, 0},
-{ 38, 0},
-{ 57348, 0},
-// { 28, 0},
-// { 25, 0},
-// { 26, 7},
-// { 27, 83},
-// { 22, 8},
-// { 23, 0},
-// { 24, 0},
-{ 57348, 0},
-// { 29, 0},
-{ 57344, 0},
-{ 57344, 0},
-{ 58156, 1},
-{ 57344, 0},
-{ 58157, 1},
-{ 57344, 0},
-{ 57678, 0},
-{ 57344, 0},
-{ 58130, 127},
-{ 57344, 0},
-{ 58153, 3},
-{ 57344, 0},
-{ 58155, 0},
-{ 57344, 0},
-{ 58161, 15},
-{ 57344, 0},
-{ 58162, 0},
-{ 57344, 0},
-{ 58154, 0},
-{ 57344, 0},
-{ 57630, 1},
-{ 0, 0},
-{ 0, 0},
-{ 434, 1},
-{ 435, 28},
-	
-};
-
-// converted_Draco_i2c_configuration_sequence_hex_8bit_1x_360fps_Version3
-static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[] = {
-	//Sensor Operating Mode
-	{ 57344, 0},
-	{ 57726, 1},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 484, 0},
-	{ 485, 19},
-	{ 482, 23},
-	{ 483, 168},
-	{ 486, 0},
-	{ 487, 202},
-	{ 364, 1},
-	{ 363, 1},
-	{ 520, 1},
-	{ 521, 240},
-	{ 522, 3},
-	{ 523, 77},
-	{ 524, 2},
-	{ 525, 16},
-	{ 526, 3},
-	{ 527, 1},
-	{ 528, 0},
-	{ 529, 19},
-	{ 530, 0},
-	{ 531, 3},
-	{ 532, 3},
-	{ 533, 239},
-	{ 534, 3},
-	{ 535, 243},
-	{ 536, 3},
-	{ 537, 244},
-	{ 538, 0},
-	{ 539, 1},
-	{ 540, 3},
-	{ 541, 248},
-	{ 542, 0},
-	{ 543, 2},
-	{ 544, 1},
-	{ 545, 242},
-	{ 546, 3},
-	{ 547, 27},
-	{ 548, 0},
-	{ 549, 33},
-	{ 550, 3},
-	{ 551, 240},
-	{ 552, 3},
-	{ 553, 241},
-	{ 554, 3},
-	{ 555, 242},
-	{ 556, 3},
-	{ 557, 245},
-	{ 558, 3},
-	{ 559, 246},
-	{ 560, 0},
-	{ 561, 193},
-	{ 562, 0},
-	{ 563, 2},
-	{ 564, 1},
-	{ 565, 242},
-	{ 566, 3},
-	{ 567, 107},
-	{ 568, 3},
-	{ 569, 255},
-	{ 570, 3},
-	{ 571, 49},
-	{ 572, 1},
-	{ 573, 240},
-	{ 574, 3},
-	{ 575, 135},
-	{ 576, 0},
-	{ 577, 10},
-	{ 578, 0},
-	{ 579, 11},
-	{ 580, 1},
-	{ 581, 249},
-	{ 582, 3},
-	{ 583, 13},
-	{ 584, 0},
-	{ 585, 7},
-	{ 586, 3},
-	{ 587, 239},
-	{ 588, 3},
-	{ 589, 243},
-	{ 590, 3},
-	{ 591, 244},
-	{ 592, 3},
-	{ 593, 0},
-	{ 594, 0},
-	{ 595, 7},
-	{ 596, 0},
-	{ 597, 12},
-	{ 598, 1},
-	{ 599, 241},
-	{ 600, 3},
-	{ 601, 67},
-	{ 602, 1},
-	{ 603, 248},
-	{ 604, 3},
-	{ 605, 16},
-	{ 606, 0},
-	{ 607, 7},
-	{ 608, 3},
-	{ 609, 240},
-	{ 610, 3},
-	{ 611, 241},
-	{ 612, 3},
-	{ 613, 242},
-	{ 614, 3},
-	{ 615, 245},
-	{ 616, 3},
-	{ 617, 246},
-	{ 618, 3},
-	{ 619, 0},
-	{ 620, 2},
-	{ 621, 135},
-	{ 622, 0},
-	{ 623, 1},
-	{ 624, 3},
-	{ 625, 255},
-	{ 626, 3},
-	{ 627, 0},
-	{ 628, 3},
-	{ 629, 255},
-	{ 630, 2},
-	{ 631, 135},
-	{ 632, 3},
-	{ 633, 2},
-	{ 634, 3},
-	{ 635, 15},
-	{ 636, 3},
-	{ 637, 247},
-	{ 638, 0},
-	{ 639, 22},
-	{ 640, 0},
-	{ 641, 51},
-	{ 642, 0},
-	{ 643, 4},
-	{ 644, 0},
-	{ 645, 17},
-	{ 646, 3},
-	{ 647, 9},
-	{ 648, 0},
-	{ 649, 2},
-	{ 650, 0},
-	{ 651, 32},
-	{ 652, 0},
-	{ 653, 181},
-	{ 654, 0},
-	{ 655, 229},
-	{ 656, 0},
-	{ 657, 18},
-	{ 658, 0},
-	{ 659, 181},
-	{ 660, 0},
-	{ 661, 229},
-	{ 662, 0},
-	{ 663, 16},
-	{ 664, 0},
-	{ 665, 2},
-	{ 666, 0},
-	{ 667, 32},
-	{ 668, 0},
-	{ 669, 181},
-	{ 670, 0},
-	{ 671, 229},
-	{ 672, 0},
-	{ 673, 18},
-	{ 674, 0},
-	{ 675, 181},
-	{ 676, 0},
-	{ 677, 229},
-	{ 678, 0},
-	{ 679, 0},
-	{ 680, 0},
-	{ 681, 18},
-	{ 682, 0},
-	{ 683, 18},
-	{ 684, 0},
-	{ 685, 32},
-	{ 686, 0},
-	{ 687, 181},
-	{ 688, 0},
-	{ 689, 229},
-	{ 690, 0},
-	{ 691, 0},
-	{ 692, 0},
-	{ 693, 18},
-	{ 694, 0},
-	{ 695, 18},
-	{ 696, 0},
-	{ 697, 32},
-	{ 698, 0},
-	{ 699, 71},
-	{ 700, 0},
-	{ 701, 39},
-	{ 702, 0},
-	{ 703, 181},
-	{ 704, 0},
-	{ 705, 229},
-	{ 706, 0},
-	{ 707, 0},
-	{ 708, 0},
-	{ 709, 4},
-	{ 710, 0},
-	{ 711, 67},
-	{ 712, 0},
-	{ 713, 1},
-	{ 714, 3},
-	{ 715, 2},
-	{ 716, 0},
-	{ 717, 8},
-	{ 718, 3},
-	{ 719, 255},
-	{ 720, 2},
-	{ 721, 135},
-	{ 722, 3},
-	{ 723, 199},
-	{ 724, 3},
-	{ 725, 247},
-	{ 726, 0},
-	{ 727, 119},
-	{ 728, 0},
-	{ 729, 23},
-	{ 730, 0},
-	{ 731, 8},
-	{ 732, 3},
-	{ 733, 255},
-	{ 734, 0},
-	{ 735, 56},
-	{ 736, 0},
-	{ 737, 23},
-	{ 738, 0},
-	{ 739, 8},
-	{ 740, 3},
-	{ 741, 255},
-	{ 742, 3},
-	{ 743, 255},
-	{ 744, 3},
-	{ 745, 255},
-	{ 746, 3},
-	{ 747, 255},
-	{ 748, 3},
-	{ 749, 255},
-	{ 750, 3},
-	{ 751, 255},
-	{ 752, 3},
-	{ 753, 255},
-	{ 754, 3},
-	{ 755, 255},
-	{ 756, 3},
-	{ 757, 255},
-	{ 758, 3},
-	{ 759, 255},
-	{ 760, 3},
-	{ 761, 255},
-	{ 762, 3},
-	{ 763, 255},
-	{ 764, 3},
-	{ 765, 255},
-	{ 766, 3},
-	{ 767, 255},
-	{ 768, 3},
-	{ 769, 255},
-	{ 770, 3},
-	{ 771, 255},
-	{ 489, 0},
-	{ 488, 25},
-	{ 490, 53},
-	{ 491, 55},
-	{ 492, 100},
-	{ 493, 107},
-	{ 504, 15},
-	{ 472, 1},
-	{ 476, 1},
-	{ 478, 1},
-	{ 393, 1},
-	{ 439, 1},
-	{ 449, 7},
-	{ 450, 246},
-	{ 451, 255},
-	{ 457, 7},
-	{ 805, 0},
-	{ 57689, 0},
-	{ 826, 0},
-	{ 440, 1},
-	{ 442, 51},
-	{ 446, 116},
-	{ 447, 54},
-	{ 448, 83},
-	{ 239, 0},
-	{ 806, 0},
-	{ 240, 0},
-	{ 241, 0},
-	{ 807, 0},
-	{ 242, 0},
-	{ 113, 1},
-	{ 436, 1},
-	{ 437, 1},
-	{ 497, 1},
-	{ 500, 1},
-	{ 501, 1},
-	{ 788, 1},
-	{ 789, 1},
-	{ 790, 1},
-	{ 519, 0},
-	{ 16903, 2},
-	{ 8711, 2},
-	{ 57480, 1},
-	{ 57485, 0},
-	{ 57486, 48},
-	{ 57487, 212},
-	{ 57481, 86},
-	{ 57482, 16},
-	{ 57483, 31},
-	{ 57484, 15},
-	{ 57510, 0},
-	{ 57513, 16},
-	{ 57514, 0},
-	{ 57517, 10},
-	{ 57512, 48},
-	{ 57511, 15},
-	{ 57516, 16},
-	{ 57515, 15},
-	{ 8349, 0},
-	{ 808, 0},
-	{ 99, 1},
-	{ 503, 15},
-	{ 57571, 1},
-	{ 57575, 3},
-	{ 58171, 0},
-	{ 58166, 0},
-	{ 58167, 0},
-	{ 58168, 0},
-	{ 58169, 0},
-	{ 233, 1},
-	{ 234, 254},
-	{ 777, 3},
-	{ 778, 2},
-	{ 779, 2},
-	{ 780, 5},
-	{ 782, 21},
-	{ 781, 20},
-	{ 783, 1},
-	{ 784, 13},
-	{ 464, 31},
-	{ 465, 31},
-	{ 461, 17},
-	{ 22, 0},
-	{ 23, 5},
-	{ 232, 3},
-	{ 498, 0},
-	{ 362, 0},
-	{ 57536, 0},
-	{ 57537, 8},
-	{ 57538, 0},
-	{ 57539, 8},
-	{ 360, 42},
-	{ 8192, 0},
-	{ 57344, 0},
-	{ 57506, 0},
-	{ 57467, 0},
-	{ 57464, 0},
-	{ 57465, 1},
-	{ 8311, 0},
-	{ 8310, 189},
-	{ 206, 1},
-	{ 112, 9},
-	{ 365, 50},
-	{ 374, 0},
-	{ 57654, 0},
-	{ 57542, 0},
-	{ 57543, 0},
-	{ 57544, 1},
-	{ 57545, 0},
-	{ 57546, 0},
-	{ 57547, 1},
-	{ 57548, 128},
-	{ 57549, 128},
-	{ 57534, 2},
-	{ 57535, 2},
-	{ 57540, 8},
-	{ 57541, 8},
-	{ 8309, 0},
-	{ 8192, 0},
-	{ 57344, 0},
-	{ 30, 1},
-	{ 57344, 0},
-	{ 8318, 0},
-	{ 57476, 0},
-	{ 57477, 0},
-	{ 57478, 1},
-	{ 57479, 0},
-	{ 8319, 0},
-	{ 8320, 0},
-	{ 8321, 3},
-	{ 8322, 0},
-	{ 8323, 2},
-	{ 144, 0},
-	{ 8343, 0},
-	{ 57344, 0},
-	{ 17, 3},
-	{ 285, 1},
-	{ 57344, 0},
-	{ 18, 0},
-	{ 19, 24},
-	{ 346, 0},
-	{ 347, 68},
-	{ 348, 0},
-	{ 349, 68},
-	{ 350, 0},
-	{ 351, 68},
-	{ 354, 0},
-	{ 355, 5},
-	{ 356, 4},
-	{ 357, 121},
-	{ 358, 4},
-	{ 359, 121},
-	{ 57344, 0},
-	{ 443, 180},
-	{ 444, 172},
-	{ 208, 0},
-	{ 496, 7},
-	{ 499, 2},
-	{ 366, 125},
-	{ 370, 0},
-	{ 371, 0},
-	{ 367, 254},
-	{ 368, 0},
-	{ 369, 125},
-	{ 372, 0},
-	{ 373, 0},
-	{ 395, 2},
-	{ 396, 14},
-	{ 397, 2},
-	{ 398, 86},
-	{ 399, 6},
-	{ 400, 14},
-	{ 375, 120},
-	{ 494, 27},
-	{ 495, 70},
-	{ 418, 0},
-	{ 419, 1},
-	{ 799, 0},
-	{ 800, 10},
-	{ 422, 0},
-	{ 423, 152},
-	{ 420, 3},
-	{ 421, 167},
-	{ 801, 3},
-	{ 802, 176},
-	{ 424, 4},
-	{ 425, 62},
-	{ 416, 0},
-	{ 417, 250},
-	{ 434, 1},
-	{ 435, 20},
-	{ 432, 1},
-	{ 433, 13},
-	{ 428, 1},
-	{ 429, 24},
-	{ 57344, 1},
-	{ 57344, 1},
-	{ 57380, 1},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 92, 0},
-	{ 93, 48},
-	{ 57344, 0},
-	{ 403, 4},
-	{ 404, 26},
-	{ 57344, 0},
-	{ 57353, 1},
-	{ 8495, 1},
-	{ 8496, 1},
-	{ 8497, 1},
-	{ 8498, 1},
-	{ 8499, 1},
-	{ 8500, 1},
-	{ 8501, 1},
-	{ 57569, 1},
-	{ 394, 1},
-	{ 224, 1},
-	{ 58158, 1},
-	{ 58176, 1},
-	{ 57344, 0},
-	{ 57817, 1},
-	{ 57344, 0},
-	{ 57579, 16},
-	{ 57344, 0},
-	{ 57821, 1},
-	{ 57344, 0},
-	{ 57581, 14},
-	{ 57344, 0},
-	{ 57823, 1},
-	{ 57344, 0},
-	{ 57582, 4},
-	{ 57344, 0},
-	{ 58165, 1},
-	{ 57344, 0},
-	{ 58148, 42},
-	{ 57344, 0},
-	{ 57850, 1},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57348, 1},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 31, 0},
-	{ 32, 0},
-	{ 35, 0},
-	{ 36, 1},
-	{ 37, 144},
-	{ 38, 0},
-	{ 39, 14},
-	{ 40, 0},
-	{ 41, 1},
-	{ 42, 144},
-	{ 43, 0},
-	{ 44, 14},
-	{ 45, 0},
-	{ 46, 0},
-	{ 47, 0},
-	{ 48, 0},
-	{ 49, 0},
-	{ 50, 0},
-	{ 51, 0},
-	{ 52, 0},
-	{ 53, 0},
-	{ 54, 0},
-	{ 55, 0},
-	{ 56, 0},
-	{ 57, 0},
-	{ 58, 0},
-	{ 59, 0},
-	{ 60, 0},
-	{ 61, 0},
-	{ 62, 0},
-	{ 63, 0},
-	{ 64, 0},
-	{ 65, 0},
-	{ 66, 0},
-	{ 67, 0},
-	{ 68, 0},
-	{ 69, 0},
-	{ 70, 0},
-	{ 71, 0},
-	{ 72, 0},
-	{ 73, 0},
-	{ 74, 0},
-	{ 75, 0},
-	{ 76, 0},
-	{ 77, 0},
-	{ 78, 0},
-	{ 79, 0},
-	{ 80, 0},
-	{ 81, 0},
-	{ 82, 0},
-	{ 83, 0},
-	{ 84, 0},
-	{ 85, 0},
-	{ 57344, 1},
-	{ 57348, 0},
-	{ 57344, 1},
-	{ 57388, 0},
-	{ 57389, 14},
-	{ 57390, 1},
-	{ 57391, 157},
-	{ 57392, 0},
-	{ 57381, 0},
-	{ 57386, 0},
-	{ 8233, 40},
-	{ 52, 0},
-	{ 53, 200},
-	{ 57348, 0},
-	{ 30, 0},
-	{ 31, 2},
-	{ 43, 0},
+	{57344, 0},
+	{443, 180},
+	{444, 172},
+	{208, 0},
+	{496, 7},
+	{499, 2},
+	{366, 125},
+	{370, 0},
+	{371, 0},
+	{367, 254},
+	{368, 0},
+	{369, 125},
+	{372, 0},
+	{373, 0},
+	{395, 2},
+	{396, 14},
+	{397, 2},
+	{398, 86},
+	{399, 6},
+	{400, 14},
+	{375, 120},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 3},
+	{421, 167},
+	{801, 3},
+	{802, 176},
+	{424, 4},
+	{425, 62},
+	{416, 0},
+	{417, 200},
+	{434, 0},
+	{435, 226},
+	{432, 0},
+	{433, 219},
+	{428, 0},
+	{429, 230},
+	{57344, 1},
+	{57344, 1},
+	{57380, 7},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 48},
+	{57344, 0},
+	{403, 4},
+	{404, 22},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
 	// { 57348, 0},
 	// { 14, 0},
 	// { 15, 0},
@@ -3551,20 +2254,15 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	// { 19, 0},
 	// { 20, 0},
 	// { 21, 0},
-	{ 57348, 0},
-	{ 50, 4},
-	{ 51, 18},
-	{ 57348, 0},
-	{ 7, 1},
-	// { 8, 0},
-	// { 9, 0},
-	// { 10, 10},
-	// { 11, 217},
-	{ 57348, 0},
-	{ 49, 0},
-	{ 57348, 0},
-	{ 38, 0},
-	{ 57348, 0},
+	{57348, 0},
+	{50, 4},
+	{51, 68},
+
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
 	// { 28, 0},
 	// { 25, 0},
 	// { 26, 7},
@@ -3572,58 +2270,1369 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	// { 22, 8},
 	// { 23, 0},
 	// { 24, 0},
-	{ 57348, 0},
+	{57348, 0},
 	// { 29, 0},
-	{ 57344, 0},
-	{ 57344, 0},
-	{ 58156, 1},
-	{ 57344, 0},
-	{ 58157, 1},
-	{ 57344, 0},
-	{ 57678, 0},
-	{ 57344, 0},
-	{ 58130, 127},
-	{ 57344, 0},
-	{ 58153, 3},
-	{ 57344, 0},
-	{ 58155, 0},
-	{ 57344, 0},
-	{ 58161, 15},
-	{ 57344, 0},
-	{ 58162, 0},
-	{ 57344, 0},
-	{ 58154, 0},
-	{ 57344, 0},
-	{ 57630, 1},
-	{ 0, 0},
-	{ 0, 0},
-	{ 434, 1},
-	{ 435, 28},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 0},
+	{435, 234},
+
+};
+
+static const struct mira016_reg partial_analog_gain_x2_10bit[] = {
+	{57344, 0},
+	{443, 156},
+	{444, 148},
+	{208, 0},
+	{496, 37},
+	{499, 1},
+	{366, 125},
+	{370, 0},
+	{371, 0},
+	{367, 126},
+	{368, 0},
+	{369, 125},
+	{372, 0},
+	{373, 0},
+	{395, 2},
+	{396, 14},
+	{397, 2},
+	{398, 86},
+	{399, 4},
+	{400, 14},
+	{375, 120},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 3},
+	{421, 39},
+	{801, 3},
+	{802, 48},
+	{424, 3},
+	{425, 190},
+	{416, 0},
+	{417, 200},
+	{434, 0},
+	{435, 226},
+	{432, 0},
+	{433, 219},
+	{428, 0},
+	{429, 230},
+	{57344, 1},
+	{57344, 1},
+	{57380, 15},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 24},
+	{57344, 0},
+	{403, 4},
+	{404, 16},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+
+	{57348, 0},
+	{50, 4},
+	{51, 70},
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
+	// { 28, 0},
+	// { 25, 0},
+	// { 26, 7},
+	// { 27, 83},
+	// { 22, 8},
+	// { 23, 0},
+	// { 24, 0},
+	{57348, 0},
+	// { 29, 0},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 0},
+	{435, 234},
+
+};
+
+static const struct mira016_reg partial_analog_gain_x1_8bit[] = {
+	{57344, 0},
+	{443, 180},
+	{444, 172},
+	{208, 0},
+	{496, 7},
+	{499, 2},
+	{366, 125},
+	{370, 0},
+	{371, 0},
+	{367, 254},
+	{368, 0},
+	{369, 125},
+	{372, 0},
+	{373, 0},
+	{395, 2},
+	{396, 14},
+	{397, 2},
+	{398, 86},
+	{399, 6},
+	{400, 14},
+	{375, 120},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 3},
+	{421, 167},
+	{801, 3},
+	{802, 176},
+	{424, 4},
+	{425, 62},
+	{416, 0},
+	{417, 250},
+	{434, 1},
+	{435, 20},
+	{432, 1},
+	{433, 13},
+	{428, 1},
+	{429, 24},
+	{57344, 1},
+	{57344, 1},
+	{57380, 1},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 48},
+	{57344, 0},
+	{403, 4},
+	{404, 26},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	// { 57348, 0},
+	// { 14, 0},
+	// { 15, 0},
+	// { 16, 3},
+	// { 17, 232},
+	// { 18, 0},
+	// { 19, 0},
+	// { 20, 0},
+	// { 21, 0},
+	{57348, 0},
+	{50, 4},
+	{51, 18},
+
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
+	// { 28, 0},
+	// { 25, 0},
+	// { 26, 7},
+	// { 27, 83},
+	// { 22, 8},
+	// { 23, 0},
+	// { 24, 0},
+	{57348, 0},
+	// { 29, 0},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 1},
+	{435, 28},
+
+};
+
+static const struct mira016_reg partial_analog_gain_x2_8bit[] = {
+	{57344, 0},
+	{443, 156},
+	{444, 148},
+	{208, 2},
+	{496, 37},
+	{499, 1},
+	{366, 125},
+	{370, 0},
+	{371, 0},
+	{367, 126},
+	{368, 0},
+	{369, 125},
+	{372, 0},
+	{373, 0},
+	{395, 0},
+	{396, 139},
+	{397, 0},
+	{398, 142},
+	{399, 1},
+	{400, 11},
+	{375, 120},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 3},
+	{421, 39},
+	{801, 3},
+	{802, 48},
+	{424, 3},
+	{425, 190},
+	{416, 0},
+	{417, 250},
+	{434, 1},
+	{435, 20},
+	{432, 1},
+	{433, 13},
+	{428, 1},
+	{429, 24},
+	{57344, 1},
+	{57344, 1},
+	{57380, 15},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 6},
+	{57344, 0},
+	{403, 1},
+	{404, 19},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	// { 57348, 0},
+	// { 14, 0},
+	// { 15, 0},
+	// { 16, 3},
+	// { 17, 232},
+	// { 18, 0},
+	// { 19, 0},
+	// { 20, 0},
+	// { 21, 0},
+	{57348, 0},
+	{50, 3},
+	{51, 236},
+	{57348, 0},
+	{7, 1},
+	// { 8, 0},
+	// { 9, 0},
+	// { 10, 10},
+	// { 11, 217},
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
+	// { 28, 0},
+	// { 25, 0},
+	// { 26, 7},
+	// { 27, 83},
+	// { 22, 8},
+	// { 23, 0},
+	// { 24, 0},
+	{57348, 0},
+	// { 29, 0},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 1},
+	{435, 28},
+
+};
+
+// converted_Draco_i2c_configuration_sequence_hex_8bit_1x_360fps_Version3
+static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[] = {
+	// Sensor Operating Mode
+	{57344, 0},
+	{57726, 1},
+	{57344, 0},
+	{57344, 0},
+	{484, 0},
+	{485, 19},
+	{482, 23},
+	{483, 168},
+	{486, 0},
+	{487, 202},
+	{364, 1},
+	{363, 1},
+	{520, 1},
+	{521, 240},
+	{522, 3},
+	{523, 77},
+	{524, 2},
+	{525, 16},
+	{526, 3},
+	{527, 1},
+	{528, 0},
+	{529, 19},
+	{530, 0},
+	{531, 3},
+	{532, 3},
+	{533, 239},
+	{534, 3},
+	{535, 243},
+	{536, 3},
+	{537, 244},
+	{538, 0},
+	{539, 1},
+	{540, 3},
+	{541, 248},
+	{542, 0},
+	{543, 2},
+	{544, 1},
+	{545, 242},
+	{546, 3},
+	{547, 27},
+	{548, 0},
+	{549, 33},
+	{550, 3},
+	{551, 240},
+	{552, 3},
+	{553, 241},
+	{554, 3},
+	{555, 242},
+	{556, 3},
+	{557, 245},
+	{558, 3},
+	{559, 246},
+	{560, 0},
+	{561, 193},
+	{562, 0},
+	{563, 2},
+	{564, 1},
+	{565, 242},
+	{566, 3},
+	{567, 107},
+	{568, 3},
+	{569, 255},
+	{570, 3},
+	{571, 49},
+	{572, 1},
+	{573, 240},
+	{574, 3},
+	{575, 135},
+	{576, 0},
+	{577, 10},
+	{578, 0},
+	{579, 11},
+	{580, 1},
+	{581, 249},
+	{582, 3},
+	{583, 13},
+	{584, 0},
+	{585, 7},
+	{586, 3},
+	{587, 239},
+	{588, 3},
+	{589, 243},
+	{590, 3},
+	{591, 244},
+	{592, 3},
+	{593, 0},
+	{594, 0},
+	{595, 7},
+	{596, 0},
+	{597, 12},
+	{598, 1},
+	{599, 241},
+	{600, 3},
+	{601, 67},
+	{602, 1},
+	{603, 248},
+	{604, 3},
+	{605, 16},
+	{606, 0},
+	{607, 7},
+	{608, 3},
+	{609, 240},
+	{610, 3},
+	{611, 241},
+	{612, 3},
+	{613, 242},
+	{614, 3},
+	{615, 245},
+	{616, 3},
+	{617, 246},
+	{618, 3},
+	{619, 0},
+	{620, 2},
+	{621, 135},
+	{622, 0},
+	{623, 1},
+	{624, 3},
+	{625, 255},
+	{626, 3},
+	{627, 0},
+	{628, 3},
+	{629, 255},
+	{630, 2},
+	{631, 135},
+	{632, 3},
+	{633, 2},
+	{634, 3},
+	{635, 15},
+	{636, 3},
+	{637, 247},
+	{638, 0},
+	{639, 22},
+	{640, 0},
+	{641, 51},
+	{642, 0},
+	{643, 4},
+	{644, 0},
+	{645, 17},
+	{646, 3},
+	{647, 9},
+	{648, 0},
+	{649, 2},
+	{650, 0},
+	{651, 32},
+	{652, 0},
+	{653, 181},
+	{654, 0},
+	{655, 229},
+	{656, 0},
+	{657, 18},
+	{658, 0},
+	{659, 181},
+	{660, 0},
+	{661, 229},
+	{662, 0},
+	{663, 16},
+	{664, 0},
+	{665, 2},
+	{666, 0},
+	{667, 32},
+	{668, 0},
+	{669, 181},
+	{670, 0},
+	{671, 229},
+	{672, 0},
+	{673, 18},
+	{674, 0},
+	{675, 181},
+	{676, 0},
+	{677, 229},
+	{678, 0},
+	{679, 0},
+	{680, 0},
+	{681, 18},
+	{682, 0},
+	{683, 18},
+	{684, 0},
+	{685, 32},
+	{686, 0},
+	{687, 181},
+	{688, 0},
+	{689, 229},
+	{690, 0},
+	{691, 0},
+	{692, 0},
+	{693, 18},
+	{694, 0},
+	{695, 18},
+	{696, 0},
+	{697, 32},
+	{698, 0},
+	{699, 71},
+	{700, 0},
+	{701, 39},
+	{702, 0},
+	{703, 181},
+	{704, 0},
+	{705, 229},
+	{706, 0},
+	{707, 0},
+	{708, 0},
+	{709, 4},
+	{710, 0},
+	{711, 67},
+	{712, 0},
+	{713, 1},
+	{714, 3},
+	{715, 2},
+	{716, 0},
+	{717, 8},
+	{718, 3},
+	{719, 255},
+	{720, 2},
+	{721, 135},
+	{722, 3},
+	{723, 199},
+	{724, 3},
+	{725, 247},
+	{726, 0},
+	{727, 119},
+	{728, 0},
+	{729, 23},
+	{730, 0},
+	{731, 8},
+	{732, 3},
+	{733, 255},
+	{734, 0},
+	{735, 56},
+	{736, 0},
+	{737, 23},
+	{738, 0},
+	{739, 8},
+	{740, 3},
+	{741, 255},
+	{742, 3},
+	{743, 255},
+	{744, 3},
+	{745, 255},
+	{746, 3},
+	{747, 255},
+	{748, 3},
+	{749, 255},
+	{750, 3},
+	{751, 255},
+	{752, 3},
+	{753, 255},
+	{754, 3},
+	{755, 255},
+	{756, 3},
+	{757, 255},
+	{758, 3},
+	{759, 255},
+	{760, 3},
+	{761, 255},
+	{762, 3},
+	{763, 255},
+	{764, 3},
+	{765, 255},
+	{766, 3},
+	{767, 255},
+	{768, 3},
+	{769, 255},
+	{770, 3},
+	{771, 255},
+	{489, 0},
+	{488, 25},
+	{490, 53},
+	{491, 55},
+	{492, 100},
+	{493, 107},
+	{504, 15},
+	{472, 1},
+	{476, 1},
+	{478, 1},
+	{393, 1},
+	{439, 1},
+	{449, 7},
+	{450, 246},
+	{451, 255},
+	{457, 7},
+	{805, 0},
+	{57689, 0},
+	{826, 0},
+	{440, 1},
+	{442, 51},
+	{446, 116},
+	{447, 54},
+	{448, 83},
+	{239, 0},
+	{806, 0},
+	{240, 0},
+	{241, 0},
+	{807, 0},
+	{242, 0},
+	{113, 1},
+	{436, 1},
+	{437, 1},
+	{497, 1},
+	{500, 1},
+	{501, 1},
+	{788, 1},
+	{789, 1},
+	{790, 1},
+	{519, 0},
+	{16903, 2},
+	{8711, 2},
+	{57480, 1},
+	{57485, 0},
+	{57486, 48},
+	{57487, 212},
+	{57481, 86},
+	{57482, 16},
+	{57483, 31},
+	{57484, 15},
+	{57510, 0},
+	{57513, 16},
+	{57514, 0},
+	{57517, 10},
+	{57512, 48},
+	{57511, 15},
+	{57516, 16},
+	{57515, 15},
+	{8349, 0},
+	{808, 0},
+	{99, 1},
+	{503, 15},
+	{57571, 1},
+	{57575, 3},
+	{58171, 0},
+	{58166, 0},
+	{58167, 0},
+	{58168, 0},
+	{58169, 0},
+	{233, 1},
+	{234, 254},
+	{777, 3},
+	{778, 2},
+	{779, 2},
+	{780, 5},
+	{782, 21},
+	{781, 20},
+	{783, 1},
+	{784, 13},
+	{464, 31},
+	{465, 31},
+	{461, 17},
+	{22, 0},
+	{23, 5},
+	{232, 3},
+	{498, 0},
+	{362, 0},
+	{57536, 0},
+	{57537, 8},
+	{57538, 0},
+	{57539, 8},
+	{360, 42},
+	{8192, 0},
+	{57344, 0},
+	{57506, 0},
+	{57467, 0},
+	{57464, 0},
+	{57465, 1},
+	{8311, 0},
+	{8310, 189},
+	{206, 1},
+	{112, 9},
+	{365, 50},
+	{374, 0},
+	{57654, 0},
+	{57542, 0},
+	{57543, 0},
+	{57544, 1},
+	{57545, 0},
+	{57546, 0},
+	{57547, 1},
+	{57548, 128},
+	{57549, 128},
+	{57534, 2},
+	{57535, 2},
+	{57540, 8},
+	{57541, 8},
+	{8309, 0},
+	{8192, 0},
+	{57344, 0},
+	{30, 1},
+	{57344, 0},
+	{8318, 0},
+	{57476, 0},
+	{57477, 0},
+	{57478, 1},
+	{57479, 0},
+	{8319, 0},
+	{8320, 0},
+	{8321, 3},
+	{8322, 0},
+	{8323, 2},
+	{144, 0},
+	{8343, 0},
+	{57344, 0},
+	{17, 3},
+	{285, 1},
+	{57344, 0},
+	{18, 0},
+	{19, 24},
+	{346, 0},
+	{347, 68},
+	{348, 0},
+	{349, 68},
+	{350, 0},
+	{351, 68},
+	{354, 0},
+	{355, 5},
+	{356, 4},
+	{357, 121},
+	{358, 4},
+	{359, 121},
+	{57344, 0},
+	{443, 180},
+	{444, 172},
+	{208, 0},
+	{496, 7},
+	{499, 2},
+	{366, 125},
+	{370, 0},
+	{371, 0},
+	{367, 254},
+	{368, 0},
+	{369, 125},
+	{372, 0},
+	{373, 0},
+	{395, 2},
+	{396, 14},
+	{397, 2},
+	{398, 86},
+	{399, 6},
+	{400, 14},
+	{375, 120},
+	{494, 27},
+	{495, 70},
+	{418, 0},
+	{419, 1},
+	{799, 0},
+	{800, 10},
+	{422, 0},
+	{423, 152},
+	{420, 3},
+	{421, 167},
+	{801, 3},
+	{802, 176},
+	{424, 4},
+	{425, 62},
+	{416, 0},
+	{417, 250},
+	{434, 1},
+	{435, 20},
+	{432, 1},
+	{433, 13},
+	{428, 1},
+	{429, 24},
+	{57344, 1},
+	{57344, 1},
+	{57380, 1},
+	{57344, 0},
+	{57344, 0},
+	{92, 0},
+	{93, 48},
+	{57344, 0},
+	{403, 4},
+	{404, 26},
+	{57344, 0},
+	{57353, 1},
+	{8495, 1},
+	{8496, 1},
+	{8497, 1},
+	{8498, 1},
+	{8499, 1},
+	{8500, 1},
+	{8501, 1},
+	{57569, 1},
+	{394, 1},
+	{224, 1},
+	{58158, 1},
+	{58176, 1},
+	{57344, 0},
+	{57817, 1},
+	{57344, 0},
+	{57579, 16},
+	{57344, 0},
+	{57821, 1},
+	{57344, 0},
+	{57581, 14},
+	{57344, 0},
+	{57823, 1},
+	{57344, 0},
+	{57582, 4},
+	{57344, 0},
+	{58165, 1},
+	{57344, 0},
+	{58148, 42},
+	{57344, 0},
+	{57850, 1},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57348, 1},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	{57344, 0},
+	{57344, 0},
+	{31, 0},
+	{32, 0},
+	{35, 0},
+	{36, 1},
+	{37, 144},
+	{38, 0},
+	{39, 14},
+	{40, 0},
+	{41, 1},
+	{42, 144},
+	{43, 0},
+	{44, 14},
+	{45, 0},
+	{46, 0},
+	{47, 0},
+	{48, 0},
+	{49, 0},
+	{50, 0},
+	{51, 0},
+	{52, 0},
+	{53, 0},
+	{54, 0},
+	{55, 0},
+	{56, 0},
+	{57, 0},
+	{58, 0},
+	{59, 0},
+	{60, 0},
+	{61, 0},
+	{62, 0},
+	{63, 0},
+	{64, 0},
+	{65, 0},
+	{66, 0},
+	{67, 0},
+	{68, 0},
+	{69, 0},
+	{70, 0},
+	{71, 0},
+	{72, 0},
+	{73, 0},
+	{74, 0},
+	{75, 0},
+	{76, 0},
+	{77, 0},
+	{78, 0},
+	{79, 0},
+	{80, 0},
+	{81, 0},
+	{82, 0},
+	{83, 0},
+	{84, 0},
+	{85, 0},
+	{57344, 1},
+	{57348, 0},
+	{57344, 1},
+	{57388, 0},
+	{57389, 14},
+	{57390, 1},
+	{57391, 157},
+	{57392, 0},
+	{57381, 0},
+	{57386, 0},
+	{8233, 40},
+	{52, 0},
+	{53, 200},
+	{57348, 0},
+	{30, 0},
+	{31, 2},
+	{43, 0},
+	// { 57348, 0},
+	// { 14, 0},
+	// { 15, 0},
+	// { 16, 3},
+	// { 17, 232},
+	// { 18, 0},
+	// { 19, 0},
+	// { 20, 0},
+	// { 21, 0},
+	{57348, 0},
+	{50, 4},
+	{51, 18},
+	{57348, 0},
+	{7, 1},
+	// { 8, 0},
+	// { 9, 0},
+	// { 10, 10},
+	// { 11, 217},
+	{57348, 0},
+	{49, 0},
+	{57348, 0},
+	{38, 0},
+	{57348, 0},
+	// { 28, 0},
+	// { 25, 0},
+	// { 26, 7},
+	// { 27, 83},
+	// { 22, 8},
+	// { 23, 0},
+	// { 24, 0},
+	{57348, 0},
+	// { 29, 0},
+	{57344, 0},
+	{57344, 0},
+	{58156, 1},
+	{57344, 0},
+	{58157, 1},
+	{57344, 0},
+	{57678, 0},
+	{57344, 0},
+	{58130, 127},
+	{57344, 0},
+	{58153, 3},
+	{57344, 0},
+	{58155, 0},
+	{57344, 0},
+	{58161, 15},
+	{57344, 0},
+	{58162, 0},
+	{57344, 0},
+	{58154, 0},
+	{57344, 0},
+	{57630, 1},
+	{0, 0},
+	{0, 0},
+	{434, 1},
+	{435, 28},
 
 	// Below are manually added after reg seq txt
-	{0x0335,1} ,//iref sel
-	{0x0324 , 43}, //iref val
+	{0x0335, 1},  // iref sel
+	{0x0324, 43}, // iref val
 
-	{0x1d9 , 1},// #vddana sel
-	{0x0EB,15} ,//#vddana val trim
+	{0x1d9, 1},	 // #vddana sel
+	{0x0EB, 15}, // #vddana val trim
 
-	{0x1dd ,1} ,//# vsspc sel
-	{0x1ed , 14} ,//# vsspc val
+	{0x1dd, 1},	 // # vsspc sel
+	{0x1ed, 14}, // # vsspc val
 
-	{0x1df,1} ,//#cp sel
-	{0x0ee,4} ,//#cp trim,	
+	{0x1df, 1}, // #cp sel
+	{0x0ee, 4}, // #cp trim,
 
-	{0xE000,0},
-	{0xE004,0},
-	{0x33D,1},
+	{0xE000, 0},
+	{0xE004, 0},
+	{0x33D, 1},
 };
 
 static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_post_soft_reset[] = {
 	// Release Soft Reset
-	{57344,  0},
+	{57344, 0},
 };
 
-static const char * const mira016_test_pattern_menu[] = {
+static const char *const mira016_test_pattern_menu[] = {
 	"Disabled",
 	"Fixed Data",
 	"2D Gradient",
@@ -3635,14 +3644,13 @@ static const int mira016_test_pattern_val[] = {
 	MIRA016_TEST_PATTERN_2D_GRADIENT,
 };
 
-
 /* regulator supplies */
-static const char * const mira016_supply_name[] = {
+static const char *const mira016_supply_name[] = {
 	// TODO(jalv): Check supply names
 	/* Supplies can be enabled in any order */
-	"VANA",  /* Analog (2.8V) supply */
-	"VDIG",  /* Digital Core (1.8V) supply */
-	"VDDL",  /* IF (1.2V) supply */
+	"VANA", /* Analog (2.8V) supply */
+	"VDIG", /* Digital Core (1.8V) supply */
+	"VDDL", /* IF (1.2V) supply */
 };
 
 #define MIRA016_NUM_SUPPLIES ARRAY_SIZE(mira016_supply_name)
@@ -3674,8 +3682,7 @@ static const struct mira016_mode supported_modes[] = {
 			.left = MIRA016_PIXEL_ARRAY_LEFT,
 			.top = MIRA016_PIXEL_ARRAY_TOP,
 			.width = 400,
-			.height = 400
-		},
+			.height = 400},
 		.reg_list_pre_soft_reset = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_10b_1lane_reg_pre_soft_reset),
 			.regs = full_400_400_100fps_10b_1lane_reg_pre_soft_reset,
@@ -3693,12 +3700,7 @@ static const struct mira016_mode supported_modes[] = {
 		/* 400x400 12 bit 100fps mode */
 		.width = 400,
 		.height = 400,
-		.crop = {
-			.left = MIRA016_PIXEL_ARRAY_LEFT,
-			.top = MIRA016_PIXEL_ARRAY_TOP,
-			.width = 400,
-			.height = 400
-		},
+		.crop = {.left = MIRA016_PIXEL_ARRAY_LEFT, .top = MIRA016_PIXEL_ARRAY_TOP, .width = 400, .height = 400},
 		.reg_list_pre_soft_reset = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_pre_soft_reset),
 			.regs = full_400_400_100fps_12b_1lane_reg_pre_soft_reset,
@@ -3708,7 +3710,7 @@ static const struct mira016_mode supported_modes[] = {
 			.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
 		},
 		.vblank = MIRA016_MIN_VBLANK,
-		.hblank = MIRA016_HBLANK_360FPS, // TODO
+		.hblank = MIRA016_HBLANK_200FPS, // TODO
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
@@ -3716,12 +3718,7 @@ static const struct mira016_mode supported_modes[] = {
 		/* 400x400 8 bit 100fps mode */
 		.width = 400,
 		.height = 400,
-		.crop = {
-			.left = MIRA016_PIXEL_ARRAY_LEFT,
-			.top = MIRA016_PIXEL_ARRAY_TOP,
-			.width = 400,
-			.height = 400
-		},
+		.crop = {.left = MIRA016_PIXEL_ARRAY_LEFT, .top = MIRA016_PIXEL_ARRAY_TOP, .width = 400, .height = 400},
 		.reg_list_pre_soft_reset = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_8b_1lane_reg_pre_soft_reset),
 			.regs = full_400_400_100fps_8b_1lane_reg_pre_soft_reset,
@@ -3737,7 +3734,8 @@ static const struct mira016_mode supported_modes[] = {
 	},
 };
 
-struct mira016 {
+struct mira016
+{
 	struct v4l2_subdev sd;
 	struct media_pad pad[NUM_PADS];
 
@@ -3746,7 +3744,7 @@ struct mira016 {
 	struct clk *xclk; /* system clock to MIRA016 */
 	u32 xclk_freq;
 
-	//struct gpio_desc *reset_gpio;
+	// struct gpio_desc *reset_gpio;
 	struct regulator_bulk_data supplies[MIRA016_NUM_SUPPLIES];
 
 	struct v4l2_ctrl_handler ctrl_handler;
@@ -3784,6 +3782,8 @@ struct mira016 {
 	/* Illumination trigger width automatically set to exposure time */
 	u8 illum_width_auto;
 	/* A flag to force write_start/stop_streaming_regs even if (skip_reg_upload==1) */
+	u32 target_frame_time_us;
+
 	u8 force_stream_ctrl;
 
 	/*
@@ -3801,7 +3801,6 @@ struct mira016 {
 	struct i2c_client *led_client;
 	/* User specified I2C device address */
 	u32 tbd_client_i2c_addr;
-
 };
 
 static inline struct mira016 *to_mira016(struct v4l2_subdev *_sd)
@@ -3812,7 +3811,7 @@ static inline struct mira016 *to_mira016(struct v4l2_subdev *_sd)
 static int mira016_read(struct mira016 *mira016, u16 reg, u8 *val)
 {
 	int ret;
-	unsigned char data_w[2] = { reg >> 8, reg & 0xff };
+	unsigned char data_w[2] = {reg >> 8, reg & 0xff};
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 
 	ret = i2c_master_send(client, data_w, 2);
@@ -3820,9 +3819,10 @@ static int mira016_read(struct mira016 *mira016, u16 reg, u8 *val)
 	 * A negative return code, or sending the wrong number of bytes, both
 	 * count as an error.
 	 */
-	if (ret != 2) {
+	if (ret != 2)
+	{
 		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-			__func__, reg);
+				__func__, reg);
 		if (ret >= 0)
 			ret = -EINVAL;
 		return ret;
@@ -3833,9 +3833,12 @@ static int mira016_read(struct mira016 *mira016, u16 reg, u8 *val)
 	 * The only return value indicating success is 1. Anything else, even
 	 * a non-negative value, indicates something went wrong.
 	 */
-	if (ret == 1) {
+	if (ret == 1)
+	{
 		ret = 0;
-	} else {
+	}
+	else
+	{
 		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
 				__func__, reg);
 		if (ret >= 0)
@@ -3848,19 +3851,21 @@ static int mira016_read(struct mira016 *mira016, u16 reg, u8 *val)
 static int mira016_write(struct mira016 *mira016, u16 reg, u8 val)
 {
 	int ret;
-	unsigned char data[3] = { reg >> 8, reg & 0xff, val};
+	unsigned char data[3] = {reg >> 8, reg & 0xff, val};
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 
 	ret = i2c_master_send(client, data, 3);
-	
-	
+
 	/*
 	 * Writing the wrong number of bytes also needs to be flagged as an
 	 * error. Success needs to produce a 0 return code.
 	 */
-	if (ret == 3) {
+	if (ret == 3)
+	{
 		ret = 0;
-	} else {
+	}
+	else
+	{
 		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
 				__func__, reg);
 		if (ret >= 0)
@@ -3903,25 +3908,25 @@ static int mira016_write(struct mira016 *mira016, u16 reg, u8 val)
 /*
 static int mira016_write_be16(struct mira016 *mira016, u16 reg, u16 val)
 {
-       int ret;
-       unsigned char data[4] = { reg >> 8, reg & 0xff, (val >> 8) & 0xff, val & 0xff };
-       struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
+	   int ret;
+	   unsigned char data[4] = { reg >> 8, reg & 0xff, (val >> 8) & 0xff, val & 0xff };
+	   struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 
-       ret = i2c_master_send(client, data, 4);
-       //
-       // Writing the wrong number of bytes also needs to be flagged as an
-       // error. Success needs to produce a 0 return code.
-       //
-       if (ret == 4) {
-               ret = 0;
-       } else {
-               dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-                               __func__, reg);
-               if (ret >= 0)
-                       ret = -EINVAL;
-       }
+	   ret = i2c_master_send(client, data, 4);
+	   //
+	   // Writing the wrong number of bytes also needs to be flagged as an
+	   // error. Success needs to produce a 0 return code.
+	   //
+	   if (ret == 4) {
+			   ret = 0;
+	   } else {
+			   dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+							   __func__, reg);
+			   if (ret >= 0)
+					   ret = -EINVAL;
+	   }
 
-       return ret;
+	   return ret;
 }
 */
 
@@ -3930,25 +3935,28 @@ static int mira016_write_be16(struct mira016 *mira016, u16 reg, u16 val)
  */
 static int mira016_write_be24(struct mira016 *mira016, u16 reg, u32 val)
 {
-       int ret;
-       unsigned char data[5] = { reg >> 8, reg & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
-       struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
+	int ret;
+	unsigned char data[5] = {reg >> 8, reg & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff};
+	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 
-       ret = i2c_master_send(client, data, 5);
-       /*
-        * Writing the wrong number of bytes also needs to be flagged as an
-        * error. Success needs to produce a 0 return code.
-        */
-       if (ret == 5) {
-               ret = 0;
-       } else {
-               dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-                               __func__, reg);
-               if (ret >= 0)
-                       ret = -EINVAL;
-       }
+	ret = i2c_master_send(client, data, 5);
+	/*
+	 * Writing the wrong number of bytes also needs to be flagged as an
+	 * error. Success needs to produce a 0 return code.
+	 */
+	if (ret == 5)
+	{
+		ret = 0;
+	}
+	else
+	{
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
 
-       return ret;
+	return ret;
 }
 
 /*
@@ -3956,25 +3964,28 @@ static int mira016_write_be24(struct mira016 *mira016, u16 reg, u32 val)
  */
 static int mira016_write_be32(struct mira016 *mira016, u16 reg, u32 val)
 {
-       int ret;
-       unsigned char data[6] = { reg >> 8, reg & 0xff, (val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff };
-       struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
+	int ret;
+	unsigned char data[6] = {reg >> 8, reg & 0xff, (val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff};
+	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 
-       ret = i2c_master_send(client, data, 6);
-       /*
-        * Writing the wrong number of bytes also needs to be flagged as an
-        * error. Success needs to produce a 0 return code.
-        */
-       if (ret == 6) {
-               ret = 0;
-       } else {
-               dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-                               __func__, reg);
-               if (ret >= 0)
-                       ret = -EINVAL;
-       }
+	ret = i2c_master_send(client, data, 6);
+	/*
+	 * Writing the wrong number of bytes also needs to be flagged as an
+	 * error. Success needs to produce a 0 return code.
+	 */
+	if (ret == 6)
+	{
+		ret = 0;
+	}
+	else
+	{
+		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
+				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
 
-       return ret;
+	return ret;
 }
 
 /*
@@ -3983,7 +3994,7 @@ static int mira016_write_be32(struct mira016 *mira016, u16 reg, u32 val)
 static int mira016_read_be32(struct mira016 *mira016, u16 reg, u32 *val)
 {
 	int ret;
-	unsigned char data_w[2] = { reg >> 8, reg & 0xff };
+	unsigned char data_w[2] = {reg >> 8, reg & 0xff};
 	/* Big-endian 32-bit buffer. */
 	unsigned char data_r[4];
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
@@ -3993,9 +4004,10 @@ static int mira016_read_be32(struct mira016 *mira016, u16 reg, u32 *val)
 	 * A negative return code, or sending the wrong number of bytes, both
 	 * count as an error.
 	 */
-	if (ret != 2) {
+	if (ret != 2)
+	{
 		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
-			__func__, reg);
+				__func__, reg);
 		if (ret >= 0)
 			ret = -EINVAL;
 		return ret;
@@ -4007,9 +4019,12 @@ static int mira016_read_be32(struct mira016 *mira016, u16 reg, u32 *val)
 	 * The only return value indicating success is 4. Anything else, even
 	 * a non-negative value, indicates something went wrong.
 	 */
-	if (ret == 4) {
+	if (ret == 4)
+	{
 		ret = 0;
-	} else {
+	}
+	else
+	{
 		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
 				__func__, reg);
 		if (ret >= 0)
@@ -4019,24 +4034,27 @@ static int mira016_read_be32(struct mira016 *mira016, u16 reg, u32 *val)
 	return ret;
 }
 
-
 /* Write a list of registers */
 static int mira016_write_regs(struct mira016 *mira016,
-			     const struct mira016_reg *regs, u32 len)
+							  const struct mira016_reg *regs, u32 len)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	unsigned int i;
 	int ret;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < len; i++)
+	{
 		ret = mira016_write(mira016, regs[i].address, regs[i].val);
-		if (ret) {
+		if (ret)
+		{
 			dev_err_ratelimited(&client->dev,
-					    "Failed to write reg 0x%4.4x. error = %d\n",
-					    regs[i].address, ret);
+								"Failed to write reg 0x%4.4x. error = %d\n",
+								regs[i].address, ret);
 
 			return ret;
-		} else {
+		}
+		else
+		{
 			// Debug code below
 			// u8 val;
 			// ret = mira016_read(mira016, regs[i].address, &val);
@@ -4064,38 +4082,45 @@ static int mira016_otp_read(struct mira016 *mira016, u8 addr, u32 *val)
 	mira016_write(mira016, MIRA016_OTP_START, 1);
 	usleep_range(5, 10);
 	mira016_write(mira016, MIRA016_OTP_START, 0);
-	for (poll_cnt = 0; poll_cnt < poll_cnt_max; poll_cnt++) {
+	for (poll_cnt = 0; poll_cnt < poll_cnt_max; poll_cnt++)
+	{
 		mira016_read(mira016, MIRA016_OTP_BUSY, &busy_status);
-		if (busy_status == 0) {
+		if (busy_status == 0)
+		{
 			break;
 		}
 	}
-	if (poll_cnt < poll_cnt_max && busy_status == 0) {
+	if (poll_cnt < poll_cnt_max && busy_status == 0)
+	{
 		ret = mira016_read_be32(mira016, MIRA016_OTP_DOUT, val);
-	} else {
+	}
+	else
+	{
 		dev_dbg(&client->dev, "%s: OTP memory busy, skip raeding addr: 0x%X\n",
-			__func__, addr);
+				__func__, addr);
 		ret = -EINVAL;
 	}
 
 	return ret;
 }
 
-
 /* Write PMIC registers, and can be reused to write microcontroller reg. */
 static int mira016pmic_write(struct i2c_client *client, u8 reg, u8 val)
 {
 	int ret;
-	unsigned char data[2] = { reg & 0xff, val};
+	unsigned char data[2] = {reg & 0xff, val};
 
 	ret = i2c_master_send(client, data, 2);
 	/*
 	 * Writing the wrong number of bytes also needs to be flagged as an
 	 * error. Success needs to produce a 0 return code.
 	 */
-	if (ret == 2) {
+	if (ret == 2)
+	{
 		ret = 0;
-	} else {
+	}
+	else
+	{
 		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
 				__func__, reg);
 		if (ret >= 0)
@@ -4108,8 +4133,8 @@ static int mira016pmic_write(struct i2c_client *client, u8 reg, u8 val)
 static int mira016pmic_read(struct i2c_client *client, u8 reg, u8 *val)
 {
 	struct i2c_msg msgs[2];
-	u8 addr_buf[1] = { reg & 0xff };
-	u8 data_buf[1] = { 0 };
+	u8 addr_buf[1] = {reg & 0xff};
+	u8 data_buf[1] = {0};
 	int ret;
 
 	/* Write register address */
@@ -4143,24 +4168,29 @@ static int mira016_power_on(struct device *dev)
 
 	printk(KERN_INFO "[MIRA016]: Entering power on function.\n");
 
-	if (mira016->powered == 0) {
+	if (mira016->powered == 0)
+	{
 		ret = regulator_bulk_enable(MIRA016_NUM_SUPPLIES, mira016->supplies);
-		if (ret) {
+		if (ret)
+		{
 			dev_err(&client->dev, "%s: failed to enable regulators\n",
-				__func__);
+					__func__);
 			return ret;
 		}
 
 		ret = clk_prepare_enable(mira016->xclk);
-		if (ret) {
+		if (ret)
+		{
 			dev_err(&client->dev, "%s: failed to enable clock\n",
-				__func__);
+					__func__);
 			goto reg_off;
 		}
 		usleep_range(MIRA016_XCLR_MIN_DELAY_US,
-			     MIRA016_XCLR_MIN_DELAY_US + MIRA016_XCLR_DELAY_RANGE_US);
+					 MIRA016_XCLR_MIN_DELAY_US + MIRA016_XCLR_DELAY_RANGE_US);
 		mira016->powered = 1;
-	} else {
+	}
+	else
+	{
 		printk(KERN_INFO "[MIRA016]: Skip regulator and clk enable, because mira016->powered == %d.\n", mira016->powered);
 	}
 
@@ -4179,35 +4209,46 @@ static int mira016_power_off(struct device *dev)
 
 	printk(KERN_INFO "[MIRA016]: Entering power off function.\n");
 
-	if (mira016->skip_reset == 0) {
-		if (mira016->powered == 1) {
+	if (mira016->skip_reset == 0)
+	{
+		if (mira016->powered == 1)
+		{
 			regulator_bulk_disable(MIRA016_NUM_SUPPLIES, mira016->supplies);
 			clk_disable_unprepare(mira016->xclk);
 			mira016->powered = 0;
-		} else {
+		}
+		else
+		{
 			printk(KERN_INFO "[MIRA016]: Skip disabling regulator and clk due to mira016->powered == %d.\n", mira016->powered);
 		}
-	} else {
+	}
+	else
+	{
 		printk(KERN_INFO "[MIRA016]: Skip disabling regulator and clk due to mira016->skip_reset=%u.\n", mira016->skip_reset);
 	}
 
 	return 0;
 }
 
-static int mira016_write_illum_trig_regs(struct mira016* mira016) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
+static int mira016_write_illum_trig_regs(struct mira016 *mira016)
+{
+	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	int ret = 0;
+	u32 lps_time = 0;
+	u32 width_adjust = 0;
 
 	// Set context bank 1A or bank 1B
 	ret = mira016_write(mira016, MIRA016_RW_CONTEXT_REG, 0);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting RW_CONTEXT.");
 		return ret;
 	}
 
 	// Set conetxt bank 0 or 1
 	ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 1);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
 		return ret;
 	}
@@ -4215,33 +4256,93 @@ static int mira016_write_illum_trig_regs(struct mira016* mira016) {
 	// Enable or disable illumination trigger
 	printk(KERN_INFO "[MIRA016]: Writing EN_TRIG_ILLUM to %d.\n", mira016->illum_enable);
 	ret = mira016_write(mira016, MIRA016_EN_TRIG_ILLUM, mira016->illum_enable);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting EN_TRIG_ILLUM to %d.", mira016->illum_enable);
 		return ret;
 	}
-	
-	// Set illumination width. Write 24 bits. All 24 bits are valid.
-	printk(KERN_INFO "[MIRA016]: Writing ILLUM_WIDTH to %u.\n", mira016->illum_width);
-	ret = mira016_write_be24(mira016, MIRA016_ILLUM_WIDTH_REG, mira016->illum_width);
-	if (ret) {
-		dev_err(&client->dev, "Error setting ILLUM_WIDTH to %u.", mira016->illum_width);
-		return ret;
-	}
 
-	// Set illumination delay. Write 24 bits. Only 20 bits, [19:0], are valid.
-	printk(KERN_INFO "[MIRA016]: Writing ILLUM_DELAY to %u.\n", mira016->illum_delay);
-	ret = mira016_write_be24(mira016, MIRA016_ILLUM_DELAY_REG, mira016->illum_delay);
-	if (ret) {
-		dev_err(&client->dev, "Error setting ILLUM_DELAY to %u.", mira016->illum_delay);
-		return ret;
+	if (MIRA016_LPS_DISABLED)
+	{
+		// Set illumination width. Write 24 bits. All 24 bits are valid.
+		printk(KERN_INFO "[MIRA016]: LPS DISABLED. Writing ILLUM_WIDTH to %u.\n", mira016->illum_width);
+		ret = mira016_write_be24(mira016, MIRA016_ILLUM_WIDTH_REG, mira016->illum_width);
+		if (ret)
+		{
+			dev_err(&client->dev, "LPS DISABLED. Error setting ILLUM_WIDTH to %u.", mira016->illum_width);
+			return ret;
+		}
 	}
-	
-	return ret;
+	else
+	{
+		// LSP active, adjust pulse with to compensate for dead time during exposure
+		// INPUT PARAMS: LPS_CYCLE_TIME, EXP_TIME, FRAME_TIME, GLOB_TIME, READOUT_TIME
+		//
+		//
+		// printk(KERN_INFO "[MIRA016]: LPS DISABLED. Exposure name is  to %u.\n", mira016->exposure->name);
+		u32 cur_exposure = (mira016->exposure->val) * MIRA016_TROW_US;
+
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur is  to %u.\n", mira016->exposure->val);
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur IN US  is  to %u.\n", cur_exposure);
+
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure max is  to %u.\n", mira016->exposure->maximum);
+
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. MIRA016_LPS_CYCLE_TIME is  to %u.\n", MIRA016_LPS_CYCLE_TIME);
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. MIRA016_GLOB_TIME is  to %u.\n", MIRA016_GLOB_TIME);
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. frame time is  to %u.\n", mira016->target_frame_time_us);
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. glob time is  to %u.\n", MIRA016_GLOB_TIME);
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. read time is  to %u.\n", MIRA016_READOUT_TIME);
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME is  to %u.\n", mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME);
+
+		// case 1: EXP_TIME < LPS_CYCLE_TIME
+		if (cur_exposure < MIRA016_LPS_CYCLE_TIME)
+		{
+			printk(KERN_INFO "[MIRA016]: LPS CASE 1 to %u.\n", mira016->illum_width);
+			lps_time = 0;
+		}
+		// case 2: LPS_ CYCLE_ TIME<EXP_ TIME≤FRAME_ TIME-GLOB_ TIME-READOUT_TIME
+		else if ((MIRA016_LPS_CYCLE_TIME < cur_exposure) && (cur_exposure < (mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME)))
+		{
+			lps_time = cur_exposure - MIRA016_LPS_CYCLE_TIME;
+			printk(KERN_INFO "[MIRA016]: LPS CASE 2 - LPS TIME is %u.\n", lps_time);
+
+		}
+		// case 3: LPS_ CYCLE_ TIME≤FRAME_ TIME-GLOB_ TIME-READOUT_TIME<EXP_ TIME
+		else if ((MIRA016_LPS_CYCLE_TIME < (mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME)) && ((mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) < cur_exposure))
+		{
+			lps_time = (mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) - MIRA016_LPS_CYCLE_TIME;
+			printk(KERN_INFO "[MIRA016]: LPS CASE 3 - LPS TIME is %u.\n", lps_time);
+
+		}
+		// case 4: FRAME_ TIME-GLOB_ TIME-READOUT_ TIME≤LPS_ CYCLE_ TIME<EXP_ TIME
+		else if (((mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) < MIRA016_LPS_CYCLE_TIME) && (MIRA016_LPS_CYCLE_TIME < cur_exposure))
+		{
+			printk(KERN_INFO "[MIRA016]: LPS CASE 4 to %u.\n", mira016->illum_width);
+			lps_time = 0;
+		}
+		else
+		{
+			printk(KERN_INFO "[MIRA016]: LPS CASE 5 invalid to %u.\n", mira016->illum_width);
+		}
+
+		width_adjust = lps_time * 1500 / 8;
+		printk(KERN_INFO "[MIRA016]: LPS ENABLE -s width adjust is  %u.\n", width_adjust);
+
+		ret = mira016_write_be24(mira016, MIRA016_ILLUM_WIDTH_REG, mira016->illum_width - width_adjust);
+
+		if (ret)
+		{
+			dev_err(&client->dev, "LPS ENABLED. Error setting ILLUM_WIDTH to %u.", mira016->illum_width - width_adjust);
+			return ret;
+		}
+	}
+		return ret;
+
 }
 
-
-static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
+static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value)
+{
+	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	u32 ret = 0;
 	u32 tmp_flag;
 
@@ -4252,105 +4353,151 @@ static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 	// printk(KERN_INFO "[MIRA016]: %s reg_flag: 0x%02X; reg_addr: 0x%04X; reg_val: 0x%02X.\n",
 	// 		__func__, reg_flag, reg_addr, reg_val);
 
-	if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_CMD_SEL) {
-		if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_SLEEP_US) {
+	if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_CMD_SEL)
+	{
+		if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_SLEEP_US)
+		{
 			// If it is for sleep, combine all 24 bits of reg_addr and reg_val as sleep us.
 			u32 sleep_us_val = value & 0x00FFFFFF;
 			// Sleep range needs an interval, default to 1/8 of the sleep value.
 			u32 sleep_us_interval = sleep_us_val >> 3;
 			printk(KERN_INFO "[MIRA016]: %s sleep_us: %u.\n", __func__, sleep_us_val);
 			usleep_range(sleep_us_val, sleep_us_val + sleep_us_interval);
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_RESET_ON) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_RESET_ON)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Enable reset at stream on/off.\n", __func__);
 			mira016->skip_reset = 0;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_RESET_OFF) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_RESET_OFF)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Disable reset at stream on/off.\n", __func__);
 			mira016->skip_reset = 1;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_ON) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_ON)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Enable base register sequence upload.\n", __func__);
 			mira016->skip_reg_upload = 0;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_OFF) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_REG_UP_OFF)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Disable base register sequence upload.\n", __func__);
 			mira016->skip_reg_upload = 1;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_ON) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_ON)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Call power on function mira016_power_on().\n", __func__);
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira016->skip_reset;
 			mira016->skip_reset = 0;
 			mira016_power_on(&client->dev);
 			mira016->skip_reset = tmp_flag;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_OFF) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_POWER_OFF)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Call power off function mira016_power_off().\n", __func__);
 			/* Temporarily disable skip_reset if manually doing power on/off */
 			tmp_flag = mira016->skip_reset;
 			mira016->skip_reset = 0;
 			mira016_power_off(&client->dev);
 			mira016->skip_reset = tmp_flag;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_TRIG_ON) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_TRIG_ON)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Enable illumination trigger.\n", __func__);
 			mira016->illum_enable = 1;
 			mira016_write_illum_trig_regs(mira016);
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_TRIG_OFF) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_TRIG_OFF)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Disable illumination trigger.\n", __func__);
 			mira016->illum_enable = 0;
 			mira016_write_illum_trig_regs(mira016);
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_WIDTH) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_WIDTH)
+		{
 			// Combine all 24 bits of reg_addr and reg_val as ILLUM_WIDTH.
 			u32 illum_width = value & 0x00FFFFFF;
 			printk(KERN_INFO "[MIRA016]: %s Set ILLUM_WIDTH to 0x%X.\n", __func__, illum_width);
 			mira016->illum_width = illum_width;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_DELAY) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_DELAY)
+		{
 			// Combine reg_addr and reg_val, then select 20 bits from [19:0] as ILLUM_DELAY.
 			u32 illum_delay = value & 0x000FFFFF;
 			printk(KERN_INFO "[MIRA016]: %s Set ILLUM_DELAY to 0x%X.\n", __func__, illum_delay);
 			mira016->illum_delay = illum_delay;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_ON) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_ON)
+		{
 			printk(KERN_INFO "[MIRA016]: %s enable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
 			mira016->illum_width_auto = 1;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_OFF) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_ILLUM_EXP_T_OFF)
+		{
 			printk(KERN_INFO "[MIRA016]: %s disable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
 			mira016->illum_width_auto = 0;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_ON) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_ON)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Force stream control even if (skip_reg_upload == 1).\n", __func__);
 			mira016->force_stream_ctrl = 1;
-		} else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_OFF) {
+		}
+		else if (reg_flag == AMS_CAMERA_CID_MIRA016_REG_FLAG_STREAM_CTRL_OFF)
+		{
 			printk(KERN_INFO "[MIRA016]: %s Disable stream control if (skip_reg_upload == 1).\n", __func__);
 			mira016->force_stream_ctrl = 0;
-		} else {
+		}
+		else
+		{
 			printk(KERN_INFO "[MIRA016]: %s unknown command from flag %u, ignored.\n", __func__, reg_flag);
 		}
-	} else if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_FOR_READ) {
+	}
+	else if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_FOR_READ)
+	{
 		// If it is for read, skip reagister write, cache addr and flag for read.
 		mira016->mira016_reg_w_cached_addr = reg_addr;
 		mira016->mira016_reg_w_cached_flag = reg_flag;
-	} else {
+	}
+	else
+	{
 		// If it is for write, select which I2C device by the flag "I2C_SEL".
-		if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_MIRA) {
+		if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_MIRA)
+		{
 			// Before writing Mira016 register, first optionally select BANK and CONTEXT
-			if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_USE_BANK){
+			if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_USE_BANK)
+			{
 				u8 bank;
 				u8 context;
 				// Set conetxt bank 0 or 1
-				if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_BANK) {
+				if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_BANK)
+				{
 					bank = 1;
-				} else {
+				}
+				else
+				{
 					bank = 0;
 				}
 				// printk(KERN_INFO "[MIRA016]: %s select bank: %u.\n", __func__, bank);
 				ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, bank);
-				if (ret) {
+				if (ret)
+				{
 					dev_err(&client->dev, "Error setting BANK_SEL_REG.");
 					return ret;
 				}
 				// Set context bank 1A or bank 1B
-				if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_CONTEXT) {
+				if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_CONTEXT)
+				{
 					context = 1;
-				} else {
+				}
+				else
+				{
 					context = 0;
 				}
 				// printk(KERN_INFO "[MIRA016]: %s select context: %u.\n", __func__, context);
 				ret = mira016_write(mira016, MIRA016_RW_CONTEXT_REG, context);
-				if (ret) {
+				if (ret)
+				{
 					dev_err(&client->dev, "Error setting RW_CONTEXT.");
 					return ret;
 				}
@@ -4358,28 +4505,40 @@ static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 			// Writing the actual Mira016 register
 			// printk(KERN_INFO "[MIRA016]: %s write reg_addr: 0x%04X; reg_val: 0x%02X.\n", __func__, reg_addr, reg_val);
 			ret = mira016_write(mira016, reg_addr, reg_val);
-			if (ret) {
+			if (ret)
+			{
 				dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_W reg_addr %X.\n", reg_addr);
 				return -EINVAL;
 			}
-		} else if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SET_TBD) {
+		}
+		else if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SET_TBD)
+		{
 			/* User tries to set TBD I2C address, store reg_val to mira016->tbd_client_i2c_addr. Skip write. */
 			printk(KERN_INFO "[MIRA016]: mira016->tbd_client_i2c_addr = 0x%X.\n", reg_val);
 			mira016->tbd_client_i2c_addr = reg_val;
-		} else if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_TBD) {
-			if (mira016->tbd_client_i2c_addr == MIRA016PMIC_I2C_ADDR) {
+		}
+		else if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_TBD)
+		{
+			if (mira016->tbd_client_i2c_addr == MIRA016PMIC_I2C_ADDR)
+			{
 				// Write PMIC. Use pre-allocated mira016->pmic_client.
 				printk(KERN_INFO "[MIRA016]: write pmic_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
 				ret = mira016pmic_write(mira016->pmic_client, (u8)(reg_addr & 0xFF), reg_val);
-			} else if (mira016->tbd_client_i2c_addr == MIRA016UC_I2C_ADDR) {
+			}
+			else if (mira016->tbd_client_i2c_addr == MIRA016UC_I2C_ADDR)
+			{
 				// Write micro-controller. Use pre-allocated mira016->uc_client.
 				printk(KERN_INFO "[MIRA016]: write uc_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
 				ret = mira016pmic_write(mira016->uc_client, (u8)(reg_addr & 0xFF), reg_val);
-			} else if (mira016->tbd_client_i2c_addr == MIRA016LED_I2C_ADDR) {
+			}
+			else if (mira016->tbd_client_i2c_addr == MIRA016LED_I2C_ADDR)
+			{
 				// Write LED driver. Use pre-allocated mira016->led_client.
 				printk(KERN_INFO "[MIRA016]: write led_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
 				ret = mira016pmic_write(mira016->led_client, (u8)(reg_addr & 0xFF), reg_val);
-			} else {
+			}
+			else
+			{
 				/* Write other TBD I2C address.
 				 * The TBD I2C address is set via AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SET_TBD.
 				 * The TBD I2C address is stored in mira016->tbd_client_i2c_addr.
@@ -4390,7 +4549,7 @@ static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 				if (IS_ERR(tmp_client))
 					return PTR_ERR(tmp_client);
 				printk(KERN_INFO "[MIRA016]: write tbd_client, i2c_addr %u, reg_addr 0x%X, reg_val 0x%X.\n",
-						mira016->tbd_client_i2c_addr, (u8)(reg_addr & 0xFF), reg_val);
+					   mira016->tbd_client_i2c_addr, (u8)(reg_addr & 0xFF), reg_val);
 				ret = mira016pmic_write(tmp_client, (u8)(reg_addr & 0xFF), reg_val);
 				i2c_unregister_device(tmp_client);
 			}
@@ -4400,8 +4559,9 @@ static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value) {
 	return 0;
 }
 
-static int mira016_v4l2_reg_r(struct mira016 *mira016, u32 *value) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
+static int mira016_v4l2_reg_r(struct mira016 *mira016, u32 *value)
+{
+	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	u32 ret = 0;
 
 	u16 reg_addr = mira016->mira016_reg_w_cached_addr;
@@ -4410,54 +4570,74 @@ static int mira016_v4l2_reg_r(struct mira016 *mira016, u32 *value) {
 
 	*value = 0;
 
-	if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_MIRA) {
-		if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_USE_BANK){
+	if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_MIRA)
+	{
+		if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_USE_BANK)
+		{
 			u8 bank;
 			u8 context;
 			// Set conetxt bank 0 or 1
-			if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_BANK) {
+			if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_BANK)
+			{
 				bank = 1;
-			} else {
+			}
+			else
+			{
 				bank = 0;
 			}
 			// printk(KERN_INFO "[MIRA016]: %s select bank: %u.\n", __func__, bank);
 			ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, bank);
-			if (ret) {
+			if (ret)
+			{
 				dev_err(&client->dev, "Error setting BANK_SEL_REG.");
 				return ret;
 			}
 			// Set context bank 1A or bank 1B
-			if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_CONTEXT) {
+			if (reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_CONTEXT)
+			{
 				context = 1;
-			} else {
+			}
+			else
+			{
 				context = 0;
 			}
 			// printk(KERN_INFO "[MIRA016]: %s select context: %u.\n", __func__, context);
 			ret = mira016_write(mira016, MIRA016_RW_CONTEXT_REG, context);
-			if (ret) {
+			if (ret)
+			{
 				dev_err(&client->dev, "Error setting RW_CONTEXT.");
 				return ret;
 			}
 		}
 		ret = mira016_read(mira016, reg_addr, &reg_val);
-		if (ret) {
+		if (ret)
+		{
 			dev_err_ratelimited(&client->dev, "Error AMS_CAMERA_CID_MIRA_REG_R reg_addr %X.\n", reg_addr);
 			return -EINVAL;
 		}
-	} else if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_TBD) {
-		if (mira016->tbd_client_i2c_addr == MIRA016PMIC_I2C_ADDR) {
+	}
+	else if ((reg_flag & AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SEL) == AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_TBD)
+	{
+		if (mira016->tbd_client_i2c_addr == MIRA016PMIC_I2C_ADDR)
+		{
 			// Read PMIC. Use pre-allocated mira016->pmic_client.
 			ret = mira016pmic_read(mira016->pmic_client, (u8)(reg_addr & 0xFF), &reg_val);
 			printk(KERN_INFO "[MIRA016]: read pmic_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
-		} else if (mira016->tbd_client_i2c_addr == MIRA016UC_I2C_ADDR) {
+		}
+		else if (mira016->tbd_client_i2c_addr == MIRA016UC_I2C_ADDR)
+		{
 			// Read micro-controller. Use pre-allocated mira016->uc_client.
 			ret = mira016pmic_read(mira016->uc_client, (u8)(reg_addr & 0xFF), &reg_val);
 			printk(KERN_INFO "[MIRA016]: read uc_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
-		} else if (mira016->tbd_client_i2c_addr == MIRA016LED_I2C_ADDR) {
+		}
+		else if (mira016->tbd_client_i2c_addr == MIRA016LED_I2C_ADDR)
+		{
 			// Read LED driver. Use pre-allocated mira016->led_client.
 			ret = mira016pmic_read(mira016->led_client, (u8)(reg_addr & 0xFF), &reg_val);
 			printk(KERN_INFO "[MIRA016]: read led_client, reg_addr 0x%X, reg_val 0x%X.\n", (u8)(reg_addr & 0xFF), reg_val);
-		} else {
+		}
+		else
+		{
 			/* Read other TBD I2C address.
 			 * The TBD I2C address is set via AMS_CAMERA_CID_MIRA016_REG_FLAG_I2C_SET_TBD.
 			 * The TBD I2C address is stored in mira016->tbd_client_i2c_addr.
@@ -4469,7 +4649,7 @@ static int mira016_v4l2_reg_r(struct mira016 *mira016, u32 *value) {
 				return PTR_ERR(tmp_client);
 			ret = mira016pmic_read(tmp_client, (u8)(reg_addr & 0xFF), &reg_val);
 			printk(KERN_INFO "[MIRA016]: read tbd_client, i2c_addr %u, reg_addr 0x%X, reg_val 0x%X.\n",
-					mira016->tbd_client_i2c_addr, (u8)(reg_addr & 0xFF), reg_val);
+				   mira016->tbd_client_i2c_addr, (u8)(reg_addr & 0xFF), reg_val);
 			i2c_unregister_device(tmp_client);
 		}
 	}
@@ -4485,25 +4665,29 @@ static int mira016_v4l2_reg_r(struct mira016 *mira016, u32 *value) {
 
 // Returns the maximum exposure time in microseconds (reg value)
 static u32 mira016_calculate_max_exposure_time(u32 row_length, u32 vsize,
-					       u32 vblank) {
+											   u32 vblank)
+{
 	(void)(row_length);
 	(void)(vsize);
 	(void)(vblank);
 	/* Mira016 does not have a max exposure limit besides register bits */
 	// return row_length * (vsize + vblank) - MIRA016_GLOB_NUM_CLK_CYCLES;
-	return 	MIRA016_EXPOSURE_MAX_US;
+	return MIRA016_EXPOSURE_MAX_US;
 }
 
-static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
+static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure)
+{
+	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	const u32 min_exposure = MIRA016_EXPOSURE_MIN_US;
 	u32 max_exposure = mira016->exposure->maximum * MIRA016_MIN_ROW_LENGTH_US;
 	u32 ret = 0;
 
-	if (exposure < min_exposure) {
+	if (exposure < min_exposure)
+	{
 		exposure = min_exposure;
 	}
-	if (exposure > max_exposure) {
+	if (exposure > max_exposure)
+	{
 		exposure = max_exposure;
 	}
 
@@ -4514,11 +4698,13 @@ static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure) {
 	/* Write Bank 1 context 1 */
 	ret = mira016_write(mira016, MIRA016_RW_CONTEXT_REG, 1);
 	ret = mira016_write_be32(mira016, MIRA016_EXP_TIME_L_REG, exposure);
-	if (ret) {
+	if (ret)
+	{
 		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", exposure);
 		return -EINVAL;
 	}
-	if (mira016->illum_width_auto == 1) {
+	if (mira016->illum_width_auto == 1)
+	{
 		mira016->illum_width = (exposure / 8) * MIRA016_DATA_RATE;
 		mira016_write_illum_trig_regs(mira016);
 	}
@@ -4526,8 +4712,9 @@ static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure) {
 	return 0;
 }
 
-static int mira016_write_target_frame_time_reg(struct mira016 *mira016, u32 target_frame_time_us) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
+static int mira016_write_target_frame_time_reg(struct mira016 *mira016, u32 target_frame_time_us)
+{
+	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	u32 ret = 0;
 
 	/* Write Bank 1 context 0 */
@@ -4537,7 +4724,8 @@ static int mira016_write_target_frame_time_reg(struct mira016 *mira016, u32 targ
 	/* Write Bank 1 context 1 */
 	ret = mira016_write(mira016, MIRA016_RW_CONTEXT_REG, 1);
 	ret = mira016_write_be32(mira016, MIRA016_TARGET_FRAME_TIME_REG, target_frame_time_us);
-	if (ret) {
+	if (ret)
+	{
 		dev_err_ratelimited(&client->dev, "Error setting target frame time to %d", target_frame_time_us);
 		return -EINVAL;
 	}
@@ -4545,38 +4733,43 @@ static int mira016_write_target_frame_time_reg(struct mira016 *mira016, u32 targ
 	return 0;
 }
 
-static int mira016_write_start_streaming_regs(struct mira016* mira016) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
+static int mira016_write_start_streaming_regs(struct mira016 *mira016)
+{
+	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	int ret = 0;
 
 	// Set conetxt bank 0 or 1
 	ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
 		return ret;
 	}
 
 	// Set context bank 1A or bank 1B
 	ret = mira016_write(mira016, MIRA016_RW_CONTEXT_REG, 0);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting RW_CONTEXT.");
 		return ret;
 	}
 
 	// Raising CMD_REQ_1 to 1 for REQ_EXP
 	ret = mira016_write(mira016, MIRA016_CMD_REQ_1_REG,
-				1);
-	if (ret) {
+						1);
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting CMD_REQ_1 to 1 for REQ_EXP.");
 		return ret;
 	}
-	
+
 	usleep_range(10, 20);
 
 	// Setting CMD_REQ_1 tp 0 for REQ_EXP
 	ret = mira016_write(mira016, MIRA016_CMD_REQ_1_REG,
-				0);
-	if (ret) {
+						0);
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting CMD_REQ_1 to 0 for REQ_EXP.");
 		return ret;
 	}
@@ -4585,22 +4778,24 @@ static int mira016_write_start_streaming_regs(struct mira016* mira016) {
 	return ret;
 }
 
-
-static int mira016_write_stop_streaming_regs(struct mira016* mira016) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
+static int mira016_write_stop_streaming_regs(struct mira016 *mira016)
+{
+	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	int ret = 0;
 
 	// Set conetxt bank 0 or 1
 	ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
 		return ret;
 	}
 
 	// Raising CMD_HALT_BLOCK to 1 to stop streaming
 	ret = mira016_write(mira016, MIRA016_CMD_HALT_BLOCK_REG,
-				1);
-	if (ret) {
+						1);
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting CMD_HALT_BLOCK to 1.");
 		return ret;
 	}
@@ -4609,118 +4804,135 @@ static int mira016_write_stop_streaming_regs(struct mira016* mira016) {
 
 	// Setting CMD_HALT_BLOCK to 0 to stop streaming
 	ret = mira016_write(mira016, MIRA016_CMD_HALT_BLOCK_REG,
-				0);
-	if (ret) {
+						0);
+	if (ret)
+	{
 		dev_err(&client->dev, "Error setting CMD_HALT_BLOCK to 0.");
 		return ret;
 	}
 	usleep_range(10, 20);
 
-        /*
-         * Wait for one frame to make sure sensor is set to
-         * software standby in V-blank
-         *
-         * frame_time = frame length rows * Tline
-         * Tline = line length / pixel clock (in MHz)
-         */
+	/*
+	 * Wait for one frame to make sure sensor is set to
+	 * software standby in V-blank
+	 *
+	 * frame_time = frame length rows * Tline
+	 * Tline = line length / pixel clock (in MHz)
+	 */
 	/*
 	u32 frame_time;
-        frame_time = MIRA016_DEFAULT_FRAME_LENGTH *
-            MIRA016_DEFAULT_LINE_LENGTH / MIRA016_DEFAULT_PIXEL_CLOCK;
+		frame_time = MIRA016_DEFAULT_FRAME_LENGTH *
+			MIRA016_DEFAULT_LINE_LENGTH / MIRA016_DEFAULT_PIXEL_CLOCK;
 
-        usleep_range(frame_time, frame_time + 1000);
+		usleep_range(frame_time, frame_time + 1000);
 	*/
 
 	return ret;
 }
 
-
-
-static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain) {
-	struct i2c_client* const client = v4l2_get_subdevdata(&mira016->sd);
+static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
+{
+	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	u32 num_of_regs;
 	u32 ret = 0;
 	u32 wait_us = 20000;
 
 	// Select partial register sequence according to bit depth
-	if (mira016->bit_depth == 12) {
+	if (mira016->bit_depth == 12)
+	{
 		// Select register sequence according to gain value
-		if (gain == 0) {
+		if (gain == 0)
+		{
 			mira016_write_stop_streaming_regs(mira016);
-			usleep_range(wait_us, wait_us+100);
+			usleep_range(wait_us, wait_us + 100);
 			printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x1 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x1_12bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
-		} else if (gain == 1) {
+		}
+		else if (gain == 1)
+		{
 			mira016_write_stop_streaming_regs(mira016);
-			usleep_range(wait_us, wait_us+100);
+			usleep_range(wait_us, wait_us + 100);
 			printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x2 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x2_12bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
-		} else {
+		}
+		else
+		{
 			// Other gains are not supported
 			printk(KERN_INFO "[mira016]: Ignore analog gain %d in 12 bit mode", gain);
 		}
 	}
-	else if (mira016->bit_depth == 10) {
+	else if (mira016->bit_depth == 10)
+	{
 		// Select register sequence according to gain value
-		if (gain == 0) {
+		if (gain == 0)
+		{
 			mira016_write_stop_streaming_regs(mira016);
-			usleep_range(wait_us, wait_us+100);
+			usleep_range(wait_us, wait_us + 100);
 			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x1 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_10bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x1_10bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
-		} else if (gain == 1) {
+		}
+		else if (gain == 1)
+		{
 			mira016_write_stop_streaming_regs(mira016);
-			usleep_range(wait_us, wait_us+100);
+			usleep_range(wait_us, wait_us + 100);
 			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x2 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_10bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x2_10bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
-		} else {
+		}
+		else
+		{
 			// Other gains are not supported
 			printk(KERN_INFO "[mira016]: Ignore analog gain %d in 12 bit mode", gain);
 		}
 	}
-	else if (mira016->bit_depth == 8) {
+	else if (mira016->bit_depth == 8)
+	{
 		// Select register sequence according to gain value
-		if (gain == 0) {
+		if (gain == 0)
+		{
 			mira016_write_stop_streaming_regs(mira016);
-			usleep_range(wait_us, wait_us+100);
+			usleep_range(wait_us, wait_us + 100);
 			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x1 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_8bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x1_8bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
-		} else if (gain == 1) {
+		}
+		else if (gain == 1)
+		{
 			mira016_write_stop_streaming_regs(mira016);
-			usleep_range(wait_us, wait_us+100);
+			usleep_range(wait_us, wait_us + 100);
 			// printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x2 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_8bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x2_8bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
-		} else {
+		}
+		else
+		{
 			// Other gains are not supported
 			printk(KERN_INFO "[mira016]: Ignore analog gain %d in 8 bit mode", gain);
 		}
 	}
-	else{
+	else
+	{
 		// Other bit depths are not supported
 		printk(KERN_INFO "[mira016]: Ignore analog gain in %u bit mode", mira016->mode->bit_depth);
 	}
-	
-	
-	if (ret) {
+
+	if (ret)
+	{
 		dev_err(&client->dev, "%s failed to set mode\n", __func__);
 	}
 
 	// Always return 0 even if it fails
 	return 0;
 }
-
-
 
 // Gets the format code if supported. Otherwise returns the default format code `codes[0]`
 static u32 mira016_validate_format_code_or_default(struct mira016 *mira016, u32 code)
@@ -4734,7 +4946,8 @@ static u32 mira016_validate_format_code_or_default(struct mira016 *mira016, u32 
 		if (codes[i] == code)
 			break;
 
-	if (i >= ARRAY_SIZE(codes)) {
+	if (i >= ARRAY_SIZE(codes))
+	{
 		dev_err_ratelimited(&client->dev, "Could not set requested format code %u", code);
 		dev_err_ratelimited(&client->dev, "Using default format %u", codes[0]);
 		i = 0;
@@ -4753,8 +4966,8 @@ static void mira016_set_default_format(struct mira016 *mira016)
 	fmt->colorspace = V4L2_COLORSPACE_RAW;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
-							  fmt->colorspace,
-							  fmt->ycbcr_enc);
+													  fmt->colorspace,
+													  fmt->ycbcr_enc);
 	fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
 	fmt->width = supported_modes[0].width;
 	fmt->height = supported_modes[0].height;
@@ -4776,7 +4989,7 @@ static int mira016_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_fmt_img->width = supported_modes[0].width;
 	try_fmt_img->height = supported_modes[0].height;
 	try_fmt_img->code = mira016_validate_format_code_or_default(mira016,
-						   MEDIA_BUS_FMT_SGRBG10_1X10);
+																MEDIA_BUS_FMT_SGRBG10_1X10);
 	try_fmt_img->field = V4L2_FIELD_NONE;
 
 	/* TODO(jalv): Initialize try_fmt for the embedded metadata pad */
@@ -4784,8 +4997,6 @@ static int mira016_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_fmt_meta->height = MIRA016_NUM_EMBEDDED_LINES;
 	try_fmt_meta->code = MEDIA_BUS_FMT_SENSOR_DATA;
 	try_fmt_meta->field = V4L2_FIELD_NONE;
-
-
 
 	/* Initialize try_crop rectangle. */
 	try_crop = v4l2_subdev_get_try_crop(sd, fh->state, 0);
@@ -4805,40 +5016,42 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 		container_of(ctrl->handler, struct mira016, ctrl_handler);
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	int ret = 0;
-	u32 target_frame_time_us;
+	// u32 target_frame_time_us;
 
 	// Debug print
 	// printk(KERN_INFO "[MIRA016]: mira016_set_ctrl() id: 0x%X value: 0x%X.\n", ctrl->id, ctrl->val);
 
-	if (ctrl->id == V4L2_CID_VBLANK) {
+	if (ctrl->id == V4L2_CID_VBLANK)
+	{
 		int exposure_max, exposure_def;
 
 		/* Update max exposure while meeting expected vblanking */
 		exposure_max = mira016_calculate_max_exposure_time(MIRA016_MIN_ROW_LENGTH,
-						   mira016->mode->height,
-						   ctrl->val);
-		exposure_def = (exposure_max < MIRA016_DEFAULT_EXPOSURE_US) ?
-			exposure_max : MIRA016_DEFAULT_EXPOSURE_US;
+														   mira016->mode->height,
+														   ctrl->val);
+		exposure_def = (exposure_max < MIRA016_DEFAULT_EXPOSURE_US) ? exposure_max : MIRA016_DEFAULT_EXPOSURE_US;
 		__v4l2_ctrl_modify_range(mira016->exposure,
-					 mira016->exposure->minimum,
-					 (int)(1 + exposure_max / MIRA016_MIN_ROW_LENGTH_US), mira016->exposure->step,
-					 (int)(1 + exposure_def / MIRA016_MIN_ROW_LENGTH_US));
+								 mira016->exposure->minimum,
+								 (int)(1 + exposure_max / MIRA016_MIN_ROW_LENGTH_US), mira016->exposure->step,
+								 (int)(1 + exposure_def / MIRA016_MIN_ROW_LENGTH_US));
 	}
-
 
 	/*
 	 * Applying V4L2 control value only happens
 	 * when power is up for streaming
 	 */
-	if (pm_runtime_get_if_in_use(&client->dev) == 0) {
+	if (pm_runtime_get_if_in_use(&client->dev) == 0)
+	{
 		dev_info(&client->dev,
-                         "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
-                         ctrl->id, ctrl->val);
+				 "device in use, ctrl(id:0x%x,val:0x%x) is not handled\n",
+				 ctrl->id, ctrl->val);
 		return 0;
 	}
 
-	if (mira016->skip_reg_upload == 0) {
-		switch (ctrl->id) {
+	if (mira016->skip_reg_upload == 0)
+	{
+		switch (ctrl->id)
+		{
 		case V4L2_CID_ANALOGUE_GAIN:
 			ret = mira016_write_analog_gain_reg(mira016, ctrl->val);
 			break;
@@ -4853,16 +5066,16 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			// Gradient is hard coded to 45 degree.
 			ret = mira016_write(mira016, MIRA016_DELTA_TEST_IMG_REG, 0x01);
 			ret = mira016_write(mira016, MIRA016_TEST_PATTERN_REG,
-						mira016_test_pattern_val[ctrl->val]);
+								mira016_test_pattern_val[ctrl->val]);
 			break;
 		case V4L2_CID_HFLIP:
 			// TODO: HFLIP requires multiple register writes
-			//ret = mira016_write(mira016, MIRA016_HFLIP_REG,
+			// ret = mira016_write(mira016, MIRA016_HFLIP_REG,
 			//		        ctrl->val);
 			break;
 		case V4L2_CID_VFLIP:
 			// TODO: VFLIP seems not supported in Mira016
-			//ret = mira016_write(mira016, MIRA016_VFLIP_REG,
+			// ret = mira016_write(mira016, MIRA016_VFLIP_REG,
 			//		        ctrl->val);
 			break;
 		case V4L2_CID_VBLANK:
@@ -4870,20 +5083,20 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			 * In libcamera, frame time (== 1/framerate) is controlled by VBLANK:
 			 * TARGET_FRAME_TIME (us) = 1000000 * ((1/PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+VBLANK))
 			 */
-			target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira016->mode->width + mira016->mode->hblank) * (u64)(mira016->mode->height + ctrl->val)) / MIRA016_PIXEL_RATE);
+			mira016->target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira016->mode->width + mira016->mode->hblank) * (u64)(mira016->mode->height + ctrl->val)) / MIRA016_PIXEL_RATE);
 			// Debug print
 			printk(KERN_INFO "[MIRA016]: mira016_write_target_frame_time_reg target_frame_time_us = %u.\n",
-				target_frame_time_us);
-			printk(KERN_INFO "[MIRA016]: width %d, hblank %d, height %d, ctrl->val %d.\n",
-					mira016->mode->width, mira016->mode->hblank, mira016->mode->height, ctrl->val);
-			ret = mira016_write_target_frame_time_reg(mira016, target_frame_time_us);
+				   mira016->target_frame_time_us);
+			printk(KERN_INFO "[MIRA016]: width %d, hblank %d, vblank %d, height %d, ctrl->val %d.\n",
+				   mira016->mode->width, mira016->mode->hblank,mira016->mode->vblank, mira016->mode->height, ctrl->val);
+			ret = mira016_write_target_frame_time_reg(mira016, mira016->target_frame_time_us);
 			break;
 		case V4L2_CID_HBLANK:
 			break;
 		default:
 			dev_info(&client->dev,
-				 "ctrl(id:0x%x,val:0x%x) is not handled\n",
-				 ctrl->id, ctrl->val);
+					 "ctrl(id:0x%x,val:0x%x) is not handled\n",
+					 ctrl->id, ctrl->val);
 			ret = -EINVAL;
 			break;
 		}
@@ -4911,14 +5124,15 @@ static int mira016_s_ctrl(struct v4l2_ctrl *ctrl)
 	 * Users need to make sure first power on then write register.
 	 */
 
-	switch (ctrl->id) {
+	switch (ctrl->id)
+	{
 	case AMS_CAMERA_CID_MIRA_REG_W:
 		ret = mira016_v4l2_reg_w(mira016, ctrl->val);
 		break;
 	default:
 		dev_info(&client->dev,
-			 "set ctrl(id:0x%x,val:0x%x) is not handled\n",
-			 ctrl->id, ctrl->val);
+				 "set ctrl(id:0x%x,val:0x%x) is not handled\n",
+				 ctrl->id, ctrl->val);
 		ret = -EINVAL;
 		break;
 	}
@@ -4943,15 +5157,16 @@ static int mira016_g_ctrl(struct v4l2_ctrl *ctrl)
 	 * Therefore, the check of "powered" flag is disabled for now.
 	 */
 
-	switch (ctrl->id) {
+	switch (ctrl->id)
+	{
 	case AMS_CAMERA_CID_MIRA_REG_R:
 		ret = mira016_v4l2_reg_r(mira016, (u32 *)&ctrl->cur.val);
 		ctrl->val = ctrl->cur.val;
 		break;
 	default:
 		dev_info(&client->dev,
-			 "get ctrl(id:0x%x) is not handled\n",
-			 ctrl->id);
+				 "get ctrl(id:0x%x) is not handled\n",
+				 ctrl->id);
 		ret = -EINVAL;
 		break;
 	}
@@ -4959,7 +5174,6 @@ static int mira016_g_ctrl(struct v4l2_ctrl *ctrl)
 	// TODO: FIXIT
 	return ret;
 }
-
 
 static const struct v4l2_ctrl_ops mira016_ctrl_ops = {
 	.s_ctrl = mira016_set_ctrl,
@@ -4969,7 +5183,6 @@ static const struct v4l2_ctrl_ops mira016_custom_ctrl_ops = {
 	.g_volatile_ctrl = mira016_g_ctrl,
 	.s_ctrl = mira016_s_ctrl,
 };
-
 
 /* list of custom v4l2 ctls */
 static struct v4l2_ctrl_config custom_ctrl_config_list[] = {
@@ -5002,21 +5215,24 @@ static struct v4l2_ctrl_config custom_ctrl_config_list[] = {
 // This function should enumerate all the media bus formats for the requested pads. If the requested
 // format index is beyond the number of avaialble formats it shall return -EINVAL;
 static int mira016_enum_mbus_code(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_state *sd_state,
-				 struct v4l2_subdev_mbus_code_enum *code)
+								  struct v4l2_subdev_state *sd_state,
+								  struct v4l2_subdev_mbus_code_enum *code)
 {
 	struct mira016 *mira016 = to_mira016(sd);
 
 	if (code->pad >= NUM_PADS)
 		return -EINVAL;
 
-	if (code->pad == IMAGE_PAD) {
+	if (code->pad == IMAGE_PAD)
+	{
 		if (code->index >= ARRAY_SIZE(codes))
 			return -EINVAL;
 
 		code->code = mira016_validate_format_code_or_default(mira016,
-						    codes[code->index]);
-	} else {
+															 codes[code->index]);
+	}
+	else
+	{
 		if (code->index > 0)
 			return -EINVAL;
 
@@ -5027,15 +5243,16 @@ static int mira016_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int mira016_enum_frame_size(struct v4l2_subdev *sd,
-				  struct v4l2_subdev_state *sd_state,
-				  struct v4l2_subdev_frame_size_enum *fse)
+								   struct v4l2_subdev_state *sd_state,
+								   struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct mira016 *mira016 = to_mira016(sd);
 
 	if (fse->pad >= NUM_PADS)
 		return -EINVAL;
 
-	if (fse->pad == IMAGE_PAD) {
+	if (fse->pad == IMAGE_PAD)
+	{
 		/* Two options about how many modes to be exposed:
 		 * - Expose all supported_modes by ARRAY_SIZE(supported_modes).
 		 * - Expose less modes by MIRA016_SUPPORTED_MODE_SIZE_PUBLIC.
@@ -5051,7 +5268,9 @@ static int mira016_enum_frame_size(struct v4l2_subdev *sd,
 		fse->max_width = fse->min_width;
 		fse->min_height = supported_modes[fse->index].height;
 		fse->max_height = fse->min_height;
-	} else {
+	}
+	else
+	{
 		if (fse->code != MEDIA_BUS_FMT_SENSOR_DATA || fse->index > 0)
 			return -EINVAL;
 
@@ -5069,14 +5288,14 @@ static void mira016_reset_colorspace(struct v4l2_mbus_framefmt *fmt)
 	fmt->colorspace = V4L2_COLORSPACE_RAW;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
-							  fmt->colorspace,
-							  fmt->ycbcr_enc);
+													  fmt->colorspace,
+													  fmt->ycbcr_enc);
 	fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
 }
 
 static void mira016_update_image_pad_format(struct mira016 *mira016,
-					   const struct mira016_mode *mode,
-					   struct v4l2_subdev_format *fmt)
+											const struct mira016_mode *mode,
+											struct v4l2_subdev_format *fmt)
 {
 	fmt->format.width = mode->width;
 	fmt->format.height = mode->height;
@@ -5090,31 +5309,34 @@ static void mira016_update_metadata_pad_format(struct v4l2_subdev_format *fmt)
 	fmt->format.height = MIRA016_NUM_EMBEDDED_LINES;
 	fmt->format.code = MEDIA_BUS_FMT_SENSOR_DATA;
 	fmt->format.field = V4L2_FIELD_NONE;
-
 }
 
 static int __mira016_get_pad_format(struct mira016 *mira016,
-				   struct v4l2_subdev_state *sd_state,
-				   struct v4l2_subdev_format *fmt)
+									struct v4l2_subdev_state *sd_state,
+									struct v4l2_subdev_format *fmt)
 {
 	if (fmt->pad >= NUM_PADS)
 		return -EINVAL;
 
-	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
+	{
 		struct v4l2_mbus_framefmt *try_fmt =
 			v4l2_subdev_get_try_format(&mira016->sd, sd_state, fmt->pad);
 
-		try_fmt->code = fmt->pad == IMAGE_PAD ?
-				mira016_validate_format_code_or_default(mira016, try_fmt->code) :
-				MEDIA_BUS_FMT_SENSOR_DATA;
+		try_fmt->code = fmt->pad == IMAGE_PAD ? mira016_validate_format_code_or_default(mira016, try_fmt->code) : MEDIA_BUS_FMT_SENSOR_DATA;
 		fmt->format = *try_fmt;
-	} else {
-		if (fmt->pad == IMAGE_PAD) {
+	}
+	else
+	{
+		if (fmt->pad == IMAGE_PAD)
+		{
 			mira016_update_image_pad_format(mira016, mira016->mode,
-						       fmt);
+											fmt);
 			fmt->format.code = mira016_validate_format_code_or_default(mira016,
-							      mira016->fmt.code);
-		} else {
+																	   mira016->fmt.code);
+		}
+		else
+		{
 			mira016_update_metadata_pad_format(fmt);
 		}
 	}
@@ -5123,8 +5345,8 @@ static int __mira016_get_pad_format(struct mira016 *mira016,
 }
 
 static int mira016_get_pad_format(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_state *sd_state,
-				 struct v4l2_subdev_format *fmt)
+								  struct v4l2_subdev_state *sd_state,
+								  struct v4l2_subdev_format *fmt)
 {
 	struct mira016 *mira016 = to_mira016(sd);
 	int ret;
@@ -5137,8 +5359,8 @@ static int mira016_get_pad_format(struct v4l2_subdev *sd,
 }
 
 static int mira016_set_pad_format(struct v4l2_subdev *sd,
-				 struct v4l2_subdev_state *sd_state,
-				 struct v4l2_subdev_format *fmt)
+								  struct v4l2_subdev_state *sd_state,
+								  struct v4l2_subdev_format *fmt)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct mira016 *mira016 = to_mira016(sd);
@@ -5152,52 +5374,74 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 
 	mutex_lock(&mira016->mutex);
 
-	if (fmt->pad == IMAGE_PAD) {
+	if (fmt->pad == IMAGE_PAD)
+	{
 		/* Validate format or use default */
 		fmt->format.code = mira016_validate_format_code_or_default(mira016,
-									  fmt->format.code);
+																   fmt->format.code);
 
 		mode = v4l2_find_nearest_size(supported_modes,
-					      ARRAY_SIZE(supported_modes),
-					      width, height,
-					      fmt->format.width,
-					      fmt->format.height);
+									  ARRAY_SIZE(supported_modes),
+									  width, height,
+									  fmt->format.width,
+									  fmt->format.height);
 		mira016_update_image_pad_format(mira016, mode, fmt);
-		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
+		{
 			framefmt = v4l2_subdev_get_try_format(sd, sd_state,
-							      fmt->pad);
+												  fmt->pad);
 			*framefmt = fmt->format;
-		} else if (mira016->mode != mode ||
-			mira016->fmt.code != fmt->format.code) {
+		}
+		else if (mira016->mode != mode ||
+				 mira016->fmt.code != fmt->format.code)
+		{
 			mira016->fmt = fmt->format;
 			mira016->mode = mode;
 
 			// Update controls based on new mode (range and current value).
 			max_exposure = mira016_calculate_max_exposure_time(MIRA016_MIN_ROW_LENGTH,
-									   mira016->mode->height,
-									   mira016->mode->vblank);
+															   mira016->mode->height,
+															   mira016->mode->vblank);
 			default_exp = MIRA016_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : MIRA016_DEFAULT_EXPOSURE_US;
 			rc = __v4l2_ctrl_modify_range(mira016->exposure,
-						     mira016->exposure->minimum,
-						     (int)( 1 + max_exposure / MIRA016_MIN_ROW_LENGTH_US), mira016->exposure->step,
-						     (int)( 1 + default_exp / MIRA016_MIN_ROW_LENGTH_US));
-			if (rc) {
+										  mira016->exposure->minimum,
+										  (int)(1 + max_exposure / MIRA016_MIN_ROW_LENGTH_US), mira016->exposure->step,
+										  (int)(1 + default_exp / MIRA016_MIN_ROW_LENGTH_US));
+			if (rc)
+			{
 				dev_err(&client->dev, "Error setting exposure range");
 			}
 
+			rc = __v4l2_ctrl_modify_range(mira016->vblank,
+										  mira016->mode->vblank,
+										  0xFFFF,
+										  1,
+										  mira016->mode->vblank);
+			if (rc)
+			{
+				dev_err(&client->dev, "Error setting exposure range");
+			}
+
+
 			// Set the current vblank value
 			rc = __v4l2_ctrl_s_ctrl(mira016->vblank, mira016->mode->vblank);
-			if (rc) {
+			if (rc)
+			{
 				dev_err(&client->dev, "Error setting vblank value to %u",
-					mira016->mode->vblank);
+						mira016->mode->vblank);
 			}
 		}
-	} else {
-		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+	}
+	else
+	{
+		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
+		{
 			framefmt = v4l2_subdev_get_try_format(sd, sd_state,
-							      fmt->pad);
+												  fmt->pad);
 			*framefmt = fmt->format;
-		} else {
+		}
+		else
+		{
 			/* Only one embedded data mode is supported */
 			mira016_update_metadata_pad_format(fmt);
 		}
@@ -5211,7 +5455,8 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 static int mira016_set_framefmt(struct mira016 *mira016)
 {
 	// TODO: There is no easy way to change frame format
-	switch (mira016->fmt.code) {
+	switch (mira016->fmt.code)
+	{
 	case MEDIA_BUS_FMT_SGRBG10_1X10:
 		printk(KERN_INFO "[MIRA016]: mira016_set_framefmt() selects 10 bit mode.\n");
 		mira016->mode = &supported_modes[0];
@@ -5236,9 +5481,10 @@ static int mira016_set_framefmt(struct mira016 *mira016)
 
 static const struct v4l2_rect *
 __mira016_get_pad_crop(struct mira016 *mira016, struct v4l2_subdev_state *sd_state,
-		      unsigned int pad, enum v4l2_subdev_format_whence which)
+					   unsigned int pad, enum v4l2_subdev_format_whence which)
 {
-	switch (which) {
+	switch (which)
+	{
 	case V4L2_SUBDEV_FORMAT_TRY:
 		return v4l2_subdev_get_try_crop(&mira016->sd, sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
@@ -5249,16 +5495,18 @@ __mira016_get_pad_crop(struct mira016 *mira016, struct v4l2_subdev_state *sd_sta
 }
 
 static int mira016_get_selection(struct v4l2_subdev *sd,
-				struct v4l2_subdev_state *sd_state,
-				struct v4l2_subdev_selection *sel)
+								 struct v4l2_subdev_state *sd_state,
+								 struct v4l2_subdev_selection *sel)
 {
-	switch (sel->target) {
-	case V4L2_SEL_TGT_CROP: {
+	switch (sel->target)
+	{
+	case V4L2_SEL_TGT_CROP:
+	{
 		struct mira016 *mira016 = to_mira016(sd);
 
 		mutex_lock(&mira016->mutex);
 		sel->r = *__mira016_get_pad_crop(mira016, sd_state, sel->pad,
-						sel->which);
+										 sel->which);
 		mutex_unlock(&mira016->mutex);
 
 		return 0;
@@ -5297,7 +5545,8 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	/* Follow examples of other camera driver, here use pm_runtime_resume_and_get */
 	ret = pm_runtime_resume_and_get(&client->dev);
 
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		printk(KERN_INFO "[MIRA016]: get_sync failed, but continue.\n");
 		pm_runtime_put_noidle(&client->dev);
 		return ret;
@@ -5305,19 +5554,22 @@ static int mira016_start_streaming(struct mira016 *mira016)
 
 	/* Set current mode according to frame format bit depth */
 	ret = mira016_set_framefmt(mira016);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(&client->dev, "%s failed to set frame format: %d\n",
-			__func__, ret);
+				__func__, ret);
 		goto err_rpm_put;
 	}
 	printk(KERN_INFO "[MIRA016]: Register sequence for %d bit mode will be used.\n", mira016->mode->bit_depth);
 
-	if (mira016->skip_reg_upload == 0) {
+	if (mira016->skip_reg_upload == 0)
+	{
 		/* Apply pre soft reset default values of current mode */
 		reg_list = &mira016->mode->reg_list_pre_soft_reset;
 		printk(KERN_INFO "[MIRA016]: Write %d regs.\n", reg_list->num_of_regs);
 		ret = mira016_write_regs(mira016, reg_list->regs, reg_list->num_of_regs);
-		if (ret) {
+		if (ret)
+		{
 			dev_err(&client->dev, "%s failed to set mode\n", __func__);
 			goto err_rpm_put;
 		}
@@ -5328,18 +5580,21 @@ static int mira016_start_streaming(struct mira016 *mira016)
 		reg_list = &mira016->mode->reg_list_post_soft_reset;
 		printk(KERN_INFO "[MIRA016]: Write %d regs.\n", reg_list->num_of_regs);
 		ret = mira016_write_regs(mira016, reg_list->regs, reg_list->num_of_regs);
-		if (ret) {
+		if (ret)
+		{
 			dev_err(&client->dev, "%s failed to set mode\n", __func__);
 			goto err_rpm_put;
 		}
-	} else {
+	}
+	else
+	{
 		printk(KERN_INFO "[MIRA016]: Skip base register sequence upload, due to mira016->skip_reg_upload=%u.\n", mira016->skip_reg_upload);
 	}
 
 	printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl handler setup function.\n");
 
 	/* Apply customized values from user */
-	ret =  __v4l2_ctrl_handler_setup(mira016->sd.ctrl_handler);
+	ret = __v4l2_ctrl_handler_setup(mira016->sd.ctrl_handler);
 	printk(KERN_INFO "[MIRA016]: __v4l2_ctrl_handler_setup ret = %d.\n", ret);
 	if (ret)
 		goto err_rpm_put;
@@ -5348,38 +5603,49 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	ret = mira016_otp_read(mira016, 0x01, &otp_cal_val);
 	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
 	mira016->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
 		/* Even if OTP reading fails, continue with the rest. */
 		mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
 		printk(KERN_INFO "[MIRA016]: Due to OTP reading failure, use default mira016->otp_cal_val : %u.\n", mira016->otp_cal_val);
 		/* goto err_rpm_put; */
-	} else {
+	}
+	else
+	{
 		printk(KERN_INFO "[MIRA016]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira016->otp_cal_val, otp_cal_val);
-		if ((otp_cal_val & 0xFFFF0000) != 0xFFFF0000) {
+		if ((otp_cal_val & 0xFFFF0000) != 0xFFFF0000)
+		{
 			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
 			printk(KERN_INFO "[MIRA016]: Due to higher 16-bit not all 1, use default mira016->otp_cal_val : %u.\n", mira016->otp_cal_val);
-		} else if (mira016->otp_cal_val < MIRA016_OTP_CAL_VALUE_MIN) {
+		}
+		else if (mira016->otp_cal_val < MIRA016_OTP_CAL_VALUE_MIN)
+		{
 			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
 			printk(KERN_INFO "[MIRA016]: Due to extracted value < %u, likely an error, use default mira016->otp_cal_val : %u.\n", MIRA016_OTP_CAL_VALUE_MIN, mira016->otp_cal_val);
-		} else if (mira016->otp_cal_val > MIRA016_OTP_CAL_VALUE_MAX) {
+		}
+		else if (mira016->otp_cal_val > MIRA016_OTP_CAL_VALUE_MAX)
+		{
 			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
 			printk(KERN_INFO "[MIRA016]: Due to extracted value > %u, likely an error, use default mira016->otp_cal_val : %u.\n", MIRA016_OTP_CAL_VALUE_MAX, mira016->otp_cal_val);
 		}
 	}
 
 	if (mira016->skip_reg_upload == 0 ||
-		(mira016->skip_reg_upload == 1 && mira016->force_stream_ctrl == 1) ) {
+		(mira016->skip_reg_upload == 1 && mira016->force_stream_ctrl == 1))
+	{
 		printk(KERN_INFO "[MIRA016]: Writing start streaming regs.\n");
 		ret = mira016_write_start_streaming_regs(mira016);
-		if (ret) {
+		if (ret)
+		{
 			dev_err(&client->dev, "Could not write stream-on sequence");
 			goto err_rpm_put;
 		}
-	} else {
+	}
+	else
+	{
 		printk(KERN_INFO "[MIRA016]: Skip write_start_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
-				mira016->skip_reg_upload, mira016->force_stream_ctrl);
-
+			   mira016->skip_reg_upload, mira016->force_stream_ctrl);
 	}
 
 	/* vflip and hflip cannot change during streaming */
@@ -5404,20 +5670,26 @@ static void mira016_stop_streaming(struct mira016 *mira016)
 	__v4l2_ctrl_grab(mira016->vflip, false);
 	__v4l2_ctrl_grab(mira016->hflip, false);
 
-	if (mira016->skip_reset == 0) {
+	if (mira016->skip_reset == 0)
+	{
 		if (mira016->skip_reg_upload == 0 ||
-			(mira016->skip_reg_upload == 1 && mira016->force_stream_ctrl == 1) ) {
+			(mira016->skip_reg_upload == 1 && mira016->force_stream_ctrl == 1))
+		{
 			printk(KERN_INFO "[MIRA016]: Writing stop streaming regs.\n");
 			ret = mira016_write_stop_streaming_regs(mira016);
-			if (ret) {
+			if (ret)
+			{
 				dev_err(&client->dev, "Could not write the stream-off sequence");
 			}
-		} else {
-			printk(KERN_INFO "[MIRA016]: Skip write_stop_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
-					mira016->skip_reg_upload, mira016->force_stream_ctrl);
-
 		}
-	} else {
+		else
+		{
+			printk(KERN_INFO "[MIRA016]: Skip write_stop_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
+				   mira016->skip_reg_upload, mira016->force_stream_ctrl);
+		}
+	}
+	else
+	{
 		printk(KERN_INFO "[MIRA016]: Skip write_stop_streaming_regs due to mira016->skip_reset == %d.\n", mira016->skip_reset);
 	}
 
@@ -5430,14 +5702,16 @@ static int mira016_set_stream(struct v4l2_subdev *sd, int enable)
 	int ret = 0;
 
 	mutex_lock(&mira016->mutex);
-	if (mira016->streaming == enable) {
+	if (mira016->streaming == enable)
+	{
 		mutex_unlock(&mira016->mutex);
 		return 0;
 	}
 
 	printk(KERN_INFO "[MIRA016]: Entering mira016_set_stream enable: %d.\n", enable);
 
-	if (enable) {
+	if (enable)
+	{
 		/*
 		 * Apply default & customized values
 		 * and then start streaming.
@@ -5445,7 +5719,9 @@ static int mira016_set_stream(struct v4l2_subdev *sd, int enable)
 		ret = mira016_start_streaming(mira016);
 		if (ret)
 			goto err_unlock;
-	} else {
+	}
+	else
+	{
 		mira016_stop_streaming(mira016);
 	}
 
@@ -5486,7 +5762,8 @@ static int __maybe_unused mira016_resume(struct device *dev)
 
 	printk(KERN_INFO "[MIRA016]: Entering resume function.\n");
 
-	if (mira016->streaming) {
+	if (mira016->streaming)
+	{
 		ret = mira016_start_streaming(mira016);
 		if (ret)
 			goto error;
@@ -5510,8 +5787,8 @@ static int mira016_get_regulators(struct mira016 *mira016)
 		mira016->supplies[i].supply = mira016_supply_name[i];
 
 	return devm_regulator_bulk_get(&client->dev,
-				       MIRA016_NUM_SUPPLIES,
-				       mira016->supplies);
+								   MIRA016_NUM_SUPPLIES,
+								   mira016->supplies);
 }
 
 /* Verify chip ID */
@@ -5522,13 +5799,13 @@ static int mira016_identify_module(struct mira016 *mira016)
 
 	ret = mira016_read(mira016, 0x25, &val);
 	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		      0x25, val);
+		   0x25, val);
 	ret = mira016_read(mira016, 0x3, &val);
 	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		      0x3, val);
+		   0x3, val);
 	ret = mira016_read(mira016, 0x4, &val);
 	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		      0x4, val);
+		   0x4, val);
 
 	return 0;
 }
@@ -5583,24 +5860,24 @@ static int mira016_init_controls(struct mira016 *mira016)
 
 	/* By default, PIXEL_RATE is read only */
 	mira016->pixel_rate = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-					        V4L2_CID_PIXEL_RATE,
-					        MIRA016_PIXEL_RATE,
-					        MIRA016_PIXEL_RATE, 1,
-					        MIRA016_PIXEL_RATE);
+											V4L2_CID_PIXEL_RATE,
+											MIRA016_PIXEL_RATE,
+											MIRA016_PIXEL_RATE, 1,
+											MIRA016_PIXEL_RATE);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_VBLANK %X.\n", __func__, V4L2_CID_VBLANK);
 
 	mira016->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-					   V4L2_CID_VBLANK, MIRA016_MIN_VBLANK,
-					   0xFFFF, 1,
-					   mira016->mode->vblank);
+										V4L2_CID_VBLANK, MIRA016_MIN_VBLANK,
+										0xFFFF, 1,
+										mira016->mode->vblank);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
 
 	mira016->hblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-					   V4L2_CID_HBLANK, mira016->mode->hblank,
-					   mira016->mode->hblank, 1,
-					   mira016->mode->hblank);
+										V4L2_CID_HBLANK, mira016->mode->hblank,
+										mira016->mode->hblank, 1,
+										mira016->mode->hblank);
 
 	// Make the vblank control read only. This could be changed to allow changing framerate in
 	// runtime, but would require adapting other settings
@@ -5611,36 +5888,36 @@ static int mira016_init_controls(struct mira016 *mira016)
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_EXPOSURE %X.\n", __func__, V4L2_CID_EXPOSURE);
 
 	mira016->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-					     V4L2_CID_EXPOSURE,
-					     MIRA016_EXPOSURE_MIN_RT, MIRA016_EXPOSURE_MAX_RT,
-					     1,
-					     MIRA016_DEFAULT_EXPOSURE_RT);
+										  V4L2_CID_EXPOSURE,
+										  MIRA016_EXPOSURE_MIN_RT, MIRA016_EXPOSURE_MAX_RT,
+										  1,
+										  MIRA016_DEFAULT_EXPOSURE_RT);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_ANALOGUE_GAIN %X.\n", __func__, V4L2_CID_ANALOGUE_GAIN);
 
 	mira016->gain = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops, V4L2_CID_ANALOGUE_GAIN,
-			  MIRA016_ANALOG_GAIN_MIN, MIRA016_ANALOG_GAIN_MAX,
-			  MIRA016_ANALOG_GAIN_STEP, MIRA016_ANALOG_GAIN_DEFAULT);
+									  MIRA016_ANALOG_GAIN_MIN, MIRA016_ANALOG_GAIN_MAX,
+									  MIRA016_ANALOG_GAIN_STEP, MIRA016_ANALOG_GAIN_DEFAULT);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_HFLIP %X.\n", __func__, V4L2_CID_HFLIP);
 
 	mira016->hflip = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-					  V4L2_CID_HFLIP, 0, 0, 1, 0);
+									   V4L2_CID_HFLIP, 0, 0, 1, 0);
 	if (mira016->hflip)
 		mira016->hflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_VFLIP %X.\n", __func__, V4L2_CID_VFLIP);
 
 	mira016->vflip = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-					  V4L2_CID_VFLIP, 0, 0, 1, 0);
+									   V4L2_CID_VFLIP, 0, 0, 1, 0);
 	if (mira016->vflip)
 		mira016->vflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_TEST_PATTERN %X.\n", __func__, V4L2_CID_TEST_PATTERN);
 	v4l2_ctrl_new_std_menu_items(ctrl_hdlr, &mira016_ctrl_ops,
-				     V4L2_CID_TEST_PATTERN,
-				     ARRAY_SIZE(mira016_test_pattern_menu) - 1,
-				     0, 0, mira016_test_pattern_menu);
+								 V4L2_CID_TEST_PATTERN,
+								 ARRAY_SIZE(mira016_test_pattern_menu) - 1,
+								 0, 0, mira016_test_pattern_menu);
 	/*
 	 * Custom op
 	 */
@@ -5654,10 +5931,11 @@ static int mira016_init_controls(struct mira016 *mira016)
 	if (mira016->mira016_reg_r)
 		mira016->mira016_reg_r->flags |= (V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY);
 
-	if (ctrl_hdlr->error) {
+	if (ctrl_hdlr->error)
+	{
 		ret = ctrl_hdlr->error;
 		dev_err(&client->dev, "%s control init failed (%d)\n",
-			__func__, ret);
+				__func__, ret);
 		goto error;
 	}
 
@@ -5666,7 +5944,7 @@ static int mira016_init_controls(struct mira016 *mira016)
 		goto error;
 
 	ret = v4l2_ctrl_new_fwnode_properties(ctrl_hdlr, &mira016_ctrl_ops,
-					      &props);
+										  &props);
 	if (ret)
 		goto error;
 
@@ -5691,40 +5969,43 @@ static int mira016_check_hwcfg(struct device *dev)
 {
 	struct fwnode_handle *endpoint;
 	struct v4l2_fwnode_endpoint ep_cfg = {
-		.bus_type = V4L2_MBUS_CSI2_DPHY
-	};
+		.bus_type = V4L2_MBUS_CSI2_DPHY};
 	int ret = -EINVAL;
 
 	endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
-	if (!endpoint) {
+	if (!endpoint)
+	{
 		dev_err(dev, "endpoint node not found\n");
 		return -EINVAL;
 	}
 
-	if (v4l2_fwnode_endpoint_alloc_parse(endpoint, &ep_cfg)) {
+	if (v4l2_fwnode_endpoint_alloc_parse(endpoint, &ep_cfg))
+	{
 		dev_err(dev, "could not parse endpoint\n");
 		goto error_out;
 	}
 
 	/* Check the number of MIPI CSI2 data lanes */
-	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 1) {
+	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 1)
+	{
 		dev_err(dev, "only 1 data lanes are currently supported\n");
 		goto error_out;
 	}
 
 	/* Check the link frequency set in device tree */
-	if (!ep_cfg.nr_of_link_frequencies) {
+	if (!ep_cfg.nr_of_link_frequencies)
+	{
 		dev_err(dev, "link-frequency property not found in DT\n");
 		goto error_out;
 	}
 
 	if (ep_cfg.nr_of_link_frequencies != 1 ||
-	    ep_cfg.link_frequencies[0] != MIRA016_DEFAULT_LINK_FREQ) {
+		ep_cfg.link_frequencies[0] != MIRA016_DEFAULT_LINK_FREQ)
+	{
 		dev_err(dev, "Link frequency not supported: %lld\n",
-			ep_cfg.link_frequencies[0]);
+				ep_cfg.link_frequencies[0]);
 		goto error_out;
 	}
-
 
 	// TODO(jalv): Check device tree configuration and make sure it is supported by the driver
 	ret = 0;
@@ -5736,19 +6017,18 @@ error_out:
 	return ret;
 }
 
-
 static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_client *uc_client)
 {
 	int ret;
 	u8 val;
 
 	// uC, set atb and jtag high
-        // according to old uC fw (svn rev41)
-        // 12[3] ldo en
-        // 11[4,5] atpg jtag
-        // 11/12 i/o direction, 15/16 output high/low
-        // uC, set atb and jtag high
-        // WARNING this only works on interposer v2 if R307 is not populated. otherwise, invert the bit for ldo
+	// according to old uC fw (svn rev41)
+	// 12[3] ldo en
+	// 11[4,5] atpg jtag
+	// 11/12 i/o direction, 15/16 output high/low
+	// uC, set atb and jtag high
+	// WARNING this only works on interposer v2 if R307 is not populated. otherwise, invert the bit for ldo
 	ret = mira016pmic_write(uc_client, 12, 0xF7);
 	ret = mira016pmic_write(uc_client, 16, 0xFF); // ldo en:1
 	ret = mira016pmic_write(uc_client, 11, 0XCF);
@@ -5788,9 +6068,9 @@ static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_
 	ret = mira016pmic_write(pmic_client, 0x21, 0x0);
 
 	// Enable master switch //
-	usleep_range(50,60);
-	ret = mira016pmic_write(pmic_client, 0x62, 0x0D);  // enable master switch
-	usleep_range(50,60);
+	usleep_range(50, 60);
+	ret = mira016pmic_write(pmic_client, 0x62, 0x0D); // enable master switch
+	usleep_range(50, 60);
 
 	// start PMIC
 	// Keep LDOs always on
@@ -5801,7 +6081,7 @@ static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_
 	ret = mira016pmic_write(pmic_client, 0x2B, 0x00);
 
 	// Unused LDO off //
-	usleep_range(50,60);
+	usleep_range(50, 60);
 	// set GPIO1=0
 	ret = mira016pmic_write(pmic_client, 0x41, 0x04);
 	// DCDC2=0.0V SPARE_PWR1
@@ -5824,7 +6104,7 @@ static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_
 	ret = mira016pmic_write(pmic_client, 0x42, 4);
 
 	// Enable 1.80V //
-	usleep_range(50,60);
+	usleep_range(50, 60);
 	// DCDC1=1.8V VINLDO1p8 >=1P8
 	ret = mira016pmic_write(pmic_client, 0x00, 0x00);
 	ret = mira016pmic_write(pmic_client, 0x04, 0x34);
@@ -5837,7 +6117,7 @@ static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_
 	ret = mira016pmic_write(pmic_client, 0x0E, 0xB4);
 
 	// Enable 2.85V //
-	usleep_range(50,60);
+	usleep_range(50, 60);
 	// LDO4=2.85V VDDHI alternativ
 	ret = mira016pmic_write(pmic_client, 0x1A, 0xB8); // Either 0x00 or 0xB8
 	// Disable LDO9 Lock
@@ -5857,9 +6137,8 @@ static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_
 	ret = mira016pmic_read(pmic_client, 0x19, &val);
 	dev_err(&pmic_client->dev, "Read 0x19 with val %x\n", val);
 
-
 	// Enable 1.2V //
-	usleep_range(700,710);
+	usleep_range(700, 710);
 	// LDO1=1.2V VDDLO_PLL
 	ret = mira016pmic_write(pmic_client, 0x12, 0x16);
 	ret = mira016pmic_write(pmic_client, 0x10, 0x16);
@@ -5870,7 +6149,7 @@ static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_
 	ret = mira016pmic_write(pmic_client, 0x21, 0x90);
 
 	// Enable green LED //
-	usleep_range(50,60);
+	usleep_range(50, 60);
 	ret = mira016pmic_write(pmic_client, 0x42, 0x15); // gpio2
 	// ret = mira016pmic_write(pmic_client, 0x43, 0x40); // leda
 	// ret = mira016pmic_write(pmic_client, 0x44, 0x40); // ledb
@@ -5879,7 +6158,6 @@ static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_
 	// ret = mira016pmic_write(pmic_client, 0x47, 0x02); // leda ctrl1
 	// ret = mira016pmic_write(pmic_client, 0x4F, 0x02); // ledb ctrl1
 	ret = mira016pmic_write(pmic_client, 0x57, 0x02); // ledc ctrl1
-
 
 	// ret = mira016pmic_write(pmic_client, 0x4D, 0x01); // leda ctrl1
 	// ret = mira016pmic_write(pmic_client, 0x55, 0x10); // ledb ctrl7
@@ -5897,11 +6175,10 @@ static int mira016pmic_init_controls(struct i2c_client *pmic_client, struct i2c_
 	ret = mira016pmic_write(uc_client, 15, 0xFD);
 	ret = mira016pmic_write(uc_client, 6, 1); // write
 
-	usleep_range(2000000,2001000);
+	usleep_range(2000000, 2001000);
 
 	return 0;
 }
-
 
 static int mira016_probe(struct i2c_client *client)
 {
@@ -5924,8 +6201,8 @@ static int mira016_probe(struct i2c_client *client)
 	if (mira016_check_hwcfg(dev))
 		return -EINVAL;
 
-        /* Parse device tree to check if dtoverlay has param skip-reg-upload=1 */
-        device_property_read_u32(dev, "skip-reg-upload", &mira016->skip_reg_upload);
+	/* Parse device tree to check if dtoverlay has param skip-reg-upload=1 */
+	device_property_read_u32(dev, "skip-reg-upload", &mira016->skip_reg_upload);
 	printk(KERN_INFO "[MIRA016]: skip-reg-upload %d.\n", mira016->skip_reg_upload);
 	/* Set default TBD I2C device address to LED I2C Address*/
 	mira016->tbd_client_i2c_addr = MIRA016LED_I2C_ADDR;
@@ -5933,20 +6210,23 @@ static int mira016_probe(struct i2c_client *client)
 
 	/* Get system clock (xclk) */
 	mira016->xclk = devm_clk_get(dev, NULL);
-	if (IS_ERR(mira016->xclk)) {
+	if (IS_ERR(mira016->xclk))
+	{
 		dev_err(dev, "failed to get xclk\n");
 		return PTR_ERR(mira016->xclk);
 	}
 
 	mira016->xclk_freq = clk_get_rate(mira016->xclk);
-	if (mira016->xclk_freq != MIRA016_SUPPORTED_XCLK_FREQ) {
+	if (mira016->xclk_freq != MIRA016_SUPPORTED_XCLK_FREQ)
+	{
 		dev_err(dev, "xclk frequency not supported: %d Hz\n",
-			mira016->xclk_freq);
+				mira016->xclk_freq);
 		return -EINVAL;
 	}
 
 	ret = mira016_get_regulators(mira016);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(dev, "failed to get regulators\n");
 		return ret;
 	}
@@ -5954,25 +6234,24 @@ static int mira016_probe(struct i2c_client *client)
 	{
 		printk(KERN_INFO "[MIRA016]: Init PMIC and uC and led driver.\n");
 		mira016->pmic_client = i2c_new_dummy_device(client->adapter,
-				MIRA016PMIC_I2C_ADDR);
+													MIRA016PMIC_I2C_ADDR);
 		if (IS_ERR(mira016->pmic_client))
 			return PTR_ERR(mira016->pmic_client);
 		mira016->uc_client = i2c_new_dummy_device(client->adapter,
-				MIRA016UC_I2C_ADDR);
+												  MIRA016UC_I2C_ADDR);
 		if (IS_ERR(mira016->uc_client))
 			return PTR_ERR(mira016->uc_client);
 		mira016->led_client = i2c_new_dummy_device(client->adapter,
-				MIRA016LED_I2C_ADDR);
+												   MIRA016LED_I2C_ADDR);
 		if (IS_ERR(mira016->led_client))
 			return PTR_ERR(mira016->led_client);
 		mira016pmic_init_controls(mira016->pmic_client, mira016->uc_client);
 	}
 
 	dev_err(dev, "[MIRA016] Sleep for 1 second to let PMIC driver complete init.\n");
-	usleep_range(1000000, 1000000+100);
-	//set some defaults
+	usleep_range(1000000, 1000000 + 100);
+	// set some defaults
 
-	
 	/*
 	 * The sensor must be powered for mira016_identify_module()
 	 * to be able to read the CHIP_ID register
@@ -6010,7 +6289,7 @@ static int mira016_probe(struct i2c_client *client)
 	/* Initialize subdev */
 	mira016->sd.internal_ops = &mira016_internal_ops;
 	mira016->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |
-			    V4L2_SUBDEV_FL_HAS_EVENTS;
+						 V4L2_SUBDEV_FL_HAS_EVENTS;
 	mira016->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
 
 	/* Initialize source pads */
@@ -6025,7 +6304,8 @@ static int mira016_probe(struct i2c_client *client)
 	printk(KERN_INFO "[MIRA016]: Entering pads init function.\n");
 
 	ret = media_entity_pads_init(&mira016->sd.entity, NUM_PADS, mira016->pad);
-	if (ret) {
+	if (ret)
+	{
 		dev_err(dev, "failed to init entity pads: %d\n", ret);
 		goto error_handler_free;
 	}
@@ -6033,7 +6313,8 @@ static int mira016_probe(struct i2c_client *client)
 	printk(KERN_INFO "[MIRA016]: Entering subdev sensor common function.\n");
 
 	ret = v4l2_async_register_subdev_sensor(&mira016->sd);
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		dev_err(dev, "failed to register sensor sub-device: %d\n", ret);
 		goto error_media_entity;
 	}
@@ -6081,12 +6362,10 @@ static void mira016_remove(struct i2c_client *client)
 	if (!pm_runtime_status_suspended(&client->dev))
 		mira016_power_off(&client->dev);
 	pm_runtime_set_suspended(&client->dev);
-
 }
 
 static const struct dev_pm_ops mira016_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(mira016_suspend, mira016_resume)
-	SET_RUNTIME_PM_OPS(mira016_power_off, mira016_power_on, NULL)
-};
+		SET_RUNTIME_PM_OPS(mira016_power_off, mira016_power_on, NULL)};
 
 #endif // __MIRA016_INL__
