@@ -152,8 +152,8 @@
 #define MIRA016_DEFAULT_EXPOSURE_RT (int)(1 + MIRA016_DEFAULT_EXPOSURE_US / MIRA016_MIN_ROW_LENGTH_US)
 
 // #define MIRA016_MIN_VBLANK 11 // for 10b or 8b, 360fps
-#define MIRA016_MIN_VBLANK 340 //200 fps
-
+#define MIRA016_MIN_VBLANK_200 340 // 200 fps
+#define MIRA016_MIN_VBLANK_360 11  // 200 fps
 
 // Power on function timing
 #define MIRA016_XCLR_MIN_DELAY_US 150000
@@ -181,8 +181,7 @@
 #define MIRA016_HBLANK_100FPS 3418
 #define MIRA016_HBLANK_360FPS 1290
 #define MIRA016_HBLANK_200FPS 2650
-
-
+#define MIRA016_HBLANK 1290
 
 // For test pattern with fixed data
 #define MIRA016_TRAINING_WORD_REG 0x0060
@@ -3691,8 +3690,8 @@ static const struct mira016_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_10b_1lane_reg_post_soft_reset),
 			.regs = full_400_400_100fps_10b_1lane_reg_post_soft_reset,
 		},
-		.vblank = MIRA016_MIN_VBLANK,
-		.hblank = MIRA016_HBLANK_360FPS, // TODO
+		.vblank = MIRA016_MIN_VBLANK_360,
+		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
 	},
@@ -3709,8 +3708,8 @@ static const struct mira016_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_post_soft_reset),
 			.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
 		},
-		.vblank = MIRA016_MIN_VBLANK,
-		.hblank = MIRA016_HBLANK_200FPS, // TODO
+		.vblank = MIRA016_MIN_VBLANK_200,
+		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
@@ -3727,8 +3726,8 @@ static const struct mira016_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_8b_1lane_reg_post_soft_reset),
 			.regs = full_400_400_100fps_8b_1lane_reg_post_soft_reset,
 		},
-		.vblank = MIRA016_MIN_VBLANK,
-		.hblank = MIRA016_HBLANK_360FPS, // TODO
+		.vblank = MIRA016_MIN_VBLANK_360,
+		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
 	},
@@ -4305,14 +4304,12 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 		{
 			lps_time = cur_exposure - MIRA016_LPS_CYCLE_TIME;
 			printk(KERN_INFO "[MIRA016]: LPS CASE 2 - LPS TIME is %u.\n", lps_time);
-
 		}
 		// case 3: LPS_ CYCLE_ TIME≤FRAME_ TIME-GLOB_ TIME-READOUT_TIME<EXP_ TIME
 		else if ((MIRA016_LPS_CYCLE_TIME < (mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME)) && ((mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) < cur_exposure))
 		{
 			lps_time = (mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) - MIRA016_LPS_CYCLE_TIME;
 			printk(KERN_INFO "[MIRA016]: LPS CASE 3 - LPS TIME is %u.\n", lps_time);
-
 		}
 		// case 4: FRAME_ TIME-GLOB_ TIME-READOUT_ TIME≤LPS_ CYCLE_ TIME<EXP_ TIME
 		else if (((mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) < MIRA016_LPS_CYCLE_TIME) && (MIRA016_LPS_CYCLE_TIME < cur_exposure))
@@ -4336,8 +4333,7 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 			return ret;
 		}
 	}
-		return ret;
-
+	return ret;
 }
 
 static int mira016_v4l2_reg_w(struct mira016 *mira016, u32 value)
@@ -4679,7 +4675,7 @@ static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure)
 {
 	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	const u32 min_exposure = MIRA016_EXPOSURE_MIN_US;
-	u32 max_exposure = mira016->exposure->maximum ;
+	u32 max_exposure = mira016->exposure->maximum;
 	u32 ret = 0;
 
 	if (exposure < min_exposure)
@@ -4939,6 +4935,7 @@ static u32 mira016_validate_format_code_or_default(struct mira016 *mira016, u32 
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	unsigned int i;
+	printk(KERN_INFO "[MIRA016]: validate format code or default. .\n");
 
 	lockdep_assert_held(&mira016->mutex);
 
@@ -5056,8 +5053,8 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			ret = mira016_write_analog_gain_reg(mira016, ctrl->val);
 			break;
 		case V4L2_CID_EXPOSURE:
-			printk(KERN_INFO "[MIRA016]: exposure line = %u, exposure us = %u.\n", ctrl->val, ctrl->val );
-			ret = mira016_write_exposure_reg(mira016, ctrl->val );
+			printk(KERN_INFO "[MIRA016]: exposure line = %u, exposure us = %u.\n", ctrl->val, ctrl->val);
+			ret = mira016_write_exposure_reg(mira016, ctrl->val);
 			break;
 		case V4L2_CID_TEST_PATTERN:
 			ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
@@ -5088,7 +5085,7 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			printk(KERN_INFO "[MIRA016]: mira016_write_target_frame_time_reg target_frame_time_us = %u.\n",
 				   mira016->target_frame_time_us);
 			printk(KERN_INFO "[MIRA016]: width %d, hblank %d, vblank %d, height %d, ctrl->val %d.\n",
-				   mira016->mode->width, mira016->mode->hblank,mira016->mode->vblank, mira016->mode->height, ctrl->val);
+				   mira016->mode->width, mira016->mode->hblank, mira016->mode->vblank, mira016->mode->height, ctrl->val);
 			ret = mira016_write_target_frame_time_reg(mira016, mira016->target_frame_time_us);
 			break;
 		case V4L2_CID_HBLANK:
@@ -5368,6 +5365,7 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 	struct v4l2_mbus_framefmt *framefmt;
 	u32 max_exposure = 0, default_exp = 0;
 	int rc = 0;
+	printk(KERN_INFO "[MIRA016]: mira016_set_pad_format() .\n");
 
 	if (fmt->pad >= NUM_PADS)
 		return -EINVAL;
@@ -5376,9 +5374,33 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 
 	if (fmt->pad == IMAGE_PAD)
 	{
+		printk(KERN_INFO "[MIRA016]: fmt format code = %d.   \n", fmt->format.code);
+		printk(KERN_INFO "[MIRA016]: some code is  = %d.   \n", MEDIA_BUS_FMT_SGRBG10_1X10);
+
 		/* Validate format or use default */
 		fmt->format.code = mira016_validate_format_code_or_default(mira016,
 																   fmt->format.code);
+
+		// switch (fmt->format.code)
+		// {
+		// case MEDIA_BUS_FMT_SGRBG10_1X10:
+		// 	printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 10 bit mode.\n");
+		// 	mira016->mode = &supported_modes[0];
+		// 	mira016->bit_depth = 10;
+		// 	return 0;
+		// case MEDIA_BUS_FMT_SGRBG12_1X12:
+		// 	printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 12 bit mode.\n");
+		// 	mira016->mode = &supported_modes[1];
+		// 	mira016->bit_depth = 12;
+		// 	return 0;
+		// case MEDIA_BUS_FMT_SGRBG8_1X8:
+		// 	printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 8 bit mode.\n");
+		// 	mira016->mode = &supported_modes[2];
+		// 	mira016->bit_depth = 8;
+		// 	return 0;
+		// default:
+		// 	printk(KERN_ERR "Unknown format requested fmt->format.code() %d", fmt->format.code);
+		// }
 
 		mode = v4l2_find_nearest_size(supported_modes,
 									  ARRAY_SIZE(supported_modes),
@@ -5388,6 +5410,7 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 		mira016_update_image_pad_format(mira016, mode, fmt);
 		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		{
+			printk(KERN_INFO "[MIRA016]:   = v4l2_subdev_get_try_format.  \n");
 			framefmt = v4l2_subdev_get_try_format(sd, sd_state,
 												  fmt->pad);
 			*framefmt = fmt->format;
@@ -5395,6 +5418,11 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 		else if (mira016->mode != mode ||
 				 mira016->fmt.code != fmt->format.code)
 		{
+			printk(KERN_INFO "[MIRA016]: Mira016 bitdepth  = %d.   \n", mira016->mode->bit_depth);
+
+			printk(KERN_INFO "[MIRA016]: Mira016 mode  = %d.   mode is %d \n", mira016->mode->code, mode->code);
+			printk(KERN_INFO "[MIRA016]: Mira016 fmt  = %d.   fmt is %d \n", mira016->fmt.code, fmt->format.code);
+
 			mira016->fmt = fmt->format;
 			mira016->mode = mode;
 
@@ -5405,12 +5433,15 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			default_exp = MIRA016_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : MIRA016_DEFAULT_EXPOSURE_US;
 			rc = __v4l2_ctrl_modify_range(mira016->exposure,
 										  mira016->exposure->minimum,
-										  (int)(1 + max_exposure ), mira016->exposure->step,
-										  (int)(1 + default_exp ));
+										  (int)(1 + max_exposure), mira016->exposure->step,
+										  (int)(1 + default_exp));
 			if (rc)
 			{
 				dev_err(&client->dev, "Error setting exposure range");
 			}
+
+			printk(KERN_INFO "[MIRA016]: Mira016 VBLANK  = %u.\n",
+				   mira016->mode->vblank);
 
 			rc = __v4l2_ctrl_modify_range(mira016->vblank,
 										  mira016->mode->vblank,
@@ -5421,7 +5452,6 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			{
 				dev_err(&client->dev, "Error setting exposure range");
 			}
-
 
 			// Set the current vblank value
 			rc = __v4l2_ctrl_s_ctrl(mira016->vblank, mira016->mode->vblank);
@@ -5868,7 +5898,7 @@ static int mira016_init_controls(struct mira016 *mira016)
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_VBLANK %X.\n", __func__, V4L2_CID_VBLANK);
 
 	mira016->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-										V4L2_CID_VBLANK, MIRA016_MIN_VBLANK,
+										V4L2_CID_VBLANK, mira016->mode->vblank,
 										0xFFFF, 1,
 										mira016->mode->vblank);
 
@@ -6278,7 +6308,7 @@ static int mira016_probe(struct i2c_client *client)
 	/* ILLUM_DELAY is in unit of TIME_UNIT, equal to 1 us. In continuous stream mode, zero delay is 1<<19. */
 	mira016->illum_delay = MIRA016_ILLUM_DELAY_DEFAULT;
 	/* Set default mode to max resolution */
-	mira016->mode = &supported_modes[0];
+	mira016->mode = &supported_modes[1];
 
 	printk(KERN_INFO "[MIRA016]: Entering init controls function.\n");
 
