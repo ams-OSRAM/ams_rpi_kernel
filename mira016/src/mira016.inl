@@ -4679,7 +4679,7 @@ static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure)
 {
 	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	const u32 min_exposure = MIRA016_EXPOSURE_MIN_US;
-	u32 max_exposure = mira016->exposure->maximum * MIRA016_MIN_ROW_LENGTH_US;
+	u32 max_exposure = mira016->exposure->maximum ;
 	u32 ret = 0;
 
 	if (exposure < min_exposure)
@@ -5056,8 +5056,8 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			ret = mira016_write_analog_gain_reg(mira016, ctrl->val);
 			break;
 		case V4L2_CID_EXPOSURE:
-			// printk(KERN_INFO "[MIRA016]: exposure line = %u, exposure us = %u.\n", ctrl->val, ctrl->val * MIRA016_MIN_ROW_LENGTH_NS / 1000);
-			ret = mira016_write_exposure_reg(mira016, ctrl->val * MIRA016_MIN_ROW_LENGTH_NS / 1000);
+			printk(KERN_INFO "[MIRA016]: exposure line = %u, exposure us = %u.\n", ctrl->val, ctrl->val );
+			ret = mira016_write_exposure_reg(mira016, ctrl->val );
 			break;
 		case V4L2_CID_TEST_PATTERN:
 			ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
@@ -5405,8 +5405,8 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			default_exp = MIRA016_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : MIRA016_DEFAULT_EXPOSURE_US;
 			rc = __v4l2_ctrl_modify_range(mira016->exposure,
 										  mira016->exposure->minimum,
-										  (int)(1 + max_exposure / MIRA016_MIN_ROW_LENGTH_US), mira016->exposure->step,
-										  (int)(1 + default_exp / MIRA016_MIN_ROW_LENGTH_US));
+										  (int)(1 + max_exposure ), mira016->exposure->step,
+										  (int)(1 + default_exp ));
 			if (rc)
 			{
 				dev_err(&client->dev, "Error setting exposure range");
@@ -5889,9 +5889,9 @@ static int mira016_init_controls(struct mira016 *mira016)
 
 	mira016->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
 										  V4L2_CID_EXPOSURE,
-										  MIRA016_EXPOSURE_MIN_RT, MIRA016_EXPOSURE_MAX_RT,
+										  MIRA016_EXPOSURE_MIN_US, MIRA016_EXPOSURE_MAX_US,
 										  1,
-										  MIRA016_DEFAULT_EXPOSURE_RT);
+										  MIRA016_DEFAULT_EXPOSURE_US);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_ANALOGUE_GAIN %X.\n", __func__, V4L2_CID_ANALOGUE_GAIN);
 
