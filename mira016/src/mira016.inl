@@ -154,6 +154,7 @@
 // #define MIRA016_MIN_VBLANK 11 // for 10b or 8b, 360fps
 #define MIRA016_MIN_VBLANK_200 340 // 200 fps
 #define MIRA016_MIN_VBLANK_360 11  // 200 fps
+#define MIRA016_DEFAULT_VBLANK_60 2050  // 200 fps
 
 // Power on function timing
 #define MIRA016_XCLR_MIN_DELAY_US 150000
@@ -276,7 +277,7 @@ struct mira016_mode
 	struct mira016_reg_list reg_list_pre_soft_reset;
 	struct mira016_reg_list reg_list_post_soft_reset;
 
-	u32 vblank;
+	u32 min_vblank;
 	u32 hblank;
 
 	/* Format code */
@@ -637,7 +638,7 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	{461, 17},
 	{22, 0},
 	{23, 5},
-	{232, 3},
+	{232, 4},
 	{498, 0},
 	{362, 1},
 	{57536, 0},
@@ -1303,7 +1304,7 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	{461, 17},
 	{22, 0},
 	{23, 5},
-	{232, 3},
+	{232, 4},
 	{498, 0},
 	{362, 2},
 	{57536, 0},
@@ -3315,7 +3316,7 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	{461, 17},
 	{22, 0},
 	{23, 5},
-	{232, 3},
+	{232, 4},
 	{498, 0},
 	{362, 0},
 	{57536, 0},
@@ -3690,7 +3691,7 @@ static const struct mira016_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_10b_1lane_reg_post_soft_reset),
 			.regs = full_400_400_100fps_10b_1lane_reg_post_soft_reset,
 		},
-		.vblank = MIRA016_MIN_VBLANK_360,
+		.min_vblank = MIRA016_MIN_VBLANK_360,
 		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
@@ -3708,7 +3709,7 @@ static const struct mira016_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_post_soft_reset),
 			.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
 		},
-		.vblank = MIRA016_MIN_VBLANK_200,
+		.min_vblank = MIRA016_MIN_VBLANK_200,
 		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
@@ -3726,7 +3727,7 @@ static const struct mira016_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_8b_1lane_reg_post_soft_reset),
 			.regs = full_400_400_100fps_8b_1lane_reg_post_soft_reset,
 		},
-		.vblank = MIRA016_MIN_VBLANK_360,
+		.min_vblank = MIRA016_MIN_VBLANK_360,
 		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
@@ -5085,7 +5086,7 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			printk(KERN_INFO "[MIRA016]: mira016_write_target_frame_time_reg target_frame_time_us = %u.\n",
 				   mira016->target_frame_time_us);
 			printk(KERN_INFO "[MIRA016]: width %d, hblank %d, vblank %d, height %d, ctrl->val %d.\n",
-				   mira016->mode->width, mira016->mode->hblank, mira016->mode->vblank, mira016->mode->height, ctrl->val);
+				   mira016->mode->width, mira016->mode->hblank, mira016->mode->min_vblank, mira016->mode->height, ctrl->val);
 			ret = mira016_write_target_frame_time_reg(mira016, mira016->target_frame_time_us);
 			break;
 		case V4L2_CID_HBLANK:
@@ -5434,7 +5435,7 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			// Update controls based on new mode (range and current value).
 			max_exposure = mira016_calculate_max_exposure_time(MIRA016_MIN_ROW_LENGTH,
 															   mira016->mode->height,
-															   mira016->mode->vblank);
+															   mira016->mode->min_vblank);
 			default_exp = MIRA016_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : MIRA016_DEFAULT_EXPOSURE_US;
 			rc = __v4l2_ctrl_modify_range(mira016->exposure,
 										  mira016->exposure->minimum,
@@ -5446,24 +5447,24 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			}
 
 			printk(KERN_INFO "[MIRA016]: Mira016 VBLANK  = %u.\n",
-				   mira016->mode->vblank);
+				   mira016->mode->min_vblank);
 
 			rc = __v4l2_ctrl_modify_range(mira016->vblank,
-										  mira016->mode->vblank,
+										  mira016->mode->min_vblank,
 										  0xFFFF,
 										  1,
-										  mira016->mode->vblank);
+										  MIRA016_DEFAULT_VBLANK_60);
 			if (rc)
 			{
 				dev_err(&client->dev, "Error setting exposure range");
 			}
 
 			// Set the current vblank value
-			rc = __v4l2_ctrl_s_ctrl(mira016->vblank, mira016->mode->vblank);
+			rc = __v4l2_ctrl_s_ctrl(mira016->vblank, MIRA016_DEFAULT_VBLANK_60);
 			if (rc)
 			{
 				dev_err(&client->dev, "Error setting vblank value to %u",
-						mira016->mode->vblank);
+						mira016->mode->min_vblank);
 			}
 		}
 	}
@@ -5689,6 +5690,10 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl grab vflip grab hflip.\n");
 	__v4l2_ctrl_grab(mira016->hflip, true);
 
+	printk(KERN_INFO "[MIRA016]: %s Enable illumination trigger.\n", __func__);
+	mira016->illum_enable = 1;
+	mira016_write_illum_trig_regs(mira016);
+
 	return 0;
 
 err_rpm_put:
@@ -5903,9 +5908,9 @@ static int mira016_init_controls(struct mira016 *mira016)
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_VBLANK %X.\n", __func__, V4L2_CID_VBLANK);
 
 	mira016->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-										V4L2_CID_VBLANK, mira016->mode->vblank,
+										V4L2_CID_VBLANK, mira016->mode->min_vblank,
 										0xFFFF, 1,
-										mira016->mode->vblank);
+										MIRA016_DEFAULT_VBLANK_60);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
 
