@@ -4279,7 +4279,7 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 		//
 		//
 		// printk(KERN_INFO "[MIRA016]: LPS DISABLED. Exposure name is  to %u.\n", mira016->exposure->name);
-		u32 cur_exposure = (mira016->exposure->val) * MIRA016_TROW_US;
+		u32 cur_exposure = (mira016->exposure->val) ;
 
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur is  to %u.\n", mira016->exposure->val);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur IN US  is  to %u.\n", cur_exposure);
@@ -4701,7 +4701,7 @@ static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure)
 	}
 	if (mira016->illum_width_auto == 1)
 	{
-		mira016->illum_width = (exposure / 8) * MIRA016_DATA_RATE;
+		mira016->illum_width = exposure * MIRA016_DATA_RATE / 8;
 		mira016_write_illum_trig_regs(mira016);
 	}
 
@@ -5381,26 +5381,31 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 		fmt->format.code = mira016_validate_format_code_or_default(mira016,
 																   fmt->format.code);
 
-		// switch (fmt->format.code)
-		// {
-		// case MEDIA_BUS_FMT_SGRBG10_1X10:
-		// 	printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 10 bit mode.\n");
-		// 	mira016->mode = &supported_modes[0];
-		// 	mira016->bit_depth = 10;
-		// 	return 0;
-		// case MEDIA_BUS_FMT_SGRBG12_1X12:
-		// 	printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 12 bit mode.\n");
-		// 	mira016->mode = &supported_modes[1];
-		// 	mira016->bit_depth = 12;
-		// 	return 0;
-		// case MEDIA_BUS_FMT_SGRBG8_1X8:
-		// 	printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 8 bit mode.\n");
-		// 	mira016->mode = &supported_modes[2];
-		// 	mira016->bit_depth = 8;
-		// 	return 0;
-		// default:
-		// 	printk(KERN_ERR "Unknown format requested fmt->format.code() %d", fmt->format.code);
-		// }
+		switch (fmt->format.code)
+		{
+		case MEDIA_BUS_FMT_SGRBG10_1X10:
+			printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 10 bit mode.\n");
+			mira016->mode = &supported_modes[0];
+			mira016->bit_depth = 10;
+			// return 0;
+			break;
+
+		case MEDIA_BUS_FMT_SGRBG12_1X12:
+			printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 12 bit mode.\n");
+			mira016->mode = &supported_modes[1];
+			mira016->bit_depth = 12;
+			// return 0;
+			break;
+
+		case MEDIA_BUS_FMT_SGRBG8_1X8:
+			printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 8 bit mode.\n");
+			mira016->mode = &supported_modes[2];
+			mira016->bit_depth = 8;
+			// return 0;
+			break;
+		default:
+			printk(KERN_ERR "Unknown format requested fmt->format.code() %d", fmt->format.code);
+		}
 
 		mode = v4l2_find_nearest_size(supported_modes,
 									  ARRAY_SIZE(supported_modes),
@@ -5424,7 +5429,7 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			printk(KERN_INFO "[MIRA016]: Mira016 fmt  = %d.   fmt is %d \n", mira016->fmt.code, fmt->format.code);
 
 			mira016->fmt = fmt->format;
-			mira016->mode = mode;
+			// mira016->mode = mode;
 
 			// Update controls based on new mode (range and current value).
 			max_exposure = mira016_calculate_max_exposure_time(MIRA016_MIN_ROW_LENGTH,
