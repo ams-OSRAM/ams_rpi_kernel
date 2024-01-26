@@ -152,9 +152,11 @@
 #define MIRA016_DEFAULT_EXPOSURE_RT (int)(1 + MIRA016_DEFAULT_EXPOSURE_US / MIRA016_MIN_ROW_LENGTH_US)
 
 // #define MIRA016_MIN_VBLANK 11 // for 10b or 8b, 360fps
-#define MIRA016_MIN_VBLANK_200 340 // 200 fps
-#define MIRA016_MIN_VBLANK_360 11  // 200 fps
-#define MIRA016_DEFAULT_VBLANK_60 2050  // 200 fps
+#define MIRA016_MIN_VBLANK_200 4610 // 200 fps
+#define MIRA016_MIN_VBLANK_360 2400  // 200 fps
+#define MIRA016_MAX_VBLANK	   1000000
+
+#define MIRA016_DEFAULT_VBLANK_60 16000  // 200 fps
 
 // Power on function timing
 #define MIRA016_XCLR_MIN_DELAY_US 150000
@@ -163,7 +165,7 @@
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
 // 0.9Gb/s * 2 * 1 / 12 = 157286400
 // 1.5 Gbit/s * 2 * 1 / 12 = 250 000 000
-#define MIRA016_PIXEL_RATE (250000000)
+#define MIRA016_PIXEL_RATE (400000000)
 /* Should match device tree link freq */
 #define MIRA016_DEFAULT_LINK_FREQ 456000000
 
@@ -179,10 +181,10 @@
  * Example with TARGET_FPS of 100 fps
  * HBLANK=1/((1/157286400)*100*(400+12))-400=3418
  */
-#define MIRA016_HBLANK_100FPS 3418
-#define MIRA016_HBLANK_360FPS 1290
-#define MIRA016_HBLANK_200FPS 2650
-#define MIRA016_HBLANK 1290
+// #define MIRA016_HBLANK_100FPS 3418
+// #define MIRA016_HBLANK_360FPS 1290
+// #define MIRA016_HBLANK_200FPS 2650
+#define MIRA016_HBLANK 0
 
 // For test pattern with fixed data
 #define MIRA016_TRAINING_WORD_REG 0x0060
@@ -195,16 +197,11 @@
 #define MIRA016_TEST_PATTERN_2D_GRADIENT 0x02
 
 /* Embedded metadata stream structure */
-#define MIRA016_EMBEDDED_LINE_WIDTH 16384
-#define MIRA016_NUM_EMBEDDED_LINES 1
+#define MIRA016_EMBEDDED_LINE_WIDTH 0
+#define MIRA016_NUM_EMBEDDED_LINES 0
 
 /* From Jetson driver */
-#define MIRA016_DEFAULT_LINE_LENGTH (0xA80)
-#define MIRA016_DEFAULT_PIXEL_CLOCK (160)
-#define MIRA016_DEFAULT_FRAME_LENGTH (0x07C0)
 
-#define MIRA016_PLL_LOCKED_REG 0x207C
-#define MIRA016_CSI2_TX_HS_ACTIVE_REG 0x209A
 
 #define MIRA016_CURRENT_ACTIVE_CONTEXT 0x4002
 
@@ -3692,6 +3689,7 @@ static const struct mira016_mode supported_modes[] = {
 			.regs = full_400_400_100fps_10b_1lane_reg_post_soft_reset,
 		},
 		.min_vblank = MIRA016_MIN_VBLANK_360,
+		.max_vblank = MIRA016_MAX_VBLANK,
 		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
@@ -3710,6 +3708,7 @@ static const struct mira016_mode supported_modes[] = {
 			.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
 		},
 		.min_vblank = MIRA016_MIN_VBLANK_200,
+		.max_vblank = MIRA016_MAX_VBLANK,
 		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
@@ -3728,6 +3727,7 @@ static const struct mira016_mode supported_modes[] = {
 			.regs = full_400_400_100fps_8b_1lane_reg_post_soft_reset,
 		},
 		.min_vblank = MIRA016_MIN_VBLANK_360,
+		.max_vblank = MIRA016_MAX_VBLANK,
 		.hblank = MIRA016_HBLANK, // TODO
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
@@ -5090,6 +5090,8 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			ret = mira016_write_target_frame_time_reg(mira016, mira016->target_frame_time_us);
 			break;
 		case V4L2_CID_HBLANK:
+			printk(KERN_INFO "[MIRA016]: V4L2_CID_HBLANK CALLED = %d.\n",
+				ctrl->val);
 			break;
 		default:
 			dev_info(&client->dev,
@@ -5921,7 +5923,7 @@ static int mira016_init_controls(struct mira016 *mira016)
 
 	// Make the vblank control read only. This could be changed to allow changing framerate in
 	// runtime, but would require adapting other settings
-	// mira016->vblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+	mira016->hblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 
 	// Exposure is indicated in number of lines here
 	// Max is determined by vblank + vsize and Tglob.
