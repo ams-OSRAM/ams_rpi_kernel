@@ -275,6 +275,7 @@ struct mira016_mode
 	struct mira016_reg_list reg_list_post_soft_reset;
 
 	u32 min_vblank;
+	u32 max_vblank;
 	u32 hblank;
 
 	/* Format code */
@@ -5453,7 +5454,7 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 
 			rc = __v4l2_ctrl_modify_range(mira016->vblank,
 										  mira016->mode->min_vblank,
-										  0xFFFF,
+										  mira016->mode->max_vblank,
 										  1,
 										  MIRA016_DEFAULT_VBLANK_60);
 			if (rc)
@@ -5911,7 +5912,7 @@ static int mira016_init_controls(struct mira016 *mira016)
 
 	mira016->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
 										V4L2_CID_VBLANK, mira016->mode->min_vblank,
-										0xFFFF, 1,
+										mira016->mode->max_vblank, 1,
 										MIRA016_DEFAULT_VBLANK_60);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
