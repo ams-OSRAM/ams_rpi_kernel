@@ -277,7 +277,7 @@ struct mira016_mode
 	u32 min_vblank;
 	u32 max_vblank;
 	u32 hblank;
-
+	u32 row_length;
 	/* Format code */
 	u32 code;
 
@@ -3784,7 +3784,7 @@ struct mira016
 	u8 illum_width_auto;
 	/* A flag to force write_start/stop_streaming_regs even if (skip_reg_upload==1) */
 	u32 target_frame_time_us;
-
+        u32 row_length;
 	u8 force_stream_ctrl;
 
 	/*
@@ -4286,14 +4286,15 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur is  to %u.\n", mira016->exposure->val);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur IN US  is  to %u.\n", cur_exposure);
 
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure max is  to %u.\n", mira016->exposure->maximum);
+		u32 readout_time = (11 + MIRA016_PIXEL_ARRAY_HEIGHT) * mira016->row_length * 8 / MIRA016_DATA_RATE; 
 
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. MIRA016_LPS_CYCLE_TIME is  to %u.\n", MIRA016_LPS_CYCLE_TIME);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. MIRA016_GLOB_TIME is  to %u.\n", MIRA016_GLOB_TIME);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. frame time is  to %u.\n", mira016->target_frame_time_us);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. glob time is  to %u.\n", MIRA016_GLOB_TIME);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. read time is  to %u.\n", MIRA016_READOUT_TIME);
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME is  to %u.\n", mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME);
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. new read time is  to %u.\n", readout_time);
+		printk(KERN_INFO "[MIRA016]: LPS ENABLED. mira016->target_frame_time_us - MIRA016_GLOB_TIME - readout_time is  to %u.\n", mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME);
 
 		// case 1: EXP_TIME < LPS_CYCLE_TIME
 		if (cur_exposure < MIRA016_LPS_CYCLE_TIME)
@@ -4302,19 +4303,19 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 			lps_time = 0;
 		}
 		// case 2: LPS_ CYCLE_ TIME<EXP_ TIME≤FRAME_ TIME-GLOB_ TIME-READOUT_TIME
-		else if ((MIRA016_LPS_CYCLE_TIME < cur_exposure) && (cur_exposure < (mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME)))
+		else if ((MIRA016_LPS_CYCLE_TIME < cur_exposure) && (cur_exposure < (mira016->target_frame_time_us - MIRA016_GLOB_TIME - readout_time)))
 		{
 			lps_time = cur_exposure - MIRA016_LPS_CYCLE_TIME;
 			printk(KERN_INFO "[MIRA016]: LPS CASE 2 - LPS TIME is %u.\n", lps_time);
 		}
 		// case 3: LPS_ CYCLE_ TIME≤FRAME_ TIME-GLOB_ TIME-READOUT_TIME<EXP_ TIME
-		else if ((MIRA016_LPS_CYCLE_TIME < (mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME)) && ((mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) < cur_exposure))
+		else if ((MIRA016_LPS_CYCLE_TIME < (mira016->target_frame_time_us - MIRA016_GLOB_TIME - readout_time)) && ((mira016->target_frame_time_us - MIRA016_GLOB_TIME - readout_time) < cur_exposure))
 		{
-			lps_time = (mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) - MIRA016_LPS_CYCLE_TIME;
+			lps_time = (mira016->target_frame_time_us - MIRA016_GLOB_TIME - readout_time) - MIRA016_LPS_CYCLE_TIME;
 			printk(KERN_INFO "[MIRA016]: LPS CASE 3 - LPS TIME is %u.\n", lps_time);
 		}
 		// case 4: FRAME_ TIME-GLOB_ TIME-READOUT_ TIME≤LPS_ CYCLE_ TIME<EXP_ TIME
-		else if (((mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME) < MIRA016_LPS_CYCLE_TIME) && (MIRA016_LPS_CYCLE_TIME < cur_exposure))
+		else if (((mira016->target_frame_time_us - MIRA016_GLOB_TIME - readout_time) < MIRA016_LPS_CYCLE_TIME) && (MIRA016_LPS_CYCLE_TIME < cur_exposure))
 		{
 			printk(KERN_INFO "[MIRA016]: LPS CASE 4 to %u.\n", mira016->illum_width);
 			lps_time = 0;
@@ -4847,6 +4848,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x1_12bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
+			mira016->row_length = 1504; 
 		}
 		else if (gain == 1)
 		{
@@ -4856,6 +4858,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x2_12bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
+			mira016->row_length = 2056; 
 		}
 		else
 		{
@@ -4874,6 +4877,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_10bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x1_10bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
+			mira016->row_length = 1092; 
 		}
 		else if (gain == 1)
 		{
@@ -4883,6 +4887,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_10bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x2_10bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
+			mira016->row_length = 1094; 
 		}
 		else
 		{
@@ -4901,6 +4906,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_8bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x1_8bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
+			mira016->row_length = 1042; 
 		}
 		else if (gain == 1)
 		{
@@ -4910,6 +4916,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_8bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x2_8bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
+			mira016->row_length = 1004; 
 		}
 		else
 		{
@@ -5600,6 +5607,7 @@ static int mira016_start_streaming(struct mira016 *mira016)
 		goto err_rpm_put;
 	}
 	printk(KERN_INFO "[MIRA016]: Register sequence for %d bit mode will be used.\n", mira016->mode->bit_depth);
+	usleep_range(30000, 50000);
 
 	if (mira016->skip_reg_upload == 0)
 	{
@@ -6323,6 +6331,7 @@ static int mira016_probe(struct i2c_client *client)
 	/* Set default mode to max resolution */
 	mira016->mode = &supported_modes[1];
 
+	mira016->row_length = MIRA016_ROW_LENGTH;
 	printk(KERN_INFO "[MIRA016]: Entering init controls function.\n");
 
 	ret = mira016_init_controls(mira016);
