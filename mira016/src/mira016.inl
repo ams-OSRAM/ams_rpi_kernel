@@ -119,7 +119,6 @@
 #define MIRA016_DATA_RATE 1500 // Mbit/s
 #define MIRA016_SEQ_TIME_BASE 8 / MIRA016_DATA_RATE
 #define MIRA016_LPS_CYCLE_TIME 1145
-#define MIRA016_TARGET_FRAME_TIME 5000
 #define MIRA016_GLOB_TIME 68
 #define MIRA016_ROW_LENGTH 1504 // 12b
 #define MIRA016_LPS_DISABLED 0
@@ -130,26 +129,12 @@
 // Default exposure is adjusted to 1 ms
 #define MIRA016_LUT_DEL_008 0
 #define MIRA016_GRAN_TG 1500 * 50 / MIRA016_DATA_RATE
-// TODO: Check Mira016 data rate in reg sequence
-// ROW_LENGTH register is 0x0032, with value 1042 (8 bit). Choose smaller one for safety.
 #define MIRA016_MIN_ROW_LENGTH MIRA016_ROW_LENGTH // 1042 for 8 bit
-// Row time in millisecond is ROW_LENGTH times SEQ_TIME_BASE
 #define MIRA016_MIN_ROW_LENGTH_US (MIRA016_MIN_ROW_LENGTH * 8 / MIRA016_DATA_RATE)
-// Row time in microsecond is not precise enoughi, e.g., 9.35 becomes 9. Need nanosecond.
-#define MIRA016_MIN_ROW_LENGTH_NS (MIRA016_MIN_ROW_LENGTH * 1000 * 8 / MIRA016_DATA_RATE)
-// Mira016 EXP_TIME registe is in microsecond. V4L2 exposure value is in row time.
-// Min exposure is set according to Mira016 datasheet, in microsecond.
 #define MIRA016_EXPOSURE_MIN_US (int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG * 8 / MIRA016_DATA_RATE)
-// Min exposure for V4L2 is in row time.
-#define MIRA016_EXPOSURE_MIN_RT (int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG / MIRA016_MIN_ROW_LENGTH)
-// Max exposure is set to TARGET_FRAME_TIME (32-bit reg 0x0008), in microsecond.
 #define MIRA016_EXPOSURE_MAX_US (1000000)
-// Max exposure for V4L2 is in row time.
-#define MIRA016_EXPOSURE_MAX_RT (int)(1 + MIRA016_EXPOSURE_MAX_US / MIRA016_MIN_ROW_LENGTH_US)
-// Default exposure register is in microseconds
 #define MIRA016_DEFAULT_EXPOSURE_US 1000
 // Default exposure for V4L2 is in row time
-#define MIRA016_DEFAULT_EXPOSURE_RT (int)(1 + MIRA016_DEFAULT_EXPOSURE_US / MIRA016_MIN_ROW_LENGTH_US)
 
 // #define MIRA016_MIN_VBLANK 11 // for 10b or 8b, 360fps
 #define MIRA016_MIN_VBLANK_200 4610 // 200 fps
@@ -3784,7 +3769,7 @@ struct mira016
 	u8 illum_width_auto;
 	/* A flag to force write_start/stop_streaming_regs even if (skip_reg_upload==1) */
 	u32 target_frame_time_us;
-        u32 row_length;
+	u32 row_length;
 	u8 force_stream_ctrl;
 
 	/*
