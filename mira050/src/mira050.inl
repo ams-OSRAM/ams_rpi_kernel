@@ -121,42 +121,62 @@
 
 #define MIRA050_SUPPORTED_XCLK_FREQ		24000000
 
-// Default exposure is adjusted to 1 ms
-#define MIRA050_LUT_DEL_008			66
-#define MIRA050_GRAN_TG				34
-#define MIRA050_DATA_RATE			1000 // Mbit/s
-// ROW_LENGTH register is 0x0032, with value 3069 (12 bit) or 1842 (8 bit). Choose smaller one for safety.
-#define MIRA050_MIN_ROW_LENGTH			1842
-// Row time in microsecond is ROW_LENGTH times SEQ_TIME_BASE
-#define MIRA050_MIN_ROW_LENGTH_US		(MIRA050_MIN_ROW_LENGTH * 8 / MIRA050_DATA_RATE)
-// Row time in microsecond is not precise enoughi, e.g., 14.736 becomes 14. Need nanosecond.
-#define MIRA050_MIN_ROW_LENGTH_NS               (MIRA050_MIN_ROW_LENGTH * 1000 * 8 / MIRA050_DATA_RATE)
-// Mira050 EXP_TIME registe is in microsecond. V4L2 exposure value is in row time.
-// Min exposure is set according to Mira050 datasheet, in microsecond.
-#define MIRA050_EXPOSURE_MIN_US			(int)(1 + (151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG * 8 / MIRA050_DATA_RATE)
-// Min exposure for V4L2 is in row time.
-#define MIRA050_EXPOSURE_MIN_RT			(int)(1 + (151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG / MIRA050_MIN_ROW_LENGTH)
-// Max exposure is set to TARGET_FRAME_TIME (32-bit reg 0x0008), in microsecond.
-#define MIRA050_EXPOSURE_MAX_US			(16601)
-// Max exposure for V4L2 is in row time.
-#define MIRA050_EXPOSURE_MAX_RT			(int)(1 + MIRA050_EXPOSURE_MAX_US / MIRA050_MIN_ROW_LENGTH_US)
-// Default exposure register is in microseconds
-#define MIRA050_DEFAULT_EXPOSURE_US		1000
-// Default exposure for V4L2 is in row time
-#define MIRA050_DEFAULT_EXPOSURE_RT		(int)(1 + MIRA050_DEFAULT_EXPOSURE_US / MIRA050_MIN_ROW_LENGTH_US)
 
-#define MIRA050_MIN_VBLANK			(11 + MIRA050_GLOB_NUM_CLK_CYCLES \
-						    / MIRA050_MIN_ROW_LENGTH)
+// Some timings
+#define MIRA050_DATA_RATE 996 // Mbit/s
+#define MIRA050_SEQ_TIME_BASE 8 / MIRA050_DATA_RATE
+#define MIRA050_LUT_DEL_008 66 // for 12bit, #TODO
+#define MIRA050_GRAN_TG 1500 * 50 / MIRA050_DATA_RATE
+#define MIRA050_LPS_CYCLE_TIME 12600 //12500 + 100
+#define MIRA050_GLOB_TIME (int)((190 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG * MIRA050_SEQ_TIME_BASE)
+#define MIRA050_ROW_LENGTH 1842 // 12b
+#define MIRA050_LPS_DISABLED 0
+#define MIRA050_TROW_US MIRA050_ROW_LENGTH * 8 / MIRA050_DATA_RATE
+
+
+// Default exposure is adjusted to 1 ms
+
+#define MIRA050_MIN_ROW_LENGTH MIRA050_ROW_LENGTH // 1042 for 8 bit
+#define MIRA050_MIN_ROW_LENGTH_US (MIRA050_MIN_ROW_LENGTH * 8 / MIRA050_DATA_RATE)
+#define MIRA050_EXPOSURE_MIN_US (int)(1 + (151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG * 8 / MIRA050_DATA_RATE)
+#define MIRA050_EXPOSURE_MAX_US (1000000)
+#define MIRA050_DEFAULT_EXPOSURE_US 1000
+// Default exposure for V4L2 is in row time
+
+// #define MIRA050_MIN_VBLANK 11 // for 10b or 8b, 360fps
+#define MIRA050_MIN_VBLANK_50 21000 // 50 fps
+#define MIRA050_MIN_VBLANK_60 16000 // 50 fps
+#define MIRA050_MAX_VBLANK	   1000000
+
+#define MIRA050_DEFAULT_VBLANK_50 21000 // 50 fps
+
+
+
+// Default exposure is adjusted to 1 ms
+// #define MIRA050_LUT_DEL_008			66
+// #define MIRA050_GRAN_TG				34
+// #define MIRA050_DATA_RATE			1000 // Mbit/s
+// #define MIRA050_MIN_ROW_LENGTH			1842
+// #define MIRA050_MIN_ROW_LENGTH_US		(MIRA050_MIN_ROW_LENGTH * 8 / MIRA050_DATA_RATE)
+// #define MIRA050_EXPOSURE_MIN_US			(int)(1 + (151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG * 8 / MIRA050_DATA_RATE)
+// #define MIRA050_EXPOSURE_MIN_RT			(int)(1 + (151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG / MIRA050_MIN_ROW_LENGTH)
+// #define MIRA050_EXPOSURE_MAX_US			(16601)
+// #define MIRA050_EXPOSURE_MAX_RT			(int)(1 + MIRA050_EXPOSURE_MAX_US / MIRA050_MIN_ROW_LENGTH_US)
+// #define MIRA050_DEFAULT_EXPOSURE_US		1000
+// #define MIRA050_DEFAULT_EXPOSURE_RT		(int)(1 + MIRA050_DEFAULT_EXPOSURE_US / MIRA050_MIN_ROW_LENGTH_US)
+
+// #define MIRA050_MIN_VBLANK			(11 + MIRA050_GLOB_NUM_CLK_CYCLES \
+// 						    / MIRA050_MIN_ROW_LENGTH)
 
 // Power on function timing
 #define MIRA050_XCLR_MIN_DELAY_US		150000
 #define MIRA050_XCLR_DELAY_RANGE_US		3000
 
 
-
+// set pixel rate equal to width. such that 1 row time is 1 us.
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
 // 1.0Gb/s * 2 * 1 / 12 = 178956970
-#define MIRA050_PIXEL_RATE		(178956970)
+#define MIRA050_PIXEL_RATE		(768000000)
 /* Should match device tree link freq */
 #define MIRA050_DEFAULT_LINK_FREQ	456000000
 
@@ -172,7 +192,6 @@
  * Example with TARGET_FPS of 50 fps
  * HBLANK=1/((1/178956970)*50*(768+12))-576=4013
  */
-#define MIRA050_HBLANK_50FPS			4013
 
 // For test pattern with fixed data
 #define MIRA050_TRAINING_WORD_REG		0x0060
@@ -259,8 +278,10 @@ struct mira050_mode {
 	struct mira050_reg_list reg_list_pre_soft_reset;
 	struct mira050_reg_list reg_list_post_soft_reset;
 
-	u32 vblank;
+	u32 min_vblank;
+	u32 max_vblank;
 	u32 hblank;
+	u32 row_length;
 
 	/* Format code */
 	u32 code;
@@ -2544,7 +2565,7 @@ static const u32 codes[] = {
 #define MIRA050_SUPPORTED_MODE_SIZE_PUBLIC 1
 static const struct mira050_mode supported_modes[] = {
 	{
-		/* 2 MPx 30fps mode */
+		/* 2 MPx 60fps mode */
 		.width = 576,
 		.height = 768,
 		.crop = {
@@ -2561,8 +2582,9 @@ static const struct mira050_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_12b_1lane_reg_post_soft_reset),
 			.regs = full_576_768_50fps_12b_1lane_reg_post_soft_reset,
 		},
-		.vblank = 2866,
-		.hblank = MIRA050_HBLANK_50FPS, // TODO
+		.min_vblank = MIRA050_MIN_VBLANK_60,
+		.max_vblank = MIRA050_MAX_VBLANK,
+		.hblank = 0, // TODO
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
@@ -2584,8 +2606,9 @@ static const struct mira050_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_10b_hs_1lane_reg_post_soft_reset),
 			.regs = full_576_768_50fps_10b_hs_1lane_reg_post_soft_reset,
 		},
-		.vblank = 2866,
-		.hblank = MIRA050_HBLANK_50FPS, // TODO
+		.min_vblank = MIRA050_MIN_VBLANK_60,
+		.max_vblank = MIRA050_MAX_VBLANK,
+		.hblank = 0, // TODO
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
 	},
@@ -2607,8 +2630,9 @@ static const struct mira050_mode supported_modes[] = {
 			.num_of_regs = ARRAY_SIZE(full_576_768_50fps_8b_1lane_reg_post_soft_reset),
 			.regs = full_576_768_50fps_8b_1lane_reg_post_soft_reset,
 		},
-		.vblank = 2866,
-		.hblank = MIRA050_HBLANK_50FPS, // TODO
+		.min_vblank = MIRA050_MIN_VBLANK_60,
+		.max_vblank = MIRA050_MAX_VBLANK,
+		.hblank = 0, // TODO
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
 	},
@@ -2663,7 +2687,8 @@ struct mira050 {
 	u8 illum_width_auto;
 	/* A flag to force write_start/stop_streaming_regs even if (skip_reg_upload==1) */
 	u8 force_stream_ctrl;
-
+	u32 target_frame_time_us;
+	u32 row_length;
 	/*
 	 * Mutex for serialized access:
 	 * Protect sensor module set pad format and start/stop streaming safely.
@@ -3587,7 +3612,7 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain) {
 			u8 rg_mult = fine_gain_lut_8bit_16x[gain].rg_mult;
 			/* otp_cal_val should come from OTP, but OTP may have incorrect value. */
 			u16 otp_cal_val = mira050->otp_cal_val;
-			u8 target_black_level = 32;
+			u8 target_black_level = 16;
 			u16 adc_offset = 1700;
 			int scaled_calibration_value = ((otp_cal_val - 2250) / 4 - target_black_level) * 16 / (gdig_amp + 1);
 			/* Avoid negative offset_clipping value. */
@@ -3746,7 +3771,7 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		case V4L2_CID_EXPOSURE:
 			//printk(KERN_INFO "[MIRA050]: V4L2_CID_EXPOSURE: exp line = %u, exp us = %u.\n",
 			//		ctrl->val, ctrl->val * MIRA050_MIN_ROW_LENGTH_NS / 1000);
-			ret = mira050_write_exposure_reg(mira050, ctrl->val * MIRA050_MIN_ROW_LENGTH_NS / 1000);
+			ret = mira050_write_exposure_reg(mira050, ctrl->val );
 			break;
 		case V4L2_CID_TEST_PATTERN:
 			ret = mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
@@ -3772,13 +3797,14 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 			 * In libcamera, frame time (== 1/framerate) is controlled by VBLANK:
 			 * TARGET_FRAME_TIME (us) = 1000000 * ((1/PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+VBLANK))
 			 */
-			target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira050->mode->width + mira050->mode->hblank) * (u64)(mira050->mode->height + ctrl->val)) / MIRA050_PIXEL_RATE);
+			mira050->target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira050->mode->width + mira050->mode->hblank) * (u64)(mira050->mode->height + ctrl->val)) / MIRA050_PIXEL_RATE);
+ 
 			// Debug print
 			//printk(KERN_INFO "[MIRA050]: mira050_write_target_frame_time_reg target_frame_time_us = %u.\n",
 			//	target_frame_time_us);
 			//printk(KERN_INFO "[MIRA050]: width %d, hblank %d, height %d, ctrl->val %d.\n",
 			//		mira050->mode->width, mira050->mode->hblank, mira050->mode->height, ctrl->val);
-			ret = mira050_write_target_frame_time_reg(mira050, target_frame_time_us);
+			ret = mira050_write_target_frame_time_reg(mira050, mira050->target_frame_time_us);
 			break;
 		case V4L2_CID_HBLANK:
 			break;
@@ -4059,6 +4085,31 @@ static int mira050_set_pad_format(struct v4l2_subdev *sd,
 		fmt->format.code = mira050_validate_format_code_or_default(mira050,
 									  fmt->format.code);
 
+		switch (fmt->format.code)
+		{
+		case MEDIA_BUS_FMT_SGRBG10_1X10:
+			printk(KERN_INFO "[MIRA050]: fmt->format.code() selects 10 bit mode.\n");
+			mira050->mode = &supported_modes[1];
+			mira050->bit_depth = 10;
+			// return 0;
+			break;
+
+		case MEDIA_BUS_FMT_SGRBG12_1X12:
+			printk(KERN_INFO "[MIRA050]: fmt->format.code() selects 12 bit mode.\n");
+			mira050->mode = &supported_modes[0];
+			mira050->bit_depth = 12;
+			// return 0;
+			break;
+
+		case MEDIA_BUS_FMT_SGRBG8_1X8:
+			printk(KERN_INFO "[MIRA050]: fmt->format.code() selects 8 bit mode.\n");
+			mira050->mode = &supported_modes[2];
+			mira050->bit_depth = 8;
+			// return 0;
+			break;
+		default:
+			printk(KERN_ERR "Unknown format requested fmt->format.code() %d", fmt->format.code);
+		}
 		mode = v4l2_find_nearest_size(supported_modes,
 					      ARRAY_SIZE(supported_modes),
 					      width, height,
@@ -4071,27 +4122,43 @@ static int mira050_set_pad_format(struct v4l2_subdev *sd,
 			*framefmt = fmt->format;
 		} else if (mira050->mode != mode ||
 			mira050->fmt.code != fmt->format.code) {
+
 			mira050->fmt = fmt->format;
-			mira050->mode = mode;
+			// mira050->mode = mode;
 
 			// Update controls based on new mode (range and current value).
 			max_exposure = mira050_calculate_max_exposure_time(MIRA050_MIN_ROW_LENGTH,
 									   mira050->mode->height,
-									   mira050->mode->vblank);
+									   mira050->mode->min_vblank);
+			
 			default_exp = MIRA050_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : MIRA050_DEFAULT_EXPOSURE_US;
 			rc = __v4l2_ctrl_modify_range(mira050->exposure,
-						     mira050->exposure->minimum,
-						     (int)( 1 + max_exposure / MIRA050_MIN_ROW_LENGTH_US), mira050->exposure->step,
-						     (int)( 1 + default_exp / MIRA050_MIN_ROW_LENGTH_US));
-			if (rc) {
+										  mira050->exposure->minimum,
+										  (int)(1 + max_exposure), mira050->exposure->step,
+										  (int)(1 + default_exp));
+			if (rc)
+			{
 				dev_err(&client->dev, "Error setting exposure range");
 			}
 
+			printk(KERN_INFO "[MIRA050]: Mira050 VBLANK  = %u.\n",
+				   mira050->mode->min_vblank);
+
+			rc = __v4l2_ctrl_modify_range(mira050->vblank,
+										  mira050->mode->min_vblank,
+										  mira050->mode->max_vblank,
+										  1,
+										  MIRA050_DEFAULT_VBLANK_50);
+			if (rc)
+			{
+				dev_err(&client->dev, "Error setting exposure range");
+			}
 			// Set the current vblank value
-			rc = __v4l2_ctrl_s_ctrl(mira050->vblank, mira050->mode->vblank);
-			if (rc) {
+			rc = __v4l2_ctrl_s_ctrl(mira050->vblank, MIRA050_DEFAULT_VBLANK_50);
+			if (rc)
+			{
 				dev_err(&client->dev, "Error setting vblank value to %u",
-					mira050->mode->vblank);
+						mira050->mode->min_vblank);
 			}
 		}
 	} else {
@@ -4499,9 +4566,10 @@ static int mira050_init_controls(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_VBLANK %X.\n", __func__, V4L2_CID_VBLANK);
 
 	mira050->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
-					   V4L2_CID_VBLANK, MIRA050_MIN_VBLANK,
-					   0xFFFF, 1,
-					   mira050->mode->vblank);
+										V4L2_CID_VBLANK, mira050->mode->min_vblank,
+										mira050->mode->max_vblank, 1,
+										MIRA050_DEFAULT_VBLANK_50);
+
 
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
 
@@ -4517,13 +4585,11 @@ static int mira050_init_controls(struct mira050 *mira050)
 	// Exposure is indicated in number of lines here
 	// Max is determined by vblank + vsize and Tglob.
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_EXPOSURE %X.\n", __func__, V4L2_CID_EXPOSURE);
-
 	mira050->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
-					     V4L2_CID_EXPOSURE,
-					     MIRA050_EXPOSURE_MIN_RT, MIRA050_EXPOSURE_MAX_RT,
-					     1,
-					     MIRA050_DEFAULT_EXPOSURE_RT);
-
+										  V4L2_CID_EXPOSURE,
+										  MIRA050_EXPOSURE_MIN_US, MIRA050_EXPOSURE_MAX_US,
+										  1,
+										  MIRA050_DEFAULT_EXPOSURE_US);
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_ANALOGUE_GAIN %X.\n", __func__, V4L2_CID_ANALOGUE_GAIN);
 
 	mira050->gain = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops, V4L2_CID_ANALOGUE_GAIN,
