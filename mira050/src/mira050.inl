@@ -137,11 +137,13 @@
 // Default exposure for V4L2 is in row time
 
 // #define MIRA050_MIN_VBLANK 11 // for 10b or 8b, 360fps
-#define MIRA050_MIN_VBLANK_50 21000 // 50 fps
-#define MIRA050_MIN_VBLANK_60 16000 // 50 fps
+#define MIRA050_MIN_VBLANK_50 19000
+ // 50 fps
+#define MIRA050_MIN_VBLANK_60 16000
+ // 50 fps
 #define MIRA050_MAX_VBLANK 1000000
 
-#define MIRA050_DEFAULT_VBLANK_50 21000 // 50 fps
+#define MIRA050_DEFAULT_VBLANK_50 19000 // 50 fps
 
 // Default exposure is adjusted to 1 ms
 // #define MIRA050_LUT_DEL_008			66
@@ -166,7 +168,7 @@
 // set pixel rate equal to width. such that 1 row time is 1 us.
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
 // 1.0Gb/s * 2 * 1 / 12 = 178956970
-#define MIRA050_PIXEL_RATE (768000000)
+#define MIRA050_PIXEL_RATE (576000000)
 /* Should match device tree link freq */
 #define MIRA050_DEFAULT_LINK_FREQ 456000000
 
@@ -4023,12 +4025,11 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 			 * TARGET_FRAME_TIME (us) = 1000000 * ((1/PIXEL_RATE)*(WIDTH+HBLANK)*(HEIGHT+VBLANK))
 			 */
 			mira050->target_frame_time_us = (u32)((u64)(1000000 * (u64)(mira050->mode->width + mira050->mode->hblank) * (u64)(mira050->mode->height + ctrl->val)) / MIRA050_PIXEL_RATE);
-
 			// Debug print
-			// printk(KERN_INFO "[MIRA050]: mira050_write_target_frame_time_reg target_frame_time_us = %u.\n",
-			//	target_frame_time_us);
-			// printk(KERN_INFO "[MIRA050]: width %d, hblank %d, height %d, ctrl->val %d.\n",
-			//		mira050->mode->width, mira050->mode->hblank, mira050->mode->height, ctrl->val);
+			printk(KERN_INFO "[MIRA050]: mira050_write_target_frame_time_reg target_frame_time_us = %u.\n",
+				   mira050->target_frame_time_us);
+			printk(KERN_INFO "[MIRA050]: width %d, hblank %d, vblank %d, height %d, ctrl->val %d.\n",
+				   mira050->mode->width, mira050->mode->hblank, mira050->mode->min_vblank, mira050->mode->height, ctrl->val);
 			ret = mira050_write_target_frame_time_reg(mira050, mira050->target_frame_time_us);
 			break;
 		case V4L2_CID_HBLANK:
