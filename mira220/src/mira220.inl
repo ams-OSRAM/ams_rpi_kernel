@@ -146,7 +146,6 @@
 // Sets the duration of the row length in clock cycles of CLK_IN
 #define MIRA220_ROW_LENGTH_LO_REG		0x102B
 #define MIRA220_ROW_LENGTH_HI_REG		0x102C
-#define MIRA220_ROW_LENGTH_MIN			300
 
 #define MIRA220_VSIZE1_LO_REG			0x1087
 #define MIRA220_VSIZE1_HI_REG			0x1088
@@ -210,14 +209,14 @@
 
 #define MIRA220_SUPPORTED_XCLK_FREQ		24000000
 
-#define MIRA220_MIN_ROW_LENGTH			300
+#define MIRA220_MIN_ROW_LENGTH			450
 #define MIRA220_MAX_ROW_LENGTH			1400
 #define MIRA220_MIN_VBLANK			(1 + 11 + MIRA220_GLOB_NUM_CLK_CYCLES \
 						    / MIRA220_MAX_ROW_LENGTH)
 
 // Default exposure is adjusted to mode with smallest height
 #define MIRA220_MIN_V_SIZE			300
-#define MIRA220_DEFAULT_EXPOSURE		(MIRA220_MIN_V_SIZE + MIRA220_MIN_VBLANK - MIRA220_GLOB_NUM_CLK_CYCLES / MIRA220_MIN_ROW_LENGTH)
+#define MIRA220_DEFAULT_EXPOSURE		100 //(MIRA220_MIN_V_SIZE + MIRA220_MIN_VBLANK - MIRA220_GLOB_NUM_CLK_CYCLES / MIRA220_MIN_ROW_LENGTH) //TODO
 #define MIRA220_EXPOSURE_MIN			1
 
 // Power on function timing
@@ -237,11 +236,9 @@
 // ROW_LENGTH_1600x1400_1000GBS=300
 // ROW_LENGTH_640x480_1000GBS=450
 // CLK_IN_PERIOD_NS = 1.0 s / 38.4 Mhz = 26.04 ns
-// MIRA220_PIXEL_RATE_1600x1400_1000GBS = 1000000000 * 1600 / (300 * 26.04) = 204813108
-// MIRA220_PIXEL_RATE_640x480_1000GBS = 1000000000 * 640 / (450 * 26.04) = 54616828
-#define MIRA220_PIXEL_RATE_1600x1400_1000GBS   204813108
-#define MIRA220_PIXEL_RATE_640x480_1000GBS     54616828
-
+// MIRA220_PIXEL_RATE = 1000000000 * 1600 / (300 * 26.04) = 204813108
+// MIRA220_PIXEL_RATE = 1000000000 * 640 / (450 * 26.04) = 54616828
+#define MIRA220_PIXEL_RATE   384000000 //384M (x10)
 // Row time in microseconds. Not used in driver, but used in libcamera cam_helper.
 // ROW_TIME_US = ROW_LENGTH * CLK_IN_PERIOD_NS / 1000
 // MIRA220_ROW_TIME_1600x1400_1000GBS_US=(300*26.04/1000)=7.8us
@@ -266,8 +263,8 @@
  * Example with TARGET_FPS of 30 fps for 1600x1400
  * HBLANK=1/((1/204813108)*30*(1400+13))-1600=3232
  */
-#define MIRA220_HBLANK_640x480_120FPS		283
-#define MIRA220_HBLANK_1600x1400_30FPS		3232
+#define MIRA220_HBLANK_640x480_120FPS		3860
+#define MIRA220_HBLANK_1600x1400_30FPS		2900
 
 #define MIRA220_REG_TEST_PATTERN	0x2091
 #define	MIRA220_TEST_PATTERN_DISABLE	0x00
@@ -280,7 +277,7 @@
 /* From Jetson driver */
 #define MIRA220_DEFAULT_LINE_LENGTH    (0xA80)
 #define MIRA220_DEFAULT_PIXEL_CLOCK    (160)
-#define MIRA220_DEFAULT_FRAME_LENGTH    (0x07C0)
+#define MIRA220_DEFAULT_FRAME_LENGTH    (0x07C0) //TODO REMOVE THESE
 
 /* Illumination trigger */
 #define MIRA220_EN_TRIG_ILLUM_REG     0x10D7
@@ -322,10 +319,11 @@ struct mira220_mode {
 
 	/* Default register values */
 	struct mira220_reg_list reg_list;
-
 	u32 row_length;
+
 	u32 pixel_rate;
-	u32 vblank;
+	u32 min_vblank;
+	u32 max_vblank;
 	u32 hblank;
 	u32 code;
 };
@@ -672,8 +670,8 @@ static const struct mira220_reg full_1600_1400_30fps_12b_2lanes_reg[] = {
         {0x302e, 0x3f},
         {0x3013, 0x0b},
         // Related to ADC timing, do not adjust these
-        {0x102b, 0x2c},
-        {0x102c, 0x01},
+		{0x102b,0xc2},
+		{0x102c,0x1},
         {0x1035, 0x54},
         {0x1036, 0x00},
         {0x3090, 0x2a},
@@ -1383,7 +1381,7 @@ static const struct mira220_reg vga_640_480_120fps_12b_2lanes_reg[] = {
 	{0x302e,0x3f},
 	{0x3013,0xb},
 	// Related to ADC timing, do not adjust these
-	{0x102b,0x2c},
+	{0x102b,0xc2},
 	{0x102c,0x1},
 	{0x1035,0x54},
 	{0x1036,0x0},
@@ -1869,28 +1867,7 @@ static const u32 codes[] = {
 
 /* Mode configs */
 static const struct mira220_mode supported_modes[] = {
-	/* VGA 120fps 8bpp mode */
-	{
-		.width = 640,
-		.height = 480,
-		.crop = {
-			.left = 480,
-			.top = 460,
-			.width = 640,
-			.height = 480
-		},
-		.reg_list = {
-			.num_of_regs = ARRAY_SIZE(vga_640_480_120fps_12b_2lanes_reg),
-			.regs = vga_640_480_120fps_12b_2lanes_reg,
-		},
-		// vblank is ceil(MIRA220_GLOB_NUM_CLK_CYCLES / ROW_LENGTH)  + 11
-		// ROW_LENGTH is configured by register 0x102B, 0x102C.
-		.row_length = 0x01C2,
-		.pixel_rate = MIRA220_PIXEL_RATE_640x480_1000GBS,
-		.vblank = 18, // ceil(1928 / 300) + 11
-		.hblank = MIRA220_HBLANK_640x480_120FPS, // TODO
-		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
-	},
+
 	/* 2 MPx 30fps 12bpp mode */
 	{
 		.width = 1600,
@@ -1907,12 +1884,38 @@ static const struct mira220_mode supported_modes[] = {
 		},
 		// vblank is ceil(MIRA220_GLOB_NUM_CLK_CYCLES / ROW_LENGTH)  + 11
 		// ROW_LENGTH is configured by register 0x102B, 0x102C.
-		.row_length = 0x012C,
-		.pixel_rate = MIRA220_PIXEL_RATE_1600x1400_1000GBS,
-		.vblank = 16, // ceil(1928 / 450) + 11
+		.row_length = 450,
+		.pixel_rate = MIRA220_PIXEL_RATE,
+		.min_vblank = 16, // ceil(1928 / 300) + 11
+		.max_vblank = 50000, // ceil(1928 / 300) + 11
 		.hblank = MIRA220_HBLANK_1600x1400_30FPS, // TODO
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
 	},
+
+	/* VGA 120fps 8bpp mode */
+	{
+		.width = 640,
+		.height = 480,
+		.crop = {
+			.left = 480,
+			.top = 460,
+			.width = 640,
+			.height = 480
+		},
+		.reg_list = {
+			.num_of_regs = ARRAY_SIZE(vga_640_480_120fps_12b_2lanes_reg),
+			.regs = vga_640_480_120fps_12b_2lanes_reg,
+		},
+		// vblank is ceil(MIRA220_GLOB_NUM_CLK_CYCLES / ROW_LENGTH)  + 11
+		// ROW_LENGTH is configured by register 0x102B, 0x102C.
+		.row_length = 450,
+		.pixel_rate = MIRA220_PIXEL_RATE,
+		.min_vblank = 16, // ceil(1928 / 300) + 11
+		.max_vblank = 50000, // ceil(1928 / 300) + 11
+		.hblank = MIRA220_HBLANK_640x480_120FPS, // TODO
+		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
+	}
+
 };
 
 struct mira220 {
@@ -2349,7 +2352,7 @@ static int mira220_write_stop_streaming_regs(struct mira220* mira220) {
         frame_time = MIRA220_DEFAULT_FRAME_LENGTH *
             MIRA220_DEFAULT_LINE_LENGTH / MIRA220_DEFAULT_PIXEL_CLOCK;
 
-        usleep_range(frame_time, frame_time + 1000);
+        usleep_range(frame_time, frame_time + 1000); //TODO, set to 1 frametime
 
 	return ret;
 }
@@ -2534,9 +2537,9 @@ static int mira220_v4l2_reg_r(struct mira220 *mira220, u32 *value) {
 
 // Returns the maximum exposure time in row_length (reg value).
 // Calculation is baded on Mira220 datasheet Section 9.2.
-static u32 mira220_calculate_max_exposure_time(u32 row_length, u32 vsize,
+static u32 mira220_calculate_max_exposure_time(u32 vsize,
 					       u32 vblank) {
-	return (vsize + vblank) - (int)(MIRA220_GLOB_NUM_CLK_CYCLES / row_length);
+	return (vsize + vblank) - (int)(MIRA220_GLOB_NUM_CLK_CYCLES / MIRA220_MIN_ROW_LENGTH);
 }
 
 static int mira220_write_analog_gain_reg(struct mira220 *mira220, u8 gain) {
@@ -2562,15 +2565,17 @@ static int mira220_write_analog_gain_reg(struct mira220 *mira220, u8 gain) {
 
 static int mira220_write_exposure_reg(struct mira220 *mira220, u32 exposure) {
 	struct i2c_client* const client = v4l2_get_subdevdata(&mira220->sd);
-	const u32 max_exposure = mira220_calculate_max_exposure_time(mira220->mode->row_length,
-		mira220->mode->height, mira220->mode->vblank);
+	const u32 max_exposure = mira220_calculate_max_exposure_time(
+		mira220->mode->height, mira220->mode->min_vblank);
 	u32 ret = 0;
 	u32 capped_exposure = exposure;
 
 	if (exposure > max_exposure) {
 		capped_exposure = max_exposure;
 	}
-
+	
+	printk(KERN_INFO "[MIRA220]: exposure fun width %d, hblank %d, vblank %d, row len %d, ctrl->val %d.\n",
+				mira220->mode->width, mira220->hblank->val, mira220->vblank->val, MIRA220_MIN_ROW_LENGTH, exposure);
 	ret = mira220_write16(mira220, MIRA220_EXP_TIME_LO_REG, capped_exposure);
 	if (ret) {
 		dev_err_ratelimited(&client->dev, "Error setting exposure time to %d", capped_exposure);
@@ -2667,7 +2672,7 @@ static int mira220_set_ctrl(struct v4l2_ctrl *ctrl)
 		int exposure_max, exposure_def;
 
 		/* Update max exposure while meeting expected vblanking */
-		exposure_max = mira220_calculate_max_exposure_time(mira220->mode->row_length,
+		exposure_max = mira220_calculate_max_exposure_time(
 				                mira220->mode->height, ctrl->val);
 		exposure_def = (exposure_max < MIRA220_DEFAULT_EXPOSURE) ?
 			exposure_max : MIRA220_DEFAULT_EXPOSURE;
@@ -2692,7 +2697,7 @@ static int mira220_set_ctrl(struct v4l2_ctrl *ctrl)
 	if (mira220->skip_reg_upload == 0) {
 		switch (ctrl->id) {
 		case V4L2_CID_ANALOGUE_GAIN:
-			ret = mira220_write_analog_gain_reg(mira220, ctrl->val);
+			// ret = mira220_write_analog_gain_reg(mira220, ctrl->val);
 			break;
 		case V4L2_CID_EXPOSURE:
 			ret = mira220_write_exposure_reg(mira220, ctrl->val);
@@ -2712,6 +2717,8 @@ static int mira220_set_ctrl(struct v4l2_ctrl *ctrl)
 		case V4L2_CID_VBLANK:
 			ret = mira220_write16(mira220, MIRA220_VBLANK_LO_REG,
 						ctrl->val);
+			printk(KERN_INFO "[MIRA220]: width %d, hblank %d, vblank %d, height %d, ctrl->val %d.\n",
+				   mira220->mode->width, mira220->mode->hblank, mira220->mode->min_vblank, mira220->mode->height, ctrl->val);
 			break;
 		case V4L2_CID_HBLANK:
 			break;
@@ -3014,9 +3021,9 @@ static int mira220_set_pad_format(struct v4l2_subdev *sd,
 			mira220->mode = mode;
 
 			// Update controls based on new mode (range and current value).
-			max_exposure = mira220_calculate_max_exposure_time(mira220->mode->row_length,
+			max_exposure = mira220_calculate_max_exposure_time(
 									   mira220->mode->height,
-									   mira220->mode->vblank);
+									   mira220->mode->min_vblank);
 			default_exp = MIRA220_DEFAULT_EXPOSURE > max_exposure ? max_exposure : MIRA220_DEFAULT_EXPOSURE;
 			printk(KERN_INFO "[MIRA220]: mira220_set_pad_format() min_exp %d max_exp %d, default_exp %d\n",
 					MIRA220_EXPOSURE_MIN, max_exposure, default_exp);
@@ -3039,12 +3046,20 @@ static int mira220_set_pad_format(struct v4l2_subdev *sd,
 						     mira220->mode->hblank);
 			printk(KERN_INFO "[MIRA220]: mira220_set_pad_format() update V4L2_CID_HBLANK to %u\n", mira220->mode->hblank);
 
+			printk(KERN_INFO "[MIRA220]: Mira220 VBLANK  = %u.\n",
+				   mira220->mode->min_vblank);
+
+			__v4l2_ctrl_modify_range(mira220->vblank,
+										  mira220->mode->min_vblank,
+										  mira220->mode->max_vblank,
+										  1,
+										  mira220->mode->min_vblank);
 
 			// Set the current vblank value
-			printk(KERN_INFO "[MIRA220]: mira220_set_pad_format() mira220->mode->vblank %d\n",
-					mira220->mode->vblank);
+			printk(KERN_INFO "[MIRA220]: mira220_set_pad_format() mira220->mode->min_vblank, %d\n",
+					mira220->mode->min_vblank);
 
-			__v4l2_ctrl_s_ctrl(mira220->vblank, mira220->mode->vblank);
+			__v4l2_ctrl_s_ctrl(mira220->vblank, mira220->mode->min_vblank);
 		}
 	} else {
 		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
@@ -3458,9 +3473,9 @@ static int mira220_init_controls(struct mira220 *mira220)
 	printk(KERN_INFO "[MIRA220]: %s V4L2_CID_VBLANK %X.\n", __func__, V4L2_CID_VBLANK);
 
 	mira220->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &mira220_ctrl_ops,
-					   V4L2_CID_VBLANK, MIRA220_MIN_VBLANK,
-					   0xFFFF, 1,
-					   mira220->mode->vblank);
+					   V4L2_CID_VBLANK, mira220->mode->min_vblank,
+					   mira220->mode->max_vblank, 1,
+					   mira220->mode->min_vblank);
 
 	printk(KERN_INFO "[MIRA220]: %s V4L2_CID_HBLANK %X.\n", __func__, V4L2_CID_HBLANK);
 
@@ -3475,9 +3490,8 @@ static int mira220_init_controls(struct mira220 *mira220)
 
 	// Exposure is indicated in number of lines here
 	// Max is determined by vblank + vsize and Tglob.
-	max_exposure = mira220_calculate_max_exposure_time(mira220->mode->row_length,
-	                                                   mira220->mode->height,
-	                                                   mira220->mode->vblank);
+	max_exposure = mira220_calculate_max_exposure_time(mira220->mode->height,
+	                                                   mira220->mode->min_vblank);
 
 	printk(KERN_INFO "[MIRA220]: %s V4L2_CID_EXPOSURE %X.\n", __func__, V4L2_CID_EXPOSURE);
 
