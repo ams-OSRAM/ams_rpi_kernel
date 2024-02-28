@@ -4310,7 +4310,7 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 			printk(KERN_INFO "[MIRA016]: LPS CASE 5 invalid to %u.\n", mira016->illum_width);
 		}
 
-		width_adjust = lps_time * 1500 / 8;
+		width_adjust = (lps_time>0 ? lps_time * 1500 / 8 - 30 : 0);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLE -s width adjust is  %u.\n", width_adjust);
 
 		ret = mira016_write_be24(mira016, MIRA016_ILLUM_WIDTH_REG, mira016->illum_width - width_adjust);
