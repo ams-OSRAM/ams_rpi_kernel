@@ -289,7 +289,8 @@ struct mira050_mode
 	/* Default register values */
 	struct mira050_reg_list reg_list_pre_soft_reset;
 	struct mira050_reg_list reg_list_post_soft_reset;
-
+	u32 gain_min;
+	u32 gain_max;
 	u32 min_vblank;
 	u32 max_vblank;
 	u32 hblank;
@@ -2635,9 +2636,13 @@ static const struct mira050_mode supported_modes[] = {
 		},
 		.min_vblank = MIRA050_MIN_VBLANK_60,
 		.max_vblank = MIRA050_MAX_VBLANK,
+
+
 		.hblank = 0,
 		.bit_depth = 12,
 		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
+		.gain_min = 0,
+		.gain_max = 2, //this is means 0,1,2 correspond to 1x 2x 4x gain
 	},
 	{
 		/* 10 bit highspeed / low power mode */
@@ -2657,6 +2662,8 @@ static const struct mira050_mode supported_modes[] = {
 		.hblank = 0,
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
+		.gain_min = 0,
+		.gain_max = ARRAY_SIZE(fine_gain_lut_10bit_hs_4x) - 1,
 	},
 	{
 		/* 8 bit mode */
@@ -2676,6 +2683,8 @@ static const struct mira050_mode supported_modes[] = {
 		.hblank = 0,
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
+		.gain_min = 0,
+		.gain_max = ARRAY_SIZE(fine_gain_lut_8bit_16x) - 1,
 	},
 
 };
@@ -3945,7 +3954,7 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 			// int estimated_offset = (part2>>8) - 2;
 			// int scaled_calibration_value = ((otp_cal_val - 1540) / 4 - target_black_level) * 16 / (gdig_amp + 1);
 			/* Avoid negative offset_clipping value. */
-			int estimated_offset = (int)((otp_cal_fine_val + 2) * analog_gain / (int)(gdig_amp + 1) / 256 - 2);
+			int estimated_offset = (int)((otp_cal_fine_val + 0) * analog_gain / (int)(gdig_amp + 1) / 256 - 0);
 
 			int offset_clipping_calc = (int)(adc_offset - (target_black_level * digital_gain - estimated_offset));
 						/*preamp_gain, _, _ = gain_settings._gain_lut[gain]
@@ -4509,6 +4518,22 @@ static int mira050_set_pad_format(struct v4l2_subdev *sd,
 				dev_err(&client->dev, "Error setting exposure range");
 			}
 
+
+			printk(KERN_INFO "[MIRA050]: Mira050 SETTING ANA GAIN RANGE  = %u.\n",
+				   ARRAY_SIZE(fine_gain_lut_8bit_16x) - 1);
+			//#FIXME #TODO
+			// rc = __v4l2_ctrl_modify_range(mira050->gain,
+			// 					 0, ARRAY_SIZE(fine_gain_lut_8bit_16x) - 1, 1, 0);
+			rc = __v4l2_ctrl_modify_range(mira050->gain,
+								mira050->mode->gain_min,
+								mira050->mode->gain_max,
+								1,
+								0);
+			if (rc)
+			{
+				dev_err(&client->dev, "Error setting gain range");
+			}
+
 			printk(KERN_INFO "[MIRA050]: Mira050 VBLANK  = %u.\n",
 				   mira050->mode->min_vblank);
 
@@ -4574,7 +4599,7 @@ static int mira050_set_framefmt(struct mira050 *mira050)
 		mira050->mode = &supported_modes[0];
 		mira050->bit_depth = 12;
 		__v4l2_ctrl_modify_range(mira050->gain,
-								 MIRA050_ANALOG_GAIN_MIN, MIRA050_ANALOG_GAIN_MAX,
+								 mira050->mode->gain_min, mira050->mode->gain_max,
 								 MIRA050_ANALOG_GAIN_STEP, MIRA050_ANALOG_GAIN_DEFAULT);
 		return 0;
 	default:
@@ -4999,6 +5024,7 @@ static int mira050_init_controls(struct mira050 *mira050)
 	ctrl_hdlr->lock = &mira050->mutex;
 
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_PIXEL_RATE %X.\n", __func__, V4L2_CID_PIXEL_RATE);
+	printk(KERN_INFO "[MIRA050]: %s INIT_CONTROLS bitmode %X.\n", __func__, mira050->mode->bit_depth);
 
 	/* By default, PIXEL_RATE is read only */
 	mira050->pixel_rate = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
@@ -5036,7 +5062,7 @@ static int mira050_init_controls(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_ANALOGUE_GAIN %X.\n", __func__, V4L2_CID_ANALOGUE_GAIN);
 
 	mira050->gain = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops, V4L2_CID_ANALOGUE_GAIN,
-									  MIRA050_ANALOG_GAIN_MIN, MIRA050_ANALOG_GAIN_MAX,
+								 mira050->mode->gain_min, mira050->mode->gain_max,
 									  MIRA050_ANALOG_GAIN_STEP, MIRA050_ANALOG_GAIN_DEFAULT);
 
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_HFLIP %X.\n", __func__, V4L2_CID_HFLIP);
@@ -5058,6 +5084,10 @@ static int mira050_init_controls(struct mira050 *mira050)
 								 V4L2_CID_TEST_PATTERN,
 								 ARRAY_SIZE(mira050_test_pattern_menu) - 1,
 								 0, 0, mira050_test_pattern_menu);
+	
+	
+	
+	
 	/*
 	 * Custom op
 	 */
