@@ -117,7 +117,7 @@
 #define MIRA050_SUPPORTED_XCLK_FREQ 24000000
 
 // Some timings
-#define MIRA050_DATA_RATE 996 // Mbit/s
+#define MIRA050_DATA_RATE 1500 // Mbit/s
 #define MIRA050_SEQ_TIME_BASE 8 / MIRA050_DATA_RATE
 #define MIRA050_LUT_DEL_008 66 // for 12bit, #TODO
 #define MIRA050_GRAN_TG 1500 * 50 / MIRA050_DATA_RATE
@@ -3892,7 +3892,7 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 			// int estimated_offset = (part2>>8) - 2;
 			// int scaled_calibration_value = ((otp_cal_val - 1540) / 4 - target_black_level) * 16 / (gdig_amp + 1);
 			/* Avoid negative offset_clipping value. */
-			int estimated_offset = (int)((otp_cal_fine_val + 2) * analog_gain / (int)(gdig_amp + 1) / 256 - 2);
+			int estimated_offset = (int)((otp_cal_fine_val + 4) * analog_gain / (int)(gdig_amp + 1) / 256 - 4);
 
 			int offset_clipping_calc = (int)(adc_offset - (target_black_level  - estimated_offset));
 						/*preamp_gain, _, _ = gain_settings._gain_lut[gain]
@@ -3944,17 +3944,18 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 			u8 rg_adcgain = fine_gain_lut_8bit_16x[gain].rg_adcgain;
 			u8 rg_mult = fine_gain_lut_8bit_16x[gain].rg_mult;
 			/* otp_cal_val should come from OTP, but OTP may have incorrect value. */
-			u8 target_black_level = 16;
+			u8 target_black_level = 8;
 			u16 adc_offset = 1540;
 			u16 digital_gain = 16 / (gdig_amp + 1);
 			u16 offset_clipping = 0;
+			u16 linear_offset = 1;
 
 			// int part1 = (int)(otp_cal_val + 2.5) ;
 			// int part2 = (int)(part1*analog_gain / (int)(gdig_amp + 1)) ;
 			// int estimated_offset = (part2>>8) - 2;
 			// int scaled_calibration_value = ((otp_cal_val - 1540) / 4 - target_black_level) * 16 / (gdig_amp + 1);
 			/* Avoid negative offset_clipping value. */
-			int estimated_offset = (int)((otp_cal_fine_val + 0) * analog_gain / (int)(gdig_amp + 1) / 256 - 0);
+			int estimated_offset = (int)((otp_cal_fine_val + linear_offset) * analog_gain / (gdig_amp + 1) / 256 - linear_offset);
 
 			int offset_clipping_calc = (int)(adc_offset - (target_black_level * digital_gain - estimated_offset));
 						/*preamp_gain, _, _ = gain_settings._gain_lut[gain]
@@ -3994,6 +3995,7 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 			mira050_write(mira050, MIRA050_BIAS_RG_MULT, rg_mult);
 			mira050_write_be16(mira050, MIRA050_OFFSET_CLIPPING, offset_clipping);
 			/* Resume streaming */
+			usleep_range(wait_us, wait_us + 100);
 			mira050_write_start_streaming_regs(mira050);
 		}
 	}
