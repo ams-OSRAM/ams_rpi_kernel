@@ -1,0 +1,5 @@
+obj-m  := poncha110.o
+dtbo-y += poncha110.dtbo
+targets += $(dtbo-y)
+always  := $(dtbo-y)
+always-y        := $(dtbo-y)

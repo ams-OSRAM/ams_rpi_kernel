@@ -45,7 +45,7 @@ Version: $PKGVER
 Architecture: $PKGARCH
 Maintainer: Zhenyu Ye <zhenyu.ye@ams-osram.com>
 Description: Mira device tree and driver for RPI.
- It contains mira220, mira220color, mira050, mira050color, mira016, mira130." > $PKGDIR/DEBIAN/control
+ It contains mira220, mira220color, mira050, mira050color, mira016, mira130, poncha110." > $PKGDIR/DEBIAN/control
 
 MODULEDIR=$PKGDIR/usr/lib/modules/$KERNELRELEASE/kernel/drivers/media/i2c
 mkdir -p $MODULEDIR
@@ -54,6 +54,16 @@ mkdir -p $PKGDIR/boot/overlays
 echo "#############################"
 echo "# Add driver and dtbo to deb"
 echo "#############################"
+
+# Build dtbo and driver
+(cd poncha110/src && make)
+# Install driver to deb package folder
+(cd poncha110/src && make INSTALL_MOD_PATH=$PKGDIR install)
+# Install dtbo to deb package folder
+(cd poncha110/src && cp poncha110.dtbo $PKGDIR/boot/overlays/)
+# Cleanup artifacts from source folder
+(cd poncha110/src && make clean)
+
 
 # Build dtbo and driver
 (cd mira220/src && make)
@@ -92,6 +102,7 @@ echo "#############################"
 (cd mira130/src && make clean)
 
 
+
 echo "#############################"
 echo "# Build and install deb pkg"
 echo "#############################"
@@ -104,7 +115,10 @@ for file in `ls /boot/overlays/mira*.dtbo`; do
 	echo "Moving ${file} to ${file}bak"
 	sudo mv ${file} ${file}bak
 done
-
+for file in `ls /boot/overlays/poncha*.dtbo`; do
+	echo "Moving ${file} to ${file}bak"
+	sudo mv ${file} ${file}bak
+done
 echo "Installing $PKGDIR.deb"
 sudo dpkg -i $PKGDIR.deb
 

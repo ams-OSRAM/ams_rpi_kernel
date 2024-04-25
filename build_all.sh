@@ -38,7 +38,10 @@ echo "Applying patches to Linux source"
 (cd $PWD/mira130/patch && ./apply_patch.sh)
 echo "Copying source files to Linux source"
 (cd $PWD/mira130/src && ./apply_src.sh)
-
+echo "Applying patches to Linux source"
+(cd $PWD/poncha110/patch && ./apply_patch.sh)
+echo "Copying source files to Linux source"
+(cd $PWD/poncha110/src && ./apply_src.sh)
 
 # prepare compilation script
 echo "Preparing a build.sh script inside Linux source dir"
