@@ -116,35 +116,15 @@
 #define PONCHA110_SUPPORTED_XCLK_FREQ 24000000
 
 // Some timings
-#define PONCHA110_DATA_RATE 1500 // Mbit/s
+#define PONCHA110_DATA_RATE 500 // Mbit/s
 #define PONCHA110_SEQ_TIME_BASE 8 / PONCHA110_DATA_RATE
 #define PONCHA110_LPS_CYCLE_TIME 1145
-#define PONCHA110_GLOB_TIME 68
-#define PONCHA110_ROW_LENGTH 1504 // 12b
+#define PONCHA110_ROW_LENGTH 2563 // 12b
 #define PONCHA110_LPS_DISABLED 0
 #define PONCHA110_TROW_US PONCHA110_ROW_LENGTH * 8 / PONCHA110_DATA_RATE
 
 #define PONCHA110_READOUT_TIME PONCHA110_TROW_US * (11 + PONCHA110_PIXEL_ARRAY_HEIGHT)
 
-// Default exposure is adjusted to 1 ms
-#define PONCHA110_LUT_DEL_008 0
-#define PONCHA110_GRAN_TG 1500 * 50 / PONCHA110_DATA_RATE
-#define PONCHA110_MIN_ROW_LENGTH PONCHA110_ROW_LENGTH // 1042 for 8 bit
-#define PONCHA110_MIN_ROW_LENGTH_US (PONCHA110_MIN_ROW_LENGTH * 8 / PONCHA110_DATA_RATE)
-#define PONCHA110_EXPOSURE_MIN_US (int)(1 + (151 + PONCHA110_LUT_DEL_008) * PONCHA110_GRAN_TG * 8 / PONCHA110_DATA_RATE)
-#define PONCHA110_EXPOSURE_MAX_US (1000000)
-#define PONCHA110_DEFAULT_EXPOSURE_US 1000
-// Default exposure for V4L2 is in row time
-
-// #define PONCHA110_MIN_VBLANK 353 // for 10b or 8b, 360fps
-#define PONCHA110_MIN_VBLANK 353  // 30 fps
-#define PONCHA110_MAX_VBLANK 4300	   //1000000
-
-#define PONCHA110_DEFAULT_VBLANK_30 353  // 200 fps
-
-// Power on function timing
-#define PONCHA110_XCLR_MIN_DELAY_US 150000
-#define PONCHA110_XCLR_DELAY_RANGE_US 3000
 
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
 // 0.9Gb/s * 2 * 1 / 12 = 157286400
@@ -201,20 +181,14 @@
 #define PONCHA110_OTP_CAL_VALUE_MIN 2000
 #define PONCHA110_OTP_CAL_VALUE_MAX 2400
 
-/* Illumination trigger */
-#define PONCHA110_EN_TRIG_ILLUM 0x001C
-#define PONCHA110_ILLUM_WIDTH_REG 0x0019
-#define PONCHA110_ILLUM_DELAY_REG 0x0016
-#define PONCHA110_ILLUM_WIDTH_DEFAULT (PONCHA110_DEFAULT_EXPOSURE_US * PONCHA110_DATA_RATE / 8)
-#define PONCHA110_ILLUM_DELAY_DEFAULT (1 << 19)
-#define PONCHA110_ILLUM_ENABLE_DEFAULT 1
-#define PONCHA110_ILLUM_SYNC_DEFAULT 1
+
 
 
 /*relevant params for poncha*/
-#define PONCHA110_PIXEL_RATE (65000000)
+#define PONCHA110_PIXEL_RATE (100000000)
 /* Should match device tree link freq */
 #define PONCHA110_DEFAULT_LINK_FREQ 456000000
+#define PONCHA110_ADC_DURATION (1000000000)
 
 #define PONCHA110_T_SEQ_NS 0x0010
 /*relevant registers for Poncha*/
@@ -222,15 +196,24 @@
 #define PONCHA110_ROW_LENGTH_REG 0x0010 //multiples of t_seq
 #define PONCHA110_EXPOSURE_REG 0x000E
 
-
+// #define PONCHA110_MIN_VBLANK 353 // for 10b or 8b, 360fps
+#define PONCHA110_MIN_VBLANK 218  // 30 fps
+#define PONCHA110_MAX_VBLANK 218	   //1000000
+#define PONCHA110_DEFAULT_VBLANK_30 218  // 200 fps
 
 #define PONCHA110_EXPOSURE_MIN 1
+#define PONCHA110_DEFAULT_EXPOSURE 0x5FF
 
-#define PONCHA110_EXPOSURE_MAX 0x6FF //TBD
+#define PONCHA110_EXPOSURE_MAX 0xFFF //long enough..
 
-#define PONCHA110_ROW_LENGTH 1510 //multiples of t_seq
+#define PONCHA110_ROW_LENGTH 2563 //multiples of t_seq
 
 #define PONCHA110_HBLANK (PONCHA110_ROW_LENGTH - PONCHA110_PIXEL_ARRAY_WIDTH)
+
+
+// Power on function timing
+#define PONCHA110_XCLR_MIN_DELAY_US 120000
+#define PONCHA110_XCLR_DELAY_RANGE_US 3000
 
 
 enum pad_types
@@ -289,540 +272,758 @@ struct poncha110_mode
 	u8 bit_depth;
 };
 
-// converted_Draco_i2c_configuration_sequence_hex_10bit_1x_360fps_Version3
+// 
 static const struct poncha110_reg full_10b_1lane_reg_pre_soft_reset[] = {
-	// Sensor Operating Mode
+    //"Preset for MIPI 30fps 1-lane @500Mbit/s (non-continuous clock)"
+
+	// polar_pix
 	{0x0106, 0x02},
 	{0x0107, 0x83},
-	//POLAR_ANACOL},
+	// polar_anacol
 	{0x0104, 0x00},
 	{0x0105, 0x34},
-	//GRAN_PIX},
+	// gran_pix
 	{0x0103, 0x01},
-	//GRAN_ANACOL},
+	// gran_anacol
 	{0x0102, 0x01},
-	//POS_DPP_TRIGGER},
+	// pos_dpp_trigger
 	{0x00e7, 0x00},
 	{0x00e8, 0x01},
-	//POS_ANACOL_TRIGGER},
+	// pos_anacol_trigger
 	{0x00e9, 0x00},
 	{0x00ea, 0x01},
-	//POS_ANACOL_YBIN_TRIGGER},
+	// pos_anacol_ybin_trigger
 	{0x00eb, 0x05},
 	{0x00ec, 0xe7},
-	//POS_PIX_TRIGGER},
+	// pos_pix_trigger
 	{0x00ed, 0x00},
 	{0x00ee, 0x01},
-	//POS_PIX_YBIN_TRIGGER},
+	// pos_pix_ybin_trigger
 	{0x00ef, 0x05},
 	{0x00f0, 0xe7},
-	//POS_YADDR_TRIGGER},
+	// pos_yaddr_trigger
 	{0x00f1, 0x00},
 	{0x00f2, 0x01},
-	//POS_YADDR_YBIN_TRIGGER},
+	// pos_yaddr_ybin_trigger
 	{0x00f3, 0x05},
 	{0x00f4, 0xe7},
-	//NR_ADC_CLKS_RST},
+	// nr_adc_clks_rst
 	{0x00dd, 0x00},
 	{0x00de, 0x78},
-	//NR_ADC_CLKS_SIG},
+	// nr_adc_clks_sig
 	{0x00df, 0x02},
 	{0x00e0, 0x78},
-	//DPATH_BITMODE},
+	// dpath_bitmode
 	{0x004d, 0x01},
-	//COLLOAD_PULSE_ENABLE},
-	{0x0018, 0x00},
-	//ROW_LENGTH},
+	// offset_clipping
+	{0x004a, 0x00},
+	{0x004b, 0x80},
+	// row_length
 	{0x0010, 0x05},
 	{0x0011, 0xe6},
-	//PROG_000},
-	{0x011a, 0x00},
-	{0x011b, 0xf0},
-	//PROG_001},
-	{0x011c, 0x00},
-	{0x011d, 0x09},
-	//PROG_002},
-	{0x011e, 0x00},
-	{0x011f, 0xf1},
-	//PROG_003},
-	{0x0120, 0x02},
-	{0x0121, 0x04},
-	//PROG_004},
-	{0x0122, 0x01},
-	{0x0123, 0x14},
-	//PROG_005},
-	{0x0124, 0x00},
-	{0x0125, 0xf2},
-	//PROG_006},
-	{0x0126, 0x00},
-	{0x0127, 0xd9},
-	//PROG_007},
-	{0x0128, 0x02},
-	{0x0129, 0x04},
-	//PROG_008},
-	{0x012a, 0x02},
-	{0x012b, 0x94},
-	//PROG_009},
-	{0x012c, 0x00},
-	{0x012d, 0xf3},
-	//PROG_010},
-	{0x012e, 0x00},
-	{0x012f, 0xf4},
-	//PROG_011},
-	{0x0130, 0x00},
-	{0x0131, 0xd0},
-	//PROG_012},
-	{0x0132, 0x02},
-	{0x0133, 0x04},
-	//PROG_013},
-	{0x0134, 0x01},
-	{0x0135, 0x42},
-	//PROG_014},
-	{0x0136, 0x00},
-	{0x0137, 0xf5},
-	//PROG_015},
-	{0x0138, 0x02},
-	{0x0139, 0x03},
-	//PROG_016},
-	{0x013a, 0x00},
-	{0x013b, 0xf6},
-	//PROG_017},
-	{0x013c, 0x02},
-	{0x013d, 0x03},
-	//PROG_018},
-	{0x013e, 0x00},
-	{0x013f, 0xf7},
-	//PROG_019},
-	{0x0140, 0x02},
-	{0x0141, 0x02},
-	//PROG_020},
-	{0x0142, 0x00},
-	{0x0143, 0xf8},
-	//PROG_021},
-	{0x0144, 0x00},
-	{0x0145, 0xd9},
-	//PROG_022},
-	{0x0146, 0x02},
-	{0x0147, 0x04},
-	//PROG_023},
-	{0x0148, 0x02},
-	{0x0149, 0x94},
-	//PROG_024},
-	{0x014a, 0x00},
-	{0x014b, 0xf9},
-	//PROG_025},
-	{0x014c, 0x00},
-	{0x014d, 0xfa},
-	//PROG_026},
-	{0x014e, 0x00},
-	{0x014f, 0xd0},
-	//PROG_027},
-	{0x0150, 0x02},
-	{0x0151, 0x04},
-	//PROG_028},
-	{0x0152, 0x02},
-	{0x0153, 0x04},
-	//PROG_029},
-	{0x0154, 0x02},
-	{0x0155, 0x01},
-	//PROG_030},
-	{0x0156, 0x00},
-	{0x0157, 0x00},
-	//PROG_031},
-	{0x0158, 0x00},
-	{0x0159, 0xf0},
-	//PROG_032},
-	{0x015a, 0x00},
-	{0x015b, 0x03},
-	//PROG_033},
-	{0x015c, 0x02},
-	{0x015d, 0x06},
-	//PROG_034},
-	{0x015e, 0x00},
-	{0x015f, 0xf1},
-	//PROG_035},
-	{0x0160, 0x02},
-	{0x0161, 0x56},
-	//PROG_036},
-	{0x0162, 0x01},
-	{0x0163, 0x01},
-	//PROG_037},
-	{0x0164, 0x00},
-	{0x0165, 0xf2},
-	//PROG_038},
-	{0x0166, 0x01},
-	{0x0167, 0x01},
-	//PROG_039},
-	{0x0168, 0x00},
-	{0x0169, 0xd9},
-	//PROG_040},
-	{0x016a, 0x01},
-	{0x016b, 0x1b},
-	//PROG_041},
-	{0x016c, 0x02},
-	{0x016d, 0x09},
-	//PROG_042},
-	{0x016e, 0x00},
-	{0x016f, 0xf3},
-	//PROG_043},
-	{0x0170, 0x01},
-	{0x0171, 0x19},
-	//PROG_044},
-	{0x0172, 0x01},
-	{0x0173, 0x02},
-	//PROG_045},
-	{0x0174, 0x01},
-	{0x0175, 0x3b},
-	//PROG_046},
-	{0x0176, 0x01},
-	{0x0177, 0x47},
-	//PROG_047},
-	{0x0178, 0x00},
-	{0x0179, 0xcf},
-	//PROG_048},
-	{0x017a, 0x02},
-	{0x017b, 0x07},
-	//PROG_049},
-	{0x017c, 0x00},
-	{0x017d, 0xf4},
-	//PROG_050},
-	{0x017e, 0x01},
-	{0x017f, 0x0a},
-	//PROG_051},
-	{0x0180, 0x01},
-	{0x0181, 0x35},
-	//PROG_052},
-	{0x0182, 0x01},
-	{0x0183, 0x2a},
-	//PROG_053},
-	{0x0184, 0x00},
-	{0x0185, 0xd0},
-	//PROG_054},
-	{0x0186, 0x00},
-	{0x0187, 0xf5},
-	//PROG_055},
-	{0x0188, 0x00},
-	{0x0189, 0xf6},
-	//PROG_056},
-	{0x018a, 0x00},
-	{0x018b, 0xf7},
-	//PROG_057},
-	{0x018c, 0x02},
-	{0x018d, 0x28},
-	//PROG_058},
-	{0x018e, 0x02},
-	{0x018f, 0x0b},
-	//PROG_059},
-	{0x0190, 0x02},
-	{0x0191, 0x0b},
-	//PROG_060},
-	{0x0192, 0x00},
-	{0x0193, 0xf8},
-	//PROG_061},
-	{0x0194, 0x00},
-	{0x0195, 0xd9},
-	//PROG_062},
-	{0x0196, 0x01},
-	{0x0197, 0x1b},
-	//PROG_063},
-	{0x0198, 0x02},
-	{0x0199, 0x09},
-	//PROG_064},
-	{0x019a, 0x00},
-	{0x019b, 0xf9},
-	//PROG_065},
-	{0x019c, 0x01},
-	{0x019d, 0x19},
-	//PROG_066},
-	{0x019e, 0x01},
-	{0x019f, 0x02},
-	//PROG_067},
-	{0x01a0, 0x01},
-	{0x01a1, 0x3b},
-	//PROG_068},
-	{0x01a2, 0x01},
-	{0x01a3, 0x47},
-	//PROG_069},
-	{0x01a4, 0x00},
-	{0x01a5, 0xcf},
-	//PROG_070},
-	{0x01a6, 0x02},
-	{0x01a7, 0x07},
-	//PROG_071},
-	{0x01a8, 0x00},
-	{0x01a9, 0xfa},
-	//PROG_072},
-	{0x01aa, 0x01},
-	{0x01ab, 0x0a},
-	//PROG_073},
-	{0x01ac, 0x01},
-	{0x01ad, 0x35},
-	//PROG_074},
-	{0x01ae, 0x01},
-	{0x01af, 0x2a},
-	//PROG_075},
-	{0x01b0, 0x00},
-	{0x01b1, 0xd0},
-	//PROG_076},
-	{0x01b2, 0x02},
-	{0x01b3, 0x18},
-	//PROG_077},
-	{0x01b4, 0x00},
-	{0x01b5, 0x00},
-	//PROG_078},
-	{0x01b6, 0x00},
-	{0x01b7, 0x00},
-	//PROG_079},
-	{0x01b8, 0x00},
-	{0x01b9, 0x00},
-	//PROG_080},
-	{0x01ba, 0x00},
-	{0x01bb, 0x00},
-	//PROG_081},
-	{0x01bc, 0x00},
-	{0x01bd, 0x00},
-	//PROG_082},
-	{0x01be, 0x00},
-	{0x01bf, 0x00},
-	//PROG_083},
-	{0x01c0, 0x00},
-	{0x01c1, 0x00},
-	//PROG_084},
-	{0x01c2, 0x00},
-	{0x01c3, 0x00},
-	//PROG_085},
-	{0x01c4, 0x00},
-	{0x01c5, 0x00},
-	//PROG_086},
-	{0x01c6, 0x00},
-	{0x01c7, 0x00},
-	//PROG_087},
-	{0x01c8, 0x00},
-	{0x01c9, 0x00},
-	//PROG_088},
-	{0x01ca, 0x00},
-	{0x01cb, 0x00},
-	//PROG_089},
-	{0x01cc, 0x00},
-	{0x01cd, 0x00},
-	//PROG_090},
-	{0x01ce, 0x00},
-	{0x01cf, 0x00},
-	//PROG_091},
-	{0x01d0, 0x00},
-	{0x01d1, 0x00},
-	//PROG_092},
-	{0x01d2, 0x00},
-	{0x01d3, 0x00},
-	//PROG_093},
-	{0x01d4, 0x00},
-	{0x01d5, 0x00},
-	//PROG_094},
-	{0x01d6, 0x00},
-	{0x01d7, 0x00},
-	//PROG_095},
-	{0x01d8, 0x00},
-	{0x01d9, 0x00},
-	//PROG_096},
-	{0x01da, 0x00},
-	{0x01db, 0x00},
-	//PROG_097},
-	{0x01dc, 0x00},
-	{0x01dd, 0x00},
-	//PROG_098},
-	{0x01de, 0x00},
-	{0x01df, 0x00},
-	//PROG_099},
-	{0x01e0, 0x00},
-	{0x01e1, 0x00},
-	//LUT_DEL_000},
-	{0x010a, 0x22},
-	//LUT_DEL_001},
-	{0x010b, 0x62},
-	//LUT_DEL_002},
-	{0x010c, 0x24},
-	//LUT_DEL_003},
-	{0x010d, 0x07},
-	//LUT_DEL_004},
-	{0x010e, 0x0c},
-	//LUT_DEL_005},
-	{0x010f, 0x08},
-	//LUT_DEL_006},
-	{0x0110, 0x12},
-	//LUT_DEL_007},
-	{0x0111, 0x4e},
-	//LUT_DEL_008},
-	{0x0112, 0x24},
-	//LUT_DEL_009},
-	{0x0113, 0x07},
-	//LUT_DEL_010},
-	{0x0114, 0x3f},
-	//LUT_DEL_011},
-	{0x0115, 0x00},
-	//LUT_DEL_012},
-	{0x0116, 0x00},
-	//LUT_DEL_013},
-	{0x0117, 0x00},
-	//LUT_DEL_014},
-	{0x0118, 0x00},
-	//LUT_DEL_015},
-	{0x0119, 0x00},
-	//PTR_PIX},
-	{0x0109, 0x00},
-	//PTR_ANACOL},
-	{0x0108, 0x1f},
-	//PHY_INTERFACE_MODE},
-	{0x00af, 0x00},
-	//MIPI_CLOCK_LANE_MODE},
-	{0x0086, 0x01},
-	//MIPI_T_CLK_PREPARE},
-	{0x00c0, 0x00},
-	//MIPI_T_CLK_ZERO},
-	{0x00c2, 0x0d},
-	//MIPI_T_CLK_TRAIL},
-	{0x00c1, 0x07},
-	//MIPI_T_HS_PREPARE},
-	{0x00c3, 0x00},
-	//MIPI_T_HS_ZERO},
-	{0x00c5, 0x02},
-	//MIPI_T_HS_TRAIL},
-	{0x00c4, 0x07},
-	//MIPI_T_PRE},
-	{0x0087, 0x20},
-	//MIPI_T_POST},
-	{0x0088, 0x09},
-	//MIPI_TX_GAP},
-	{0x0089, 0x05},
-	//MIPI_TWAKEUP},
-	{0x008b, 0x00},
-	{0x008c, 0x31},
-	{0x008d, 0x00},
-	//PHY_INTERFACE_MODE},
-	{0x00af, 0x00},
-	//PLL_CM},
-	{0x0075, 0x1a},
-	//PLL_CO},
-	{0x0077, 0x00},
-	//PLL_CO1},
-	{0x0078, 0x00},
-	//XWIN_LEFT},
-	{0x003a, 0x00},
-	{0x003b, 0x02},
-	//XWIN_RIGHT},
-	{0x003c, 0x04},
-	{0x003d, 0x39},
-	//ANA_PWR_MGR_CTRL},
+	// adcana_bypass_cds
+	{0x01f1, 0x01},
+	// rampgen_rstn
+	{0x01f2, 0x01},
+	// colload_pulse_enable
+	{0x0018, 0x00},
+	// idac_set_1
+	{0x0200, 0x05},
+	// idac_set_2
+	{0x0201, 0x00},
+	// idac_set_4
+	{0x0203, 0x03},
+	// adcana_sel_bw
+	{0x01f0, 0x00},
+	// ana_pwr_mgr_ctrl
 	{0x021a, 0x00},
 	{0x021b, 0x00},
 	{0x021c, 0x01},
-	//ENABLE_IREF},
+	// enable_iref
 	{0x01f8, 0x01},
-	//ENABLE_IDAC},
-	{0x01fd, 0x00},
-	{0x01fe, 0xc1},
-	{0x01ff, 0xc1},
-	//ENABLE_VDD38},
-	{0x01e3, 0x01},
-	//ENABLE_VDD28},
-	{0x01e7, 0x01},
-	//ENABLE_VSS16N},
-	{0x01eb, 0x01},
-	//PCP_DOMAIN_NEW_CMD_TOGGLE},
-	{0x00cc, 0x01},
-	//NCP_DOMAIN_NEW_CMD_TOGGLE},
-	{0x00cf, 0x01},
-	//ENABLE_VSS1N},
-	{0x01e9, 0x01},
-	//ENABLE_IDAC},
+	// enable_idac
 	{0x01fd, 0x01},
 	{0x01fe, 0xff},
-	{0x01ff, 0xfb},
-	//ENABLE_VDAC},
-	{0x0213, 0x0c},
-	//ENABLE_IDAC_RAMP_IREF},
+	{0x01ff, 0xff},
+	// enable_vdd38
+	{0x01e3, 0x01},
+	// enable_vdd28
+	{0x01e7, 0x01},
+	// enable_vss16n
+	{0x01eb, 0x01},
+	// pcp_domain_new_cmd_toggle
+	{0x00cc, 0x01},
+	// ncp_domain_new_cmd_toggle
+	{0x00cf, 0x01},
+	// enable_vss1n
+	{0x01e9, 0x01},
+	// enable_vdac
+	{0x0213, 0x0f},
+	// enable_idac_ramp_iref
 	{0x01f9, 0x01},
-	//EN_CLK_F2I},
+	// en_clk_f2i
 	{0x00d9, 0x01},
-	//ENABLE_F2I},
+	// enable_f2i
 	{0x01f5, 0x01},
-	//ENABLE_ADCANA_KBC},
+	// enable_adcana_kbc
 	{0x01ef, 0x01},
-	//ENABLE_RAMPGEN},
+	// enable_rampgen
 	{0x01f3, 0x01},
-	//ENABLE_COLLOAD_CIS},
+	// enable_colload_cis
 	{0x0218, 0x01},
-	//CMD_POWER_UP_ANALOG},
-	{0x0006, 0x20},
-	//CMD_POWER_UP_ANALOG},
-	{0x0006, 0x00},
-	//ENABLE_COLLOAD_CIS},
-	{0x0218, 0x00},
-	//ENABLE_COLLOAD_LOGIC},
-	{0x0219, 0x01},
-	//AMUX_BYPASS},
-	{0x021e, 0x00},
-	//ENABLE_AMUX},
-	{0x021d, 0x01},
-	//AMUX_SEL},
-	{0x021f, 0x00},
-	//DMUX_SEL},
-	{0x0220, 0x06},
-	//CLKGEN_ESC_DIV},
-	{0x00c7, 0x02},
-	//CLK_IN_SOFT_RST_N},
-	{0x00c6, 0x01},
-	//ESC_DOMAIN_NEW_CMD_TOGGLE},
-	{0x00c9, 0x01},
-	//PLL_PD},
-	{0x0074, 0x00},
-	//PHY_PD},
-	{0x00ac, 0x00},
-	//MAIN_SOFT_RST_N},
-	{0x00d2, 0x01},
-	//CMD_BYTE_SOFT_RST_N},
-	{0x00d6, 0x01},
-	//EN_CLK_MAIN},
-	{0x00d3, 0x01},
-	//EN_CLK_BYTE},
-	{0x00d7, 0x01},
-	//MAIN_DOMAIN_NEW_CMD_TOGGLE},
-	{0x00d1, 0x01},
-	//BYTE_DOMAIN_NEW_CMD_TOGGLE},
-	{0x00d5, 0x01},
-	//MIPI_CLK_LANE_EN},
-	{0x008f, 0x01},
-	//MIPI_DATA_LANE_EN},
-	{0x0090, 0x01},
-	//MIPI_NBR_LANES},
-	{0x0085, 0x01},
-	//EXP_TIME},
-	{0x000e, 0x00},
-	{0x000f, 0x02},
-	//TARGET_FRAME_TIME},
-	{0x000a, 0x05},
-	{0x000b, 0x9b},
-	//TEST_LVDS},
-	{0x007e, 0x05},
-	//NROF_FRAMES},
-	{0x0008, 0x00},
-	{0x034, 0x00},
-	//OVERRIDE SOME SETTINGS},
-	{0x007e, 0x00},
-	//ENABLE_COLLOAD_CIS},
-	{0x0218, 0x01},
-	//ENABLE_COLLOAD_LOGIC},
+	// enable_colload_logic
 	{0x0219, 0x00},
-	// RAMPGEN_RSTN},
-	{0x01F2, 0x01},
-	// POLAR_PIX},
-	{0x0106, 0x02},
-	{0x0107, 0x03},
-	//adcana_sel_bw},
-	{0x01F0, 0x03},
-	//OB disable},
-	{0x055, 0x00},
-	//MODE_SELECT},
-	{0x0007, 0x01},
+	// cmd
+	{0x0006, 0x20},
+	// prog_000
+	{0x011a, 0x00},
+	{0x011b, 0xf0},
+	// prog_001
+	{0x011c, 0x00},
+	{0x011d, 0x09},
+	// prog_002
+	{0x011e, 0x00},
+	{0x011f, 0xf1},
+	// prog_003
+	{0x0120, 0x02},
+	{0x0121, 0x04},
+	// prog_004
+	{0x0122, 0x01},
+	{0x0123, 0x14},
+	// prog_005
+	{0x0124, 0x00},
+	{0x0125, 0xf2},
+	// prog_006
+	{0x0126, 0x00},
+	{0x0127, 0xd9},
+	// prog_007
+	{0x0128, 0x02},
+	{0x0129, 0x04},
+	// prog_008
+	{0x012a, 0x02},
+	{0x012b, 0x94},
+	// prog_009
+	{0x012c, 0x00},
+	{0x012d, 0xf3},
+	// prog_010
+	{0x012e, 0x00},
+	{0x012f, 0xf4},
+	// prog_011
+	{0x0130, 0x00},
+	{0x0131, 0xd0},
+	// prog_012
+	{0x0132, 0x02},
+	{0x0133, 0x04},
+	// prog_013
+	{0x0134, 0x01},
+	{0x0135, 0x42},
+	// prog_014
+	{0x0136, 0x00},
+	{0x0137, 0xf5},
+	// prog_015
+	{0x0138, 0x02},
+	{0x0139, 0x03},
+	// prog_016
+	{0x013a, 0x00},
+	{0x013b, 0xf6},
+	// prog_017
+	{0x013c, 0x02},
+	{0x013d, 0x03},
+	// prog_018
+	{0x013e, 0x00},
+	{0x013f, 0xf7},
+	// prog_019
+	{0x0140, 0x02},
+	{0x0141, 0x02},
+	// prog_020
+	{0x0142, 0x00},
+	{0x0143, 0xf8},
+	// prog_021
+	{0x0144, 0x00},
+	{0x0145, 0xd9},
+	// prog_022
+	{0x0146, 0x02},
+	{0x0147, 0x04},
+	// prog_023
+	{0x0148, 0x02},
+	{0x0149, 0x94},
+	// prog_024
+	{0x014a, 0x00},
+	{0x014b, 0xf9},
+	// prog_025
+	{0x014c, 0x00},
+	{0x014d, 0xfa},
+	// prog_026
+	{0x014e, 0x00},
+	{0x014f, 0xd0},
+	// prog_027
+	{0x0150, 0x02},
+	{0x0151, 0x04},
+	// prog_028
+	{0x0152, 0x02},
+	{0x0153, 0x04},
+	// prog_029
+	{0x0154, 0x02},
+	{0x0155, 0x01},
+	// prog_030
+	{0x0156, 0x00},
+	{0x0157, 0x00},
+	// prog_031
+	{0x0158, 0x00},
+	{0x0159, 0xf0},
+	// prog_032
+	{0x015a, 0x00},
+	{0x015b, 0x03},
+	// prog_033
+	{0x015c, 0x02},
+	{0x015d, 0x06},
+	// prog_034
+	{0x015e, 0x00},
+	{0x015f, 0xf1},
+	// prog_035
+	{0x0160, 0x02},
+	{0x0161, 0x56},
+	// prog_036
+	{0x0162, 0x00},
+	{0x0163, 0xcf},
+	// prog_037
+	{0x0164, 0x00},
+	{0x0165, 0xf2},
+	// prog_038
+	{0x0166, 0x00},
+	{0x0167, 0xcf},
+	// prog_039
+	{0x0168, 0x00},
+	{0x0169, 0xd9},
+	// prog_040
+	{0x016a, 0x02},
+	{0x016b, 0x0b},
+	// prog_041
+	{0x016c, 0x02},
+	{0x016d, 0x09},
+	// prog_042
+	{0x016e, 0x00},
+	{0x016f, 0xf3},
+	// prog_043
+	{0x0170, 0x02},
+	{0x0171, 0x09},
+	// prog_044
+	{0x0172, 0x01},
+	{0x0173, 0x02},
+	// prog_045
+	{0x0174, 0x01},
+	{0x0175, 0x3b},
+	// prog_046
+	{0x0176, 0x01},
+	{0x0177, 0x47},
+	// prog_047
+	{0x0178, 0x00},
+	{0x0179, 0xcf},
+	// prog_048
+	{0x017a, 0x02},
+	{0x017b, 0x07},
+	// prog_049
+	{0x017c, 0x00},
+	{0x017d, 0xf4},
+	// prog_050
+	{0x017e, 0x01},
+	{0x017f, 0x0a},
+	// prog_051
+	{0x0180, 0x01},
+	{0x0181, 0x35},
+	// prog_052
+	{0x0182, 0x01},
+	{0x0183, 0x2a},
+	// prog_053
+	{0x0184, 0x00},
+	{0x0185, 0xd0},
+	// prog_054
+	{0x0186, 0x00},
+	{0x0187, 0xf5},
+	// prog_055
+	{0x0188, 0x00},
+	{0x0189, 0xf6},
+	// prog_056
+	{0x018a, 0x00},
+	{0x018b, 0xf7},
+	// prog_057
+	{0x018c, 0x02},
+	{0x018d, 0x28},
+	// prog_058
+	{0x018e, 0x02},
+	{0x018f, 0x0b},
+	// prog_059
+	{0x0190, 0x02},
+	{0x0191, 0x0b},
+	// prog_060
+	{0x0192, 0x00},
+	{0x0193, 0xf8},
+	// prog_061
+	{0x0194, 0x00},
+	{0x0195, 0xd9},
+	// prog_062
+	{0x0196, 0x02},
+	{0x0197, 0x0b},
+	// prog_063
+	{0x0198, 0x02},
+	{0x0199, 0x09},
+	// prog_064
+	{0x019a, 0x00},
+	{0x019b, 0xf9},
+	// prog_065
+	{0x019c, 0x02},
+	{0x019d, 0x09},
+	// prog_066
+	{0x019e, 0x01},
+	{0x019f, 0x02},
+	// prog_067
+	{0x01a0, 0x01},
+	{0x01a1, 0x3b},
+	// prog_068
+	{0x01a2, 0x01},
+	{0x01a3, 0x47},
+	// prog_069
+	{0x01a4, 0x00},
+	{0x01a5, 0xcf},
+	// prog_070
+	{0x01a6, 0x02},
+	{0x01a7, 0x07},
+	// prog_071
+	{0x01a8, 0x00},
+	{0x01a9, 0xfa},
+	// prog_072
+	{0x01aa, 0x01},
+	{0x01ab, 0x0a},
+	// prog_073
+	{0x01ac, 0x01},
+	{0x01ad, 0x35},
+	// prog_074
+	{0x01ae, 0x01},
+	{0x01af, 0x2a},
+	// prog_075
+	{0x01b0, 0x00},
+	{0x01b1, 0xd0},
+	// prog_076
+	{0x01b2, 0x02},
+	{0x01b3, 0x18},
+	// prog_077
+	{0x01b4, 0x00},
+	{0x01b5, 0x00},
+	// prog_078
+	{0x01b6, 0x00},
+	{0x01b7, 0x00},
+	// prog_079
+	{0x01b8, 0x00},
+	{0x01b9, 0x00},
+	// prog_080
+	{0x01ba, 0x00},
+	{0x01bb, 0x00},
+	// prog_081
+	{0x01bc, 0x00},
+	{0x01bd, 0x00},
+	// prog_082
+	{0x01be, 0x00},
+	{0x01bf, 0x00},
+	// prog_083
+	{0x01c0, 0x00},
+	{0x01c1, 0x00},
+	// prog_084
+	{0x01c2, 0x00},
+	{0x01c3, 0x00},
+	// prog_085
+	{0x01c4, 0x00},
+	{0x01c5, 0x00},
+	// prog_086
+	{0x01c6, 0x00},
+	{0x01c7, 0x00},
+	// prog_087
+	{0x01c8, 0x00},
+	{0x01c9, 0x00},
+	// prog_088
+	{0x01ca, 0x00},
+	{0x01cb, 0x00},
+	// prog_089
+	{0x01cc, 0x00},
+	{0x01cd, 0x00},
+	// prog_090
+	{0x01ce, 0x00},
+	{0x01cf, 0x00},
+	// prog_091
+	{0x01d0, 0x00},
+	{0x01d1, 0x00},
+	// prog_092
+	{0x01d2, 0x00},
+	{0x01d3, 0x00},
+	// prog_093
+	{0x01d4, 0x00},
+	{0x01d5, 0x00},
+	// prog_094
+	{0x01d6, 0x00},
+	{0x01d7, 0x00},
+	// prog_095
+	{0x01d8, 0x00},
+	{0x01d9, 0x00},
+	// prog_096
+	{0x01da, 0x00},
+	{0x01db, 0x00},
+	// prog_097
+	{0x01dc, 0x00},
+	{0x01dd, 0x00},
+	// prog_098
+	{0x01de, 0x00},
+	{0x01df, 0x00},
+	// prog_099
+	{0x01e0, 0x00},
+	{0x01e1, 0x00},
+	// lut_del_000
+	{0x010a, 0x22},
+	// lut_del_001
+	{0x010b, 0x62},
+	// lut_del_002
+	{0x010c, 0x24},
+	// lut_del_003
+	{0x010d, 0x07},
+	// lut_del_004
+	{0x010e, 0x0c},
+	// lut_del_005
+	{0x010f, 0x08},
+	// lut_del_006
+	{0x0110, 0x12},
+	// lut_del_007
+	{0x0111, 0x4e},
+	// lut_del_008
+	{0x0112, 0x24},
+	// lut_del_009
+	{0x0113, 0x07},
+	// lut_del_010
+	{0x0114, 0x3f},
+	// lut_del_011
+	{0x0115, 0x00},
+	// lut_del_012
+	{0x0116, 0x00},
+	// lut_del_013
+	{0x0117, 0x00},
+	// lut_del_014
+	{0x0118, 0x00},
+	// lut_del_015
+	{0x0119, 0x00},
+	// ptr_pix
+	{0x0109, 0x00},
+	// ptr_anacol
+	{0x0108, 0x1f},
+	// mipi_twakeup
+	{0x008b, 0x00},
+	{0x008c, 0x31},
+	{0x008d, 0x00},
+	// pll_cm
+	{0x0075, 0x28},
+	// pll_cn
+	{0x0076, 0x1f},
+	// pll_co
+	{0x0077, 0x01},
+	// pll_co1
+	{0x0078, 0x00},
+	// otp_granularity
+	{0x0067, 0x09},
+	// clkgen_esc_div
+	{0x00c7, 0x02},
+	// clkgen_ncp_div
+	{0x00cd, 0x01},
+	// clkgen_pcp_div
+	{0x00ca, 0x01},
+	// clk_in_soft_rst_n
+	{0x00c6, 0x01},
+	// esc_domain_new_cmd_toggle
+	{0x00c9, 0x01},
+	// pll_pd
+	{0x0074, 0x00},
+	// rw_context
+	{0x0000, 0x00},
+	// phy_interface_mode
+	{0x00af, 0x00},
+	// mipi_vc_id
+	{0x0084, 0x00},
+	// mipi_frame_count_wrap
+	{0x00a7, 0x00},
+	{0x00a8, 0x00},
+	// mipi_clock_lane_mode
+	{0x0086, 0x00},
+	// mipi_scramble_en
+	{0x008e, 0x00},
+	// phy_tx_rcal
+	{0x00bf, 0x01},
+	// dphy_bypass_reg_hstx
+	{0x00bb, 0x00},
+	// phy_vcal_hstx
+	{0x00bd, 0x04},
+	// mipi_accurate_timing_mode
+	{0x00a9, 0x00},
+	// mipi_line_count_en
+	{0x00aa, 0x01},
+	// phy_pd
+	{0x00ac, 0x00},
+	// mipi_insert_error1_mode
+	{0x009e, 0x00},
+	// mipi_insert_error1_byte_number
+	{0x009f, 0x00},
+	// mipi_insert_error1_flipbits
+	{0x00a0, 0x00},
+	// mipi_insert_error2_mode
+	{0x00a1, 0x00},
+	// mipi_insert_error2_byte_number
+	{0x00a2, 0x00},
+	// mipi_insert_error2_flipbits
+	{0x00a3, 0x00},
+	// main_soft_rst_n
+	{0x00d2, 0x01},
+	// cmd_byte_soft_rst_n
+	{0x00d6, 0x01},
+	// en_clk_main
+	{0x00d3, 0x01},
+	// en_clk_byte
+	{0x00d7, 0x01},
+	// main_domain_new_cmd_toggle
+	{0x00d1, 0x01},
+	// byte_domain_new_cmd_toggle
+	{0x00d5, 0x01},
+	// phy_auto_pd_inactive_lanes
+	{0x00ae, 0x01},
+	// mipi_clk_lane_en
+	{0x008f, 0x01},
+	// mipi_data_lane_en
+	{0x0090, 0x01},
+	// mipi_nbr_lanes
+	{0x0085, 0x01},
+	// cfa_size
+	{0x0038, 0x02},
+	// xwin_ob_enable
+	{0x003e, 0x00},
+	// output_ob_rows
+	{0x0062, 0x00},
+	// image_orientation
+	{0x0034, 0x00},
+	// ob_pedestal
+	{0x0053, 0x00},
+	{0x0054, 0x20},
+	// ob_bypass_enable
+	{0x0055, 0x00},
+	// ob_bypass_value
+	{0x0056, 0x00},
+	{0x0057, 0x20},
+	// ob_nrof_high_remove
+	{0x0058, 0x04},
+	// ob_nrof_low_remove
+	{0x0059, 0x04},
+	// frame_termination_mode
+	{0x0009, 0x00},
+	// rw_context
+	{0x0000, 0x00},
+	// nrof_frames
+	{0x0008, 0x04},
+	// row_length
+	{0x0010, 0x0a},
+	{0x0011, 0x03},
+	// target_frame_time
+	{0x000a, 0x05},
+	{0x000b, 0x14},
+	// framesync_predelay
+	{0x000d, 0x32},
+	// frame_overhead_time
+	{0x000c, 0x01},
+	// pix_ctrl_electrical_black
+	{0x0017, 0x00},
+	// rw_context
+	{0x0000, 0x00},
+	// exp_time
+	{0x000e, 0x04},
+	{0x000f, 0x27},
+	// rw_context
+	{0x0000, 0x00},
+	// xwin_left
+	{0x003a, 0x00},
+	{0x003b, 0x02},
+	// xwin_right
+	{0x003c, 0x04},
+	{0x003d, 0x39},
+	// xwin_ob_left
+	{0x003f, 0x04},
+	{0x0040, 0x3e},
+	// xwin_ob_right
+	{0x0041, 0x04},
+	{0x0042, 0x41},
+	// auto_recalc_xparams
+	{0x0043, 0x01},
+	// rw_context
+	{0x0000, 0x00},
+	// ywin_enable
+	{0x0012, 0x03},
+	// ywin_ob_start
+	{0x0019, 0x00},
+	{0x001a, 0x00},
+	// ywin_ob_end
+	{0x001b, 0x00},
+	{0x001c, 0x09},
+	// ywin0_start
+	{0x0022, 0x00},
+	{0x0023, 0x0a},
+	// ywin0_end
+	{0x0024, 0x04},
+	{0x0025, 0x47},
+	// ywin1_start
+	{0x002b, 0x00},
+	{0x002c, 0x0a},
+	// ywin1_end
+	{0x002d, 0x04},
+	{0x002e, 0x47},
+	// extern_yaddr
+	{0x0014, 0x00},
+	{0x0015, 0x00},
+	// force_extern_yaddr
+	{0x0013, 0x00},
+	// rw_context
+	{0x0000, 0x00},
+	// ywin_ob_subs_factor
+	{0x001d, 0x01},
+	// ywin0_subs_factor
+	{0x0026, 0x01},
+	// ywin1_subs_factor
+	{0x002f, 0x01},
+	// xsubs_factor
+	{0x0039, 0x01},
+	// binning_mode
+	{0x0035, 0x00},
+	// binning_type
+	{0x0036, 0x11},
+	// binning_weighting
+	{0x0037, 0x00},
+	// rw_context
+	{0x0000, 0x00},
+	// ywin_crop_enable
+	{0x0016, 0x01},
+	// ywin_ob_crop_offset
+	{0x001e, 0x00},
+	{0x001f, 0x02},
+	// ywin_ob_crop_height
+	{0x0020, 0x00},
+	{0x0021, 0x06},
+	// ywin0_crop_offset
+	{0x0027, 0x00},
+	{0x0028, 0x02},
+	// ywin0_crop_height
+	{0x0029, 0x04},
+	{0x002a, 0x3a},
+	// ywin1_crop_offset
+	{0x0030, 0x00},
+	{0x0031, 0x02},
+	// ywin1_crop_height
+	{0x0032, 0x04},
+	{0x0033, 0x3a},
+	// rw_context
+	{0x0000, 0x00},
+	// gdig_cfa_idx0
+	{0x004e, 0x0f},
+	// gdig_cfa_idx1
+	{0x004f, 0x0f},
+	// gdig_cfa_idx2
+	{0x0050, 0x0f},
+	// gdig_cfa_idx3
+	{0x0051, 0x0f},
+	// next_active_context
+	{0x0002, 0x00},
+	// nrof_frames
+	{0x0008, 0x00},
+	// meta_insert_en
+	{0x0063, 0x00},
+	// mipi_embedded_data_type
+	{0x00ab, 0x12},
+	// lvds_embedded_data_type
+	{0x0064, 0x02},
+	// dpc_mode
+	{0x005a, 0x00},
+	// dpc_limit_high_slope
+	{0x005b, 0x02},
+	// dpc_limit_high_offset
+	{0x005c, 0x02},
+	// dpc_limit_low_slope
+	{0x005d, 0x02},
+	// dpc_limit_low_offset
+	{0x005e, 0x02},
+	// test_lvds
+	{0x007e, 0x00},
+	// training_word
+	{0x007d, 0x0a},
+	// mipi_clk_pn_change
+	{0x00b3, 0x00},
+	// mipi_data_pn_change
+	{0x00b4, 0x00},
+	// mipi_lane0_sel
+	{0x0091, 0x00},
+	// mipi_lane1_sel
+	{0x0092, 0x01},
+	// dphy_lane0_sel
+	{0x00b5, 0x00},
+	// tsens_enable
+	{0x006b, 0x01},
+	// tsens_nof_samples
+	{0x0072, 0x01},
+	// tsens_ewma_enable
+	{0x006f, 0x01},
+	// tsens_ewma_frac_sel
+	{0x0070, 0x00},
+	// tsens_reset_early
+	{0x0073, 0x00},
+	// tsens_clkdiv
+	{0x0071, 0x01},
+	// amux_bypass
+	{0x021e, 0x01},
+	// enable_amux
+	{0x021d, 0x00},
+	// amux_sel
+	{0x021f, 0x3c},
+	// tdig_mode
+	{0x0222, 0x00},
+	// tdig_factor
+	{0x0221, 0x00},
+	// dmux_sel
+	{0x0220, 0x00},
+	// lfsr_en
+	{0x0052, 0x07},
+	// en_auto_kernel_enable_calc
+	{0x0046, 0x01},
+	// kernel_enable_force_value
+	{0x0047, 0x01},
+	// nr_adc_conversions
+	{0x00f5, 0x0a},
+	// kernel_addr_global_cds
+	{0x00f6, 0x0f},
+	// kernel_addr_col0
+	{0x00f7, 0x00},
+	// kernel_addr_col1
+	{0x00f8, 0x01},
+	// kernel_addr_col2
+	{0x00f9, 0x02},
+	// kernel_addr_col3
+	{0x00fa, 0x03},
+	// kernel_addr_col4
+	{0x00fb, 0x04},
+	// kernel_addr_col5
+	{0x00fc, 0x05},
+	// kernel_addr_col6
+	{0x00fd, 0x06},
+	// kernel_addr_col7
+	{0x00fe, 0x07},
+	// kernel_addr_col8
+	{0x00ff, 0x08},
+	// kernel_addr_col9
+	{0x0100, 0x09},
+	// kernel_addr_invalid
+	{0x0101, 0x0e},
+	// nrof_frames
+	{0x0008, 0x00},
+	// // mode_select
+	// {0x0007, 0x00},
+	// // mode_select
+	// {0x0007, 0x01},
 };
 
 
@@ -928,14 +1129,7 @@ struct poncha110
 	u32 skip_reset;
 	/* Whether regulator and clk are powered on */
 	u32 powered;
-	/* Illumination trigger enable */
-	u8 illum_enable;
-	/* Illumination trigger width. Use [23:0] for 24-bit register. */
-	u32 illum_width;
-	/* Illumination trigger delay. Use [19:0] for 20-bit register */
-	u32 illum_delay;
-	/* Illumination trigger width automatically set to exposure time */
-	u8 illum_width_auto;
+
 	/* A flag to force write_start/stop_streaming_regs even if (skip_reg_upload==1) */
 	u32 target_frame_time;
 	u32 row_length;
@@ -1210,10 +1404,10 @@ static int poncha110_write_regs(struct poncha110 *poncha110,
 		else
 		{
 			// Debug code below
-			u8 val;
-			ret = poncha110_read(poncha110, regs[i].address, &val);
-			printk(KERN_INFO "[PONCHA110]: Read reg 0x%4.4x, val = 0x%x.\n",
-					regs[i].address, val);
+			// u8 val;
+			// ret = poncha110_read(poncha110, regs[i].address, &val);
+			// printk(KERN_INFO "[PONCHA110]: Read reg 0x%4.4x, val = 0x%x.\n",
+			// 		regs[i].address, val);
 
 		}
 	}
@@ -1385,56 +1579,6 @@ static int poncha110_power_off(struct device *dev)
 	return 0;
 }
 
-static int poncha110_write_illum_trig_regs(struct poncha110 *poncha110)
-{
-	struct i2c_client *const client = v4l2_get_subdevdata(&poncha110->sd);
-	int ret = 0;
-	u32 lps_time = 0;
-	u32 width_adjust = 0;
-
-	// Set context bank 1A or bank 1B
-	ret = poncha110_write(poncha110, PONCHA110_RW_CONTEXT_REG, 0);
-	if (ret)
-	{
-		dev_err(&client->dev, "Error setting RW_CONTEXT.");
-		return ret;
-	}
-
-	// Set conetxt bank 0 or 1
-	ret = poncha110_write(poncha110, PONCHA110_BANK_SEL_REG, 1);
-	if (ret)
-	{
-		dev_err(&client->dev, "Error setting BANK_SEL_REG.");
-		return ret;
-	}
-
-	// Enable or disable illumination trigger
-	printk(KERN_INFO "[PONCHA110]: Writing EN_TRIG_ILLUM to %d.\n", poncha110->illum_enable);
-	ret = poncha110_write(poncha110, PONCHA110_EN_TRIG_ILLUM, poncha110->illum_enable);
-	if (ret)
-	{
-		dev_err(&client->dev, "Error setting EN_TRIG_ILLUM to %d.", poncha110->illum_enable);
-		return ret;
-	}
-
-	if (PONCHA110_LPS_DISABLED)
-	{
-		// Set illumination width. Write 24 bits. All 24 bits are valid.
-		printk(KERN_INFO "[PONCHA110]: LPS DISABLED. Writing ILLUM_WIDTH to %u.\n", poncha110->illum_width);
-		ret = poncha110_write_be24(poncha110, PONCHA110_ILLUM_WIDTH_REG, poncha110->illum_width);
-		if (ret)
-		{
-			dev_err(&client->dev, "LPS DISABLED. Error setting ILLUM_WIDTH to %u.", poncha110->illum_width);
-			return ret;
-		}
-	}
-	else
-	{
-		
-	}
-	return ret;
-}
-
 static int poncha110_v4l2_reg_w(struct poncha110 *poncha110, u32 value)
 {
 	struct i2c_client *const client = v4l2_get_subdevdata(&poncha110->sd);
@@ -1497,42 +1641,42 @@ static int poncha110_v4l2_reg_w(struct poncha110 *poncha110, u32 value)
 			poncha110_power_off(&client->dev);
 			poncha110->skip_reset = tmp_flag;
 		}
-		else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_TRIG_ON)
-		{
-			printk(KERN_INFO "[PONCHA110]: %s Enable illumination trigger.\n", __func__);
-			poncha110->illum_enable = 1;
-			poncha110_write_illum_trig_regs(poncha110);
-		}
-		else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_TRIG_OFF)
-		{
-			printk(KERN_INFO "[PONCHA110]: %s Disable illumination trigger.\n", __func__);
-			poncha110->illum_enable = 0;
-			poncha110_write_illum_trig_regs(poncha110);
-		}
-		else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_WIDTH)
-		{
-			// Combine all 24 bits of reg_addr and reg_val as ILLUM_WIDTH.
-			u32 illum_width = value & 0x00FFFFFF;
-			printk(KERN_INFO "[PONCHA110]: %s Set ILLUM_WIDTH to 0x%X.\n", __func__, illum_width);
-			poncha110->illum_width = illum_width;
-		}
-		else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_DELAY)
-		{
-			// Combine reg_addr and reg_val, then select 20 bits from [19:0] as ILLUM_DELAY.
-			u32 illum_delay = value & 0x000FFFFF;
-			printk(KERN_INFO "[PONCHA110]: %s Set ILLUM_DELAY to 0x%X.\n", __func__, illum_delay);
-			poncha110->illum_delay = illum_delay;
-		}
-		else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_EXP_T_ON)
-		{
-			printk(KERN_INFO "[PONCHA110]: %s enable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
-			poncha110->illum_width_auto = 1;
-		}
-		else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_EXP_T_OFF)
-		{
-			printk(KERN_INFO "[PONCHA110]: %s disable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
-			poncha110->illum_width_auto = 0;
-		}
+		// else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_TRIG_ON)
+		// {
+		// 	printk(KERN_INFO "[PONCHA110]: %s Enable illumination trigger.\n", __func__);
+		// 	poncha110->illum_enable = 1;
+		// 	poncha110_write_illum_trig_regs(poncha110);
+		// }
+		// else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_TRIG_OFF)
+		// {
+		// 	printk(KERN_INFO "[PONCHA110]: %s Disable illumination trigger.\n", __func__);
+		// 	poncha110->illum_enable = 0;
+		// 	poncha110_write_illum_trig_regs(poncha110);
+		// }
+		// else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_WIDTH)
+		// {
+		// 	// Combine all 24 bits of reg_addr and reg_val as ILLUM_WIDTH.
+		// 	u32 illum_width = value & 0x00FFFFFF;
+		// 	printk(KERN_INFO "[PONCHA110]: %s Set ILLUM_WIDTH to 0x%X.\n", __func__, illum_width);
+		// 	poncha110->illum_width = illum_width;
+		// }
+		// else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_DELAY)
+		// {
+		// 	// Combine reg_addr and reg_val, then select 20 bits from [19:0] as ILLUM_DELAY.
+		// 	u32 illum_delay = value & 0x000FFFFF;
+		// 	printk(KERN_INFO "[PONCHA110]: %s Set ILLUM_DELAY to 0x%X.\n", __func__, illum_delay);
+		// 	poncha110->illum_delay = illum_delay;
+		// }
+		// else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_EXP_T_ON)
+		// {
+		// 	printk(KERN_INFO "[PONCHA110]: %s enable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
+		// 	poncha110->illum_width_auto = 1;
+		// }
+		// else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_ILLUM_EXP_T_OFF)
+		// {
+		// 	printk(KERN_INFO "[PONCHA110]: %s disable ILLUM_WIDTH to automatically track exposure time.\n", __func__);
+		// 	poncha110->illum_width_auto = 0;
+		// }
 		else if (reg_flag == AMS_CAMERA_CID_PONCHA110_REG_FLAG_STREAM_CTRL_ON)
 		{
 			printk(KERN_INFO "[PONCHA110]: %s Force stream control even if (skip_reg_upload == 1).\n", __func__);
@@ -1767,7 +1911,7 @@ static u32 poncha110_calculate_max_exposure_time(u32 row_length, u32 vsize,
 	(void)(vblank);
 	/* Poncha110 does not have a max exposure limit besides register bits */
 	// return row_length * (vsize + vblank) - PONCHA110_GLOB_NUM_CLK_CYCLES;
-	return PONCHA110_EXPOSURE_MAX_US;
+	return PONCHA110_EXPOSURE_MAX;
 }
 
 static int poncha110_write_exposure_reg(struct poncha110 *poncha110, u32 exposure)
@@ -1809,13 +1953,18 @@ static int poncha110_write_exposure_reg(struct poncha110 *poncha110, u32 exposur
 	printk(KERN_INFO "[PONCHA110]: Read reg 0x%4.4x, val = 0x%x.\n",
 		   0x00E, val);
 	ret = poncha110_read(poncha110, 0x00F, &val);
-	printk(KERN_INFO "[PONCHA110]: Read reg 0x%4.4x, val = 0x%x.\n",
+	printk(KERN_INFO "[PONCHA110]: Read reg  0x%4.4x, val = 0x%x.\n",
 		   0x00F, val);
 	// if (poncha110->illum_width_auto == 1)
 	// {
 	// 	poncha110->illum_width = exposure * PONCHA110_DATA_RATE / 8;
 	// 	poncha110_write_illum_trig_regs(poncha110);
 	// }
+	// some delay
+	// printk(KERN_INFO "[PONCHA110]: exposure function, before delay..\n");
+	// usleep_range(PONCHA110_XCLR_MIN_DELAY_US,
+	// 				 PONCHA110_XCLR_MIN_DELAY_US + PONCHA110_XCLR_DELAY_RANGE_US);
+	// printk(KERN_INFO "[PONCHA110]: exposure function, after delay..\n");
 
 	return 0;
 }
@@ -1842,27 +1991,31 @@ static int poncha110_write_start_streaming_regs(struct poncha110 *poncha110)
 	struct i2c_client *const client = v4l2_get_subdevdata(&poncha110->sd);
 	int ret = 0;
 
+	// // mode_select
+	// {0x0007, 0x00},
+	// // mode_select
+	// {0x0007, 0x01},
 
-	// // Raising CMD_REQ_1 to 1 for REQ_EXP
-	// ret = poncha110_write(poncha110, PONCHA110_CMD_REQ_1_REG,
-	// 					1);
-	// if (ret)
-	// {
-	// 	dev_err(&client->dev, "Error setting CMD_REQ_1 to 1 for REQ_EXP.");
-	// 	return ret;
-	// }
+	// Raising CMD_REQ_1 to 1 for REQ_EXP
+	ret = poncha110_write(poncha110, 0x0007,
+						0);
+	if (ret)
+	{
+		dev_err(&client->dev, "Error setting CMD_REQ_1 to 0 for REQ_EXP.");
+		return ret;
+	}
 
-	// usleep_range(10, 20);
+	usleep_range(10, 20);
 
-	// // Setting CMD_REQ_1 tp 0 for REQ_EXP
-	// ret = poncha110_write(poncha110, PONCHA110_CMD_REQ_1_REG,
-	// 					0);
-	// if (ret)
-	// {
-	// 	dev_err(&client->dev, "Error setting CMD_REQ_1 to 0 for REQ_EXP.");
-	// 	return ret;
-	// }
-	// usleep_range(10, 20);
+	// Setting CMD_REQ_1 tp 0 for REQ_EXP
+	ret = poncha110_write(poncha110, 0x0007,
+						1);
+	if (ret)
+	{
+		dev_err(&client->dev, "Error setting CMD_REQ_1 to 1 for REQ_EXP.");
+		return ret;
+	}
+	usleep_range(10, 20);
 
 	return ret;
 }
@@ -2011,11 +2164,11 @@ static int poncha110_set_ctrl(struct v4l2_ctrl *ctrl)
 	// {
 	// 	int exposure_max, exposure_def;
 
-	// 	/* Update max exposure while meeting expected vblanking */
+		/* Update max exposure while meeting expected vblanking */
 	// 	exposure_max = poncha110_calculate_max_exposure_time(PONCHA110_MIN_ROW_LENGTH,
 	// 													   poncha110->mode->height,
 	// 													   ctrl->val);
-	// 	exposure_def = (exposure_max < PONCHA110_DEFAULT_EXPOSURE_US) ? exposure_max : PONCHA110_DEFAULT_EXPOSURE_US;
+	// 	exposure_def = (exposure_max < PONCHA110_DEFAULT_EXPOSURE) ? exposure_max : PONCHA110_DEFAULT_EXPOSURE;
 	// 	__v4l2_ctrl_modify_range(poncha110->exposure,
 	// 							 poncha110->exposure->minimum,
 	// 							 (int)(1 + exposure_max / PONCHA110_MIN_ROW_LENGTH_US), poncha110->exposure->step,
@@ -2039,6 +2192,7 @@ static int poncha110_set_ctrl(struct v4l2_ctrl *ctrl)
 		switch (ctrl->id)
 		{
 		case V4L2_CID_ANALOGUE_GAIN:
+			printk(KERN_INFO "[PONCHA110]: exposure line = %u, exposure us = %u.\n", ctrl->val, ctrl->val);
 			break;
 		case V4L2_CID_EXPOSURE:
 			printk(KERN_INFO "[PONCHA110]: exposure line = %u, exposure us = %u.\n", ctrl->val, ctrl->val);
@@ -2410,18 +2564,18 @@ static int poncha110_set_pad_format(struct v4l2_subdev *sd,
 			// poncha110->mode = mode;
 
 			// Update controls based on new mode (range and current value).
-			max_exposure = poncha110_calculate_max_exposure_time(PONCHA110_MIN_ROW_LENGTH,
-															   poncha110->mode->height,
-															   poncha110->mode->min_vblank);
-			default_exp = PONCHA110_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : PONCHA110_DEFAULT_EXPOSURE_US;
-			rc = __v4l2_ctrl_modify_range(poncha110->exposure,
-										  poncha110->exposure->minimum,
-										  (int)(1 + max_exposure), poncha110->exposure->step,
-										  (int)(1 + default_exp));
-			if (rc)
-			{
-				dev_err(&client->dev, "Error setting exposure range");
-			}
+			// max_exposure = poncha110_calculate_max_exposure_time(PONCHA110_MIN_ROW_LENGTH,
+			// 												   poncha110->mode->height,
+			// 												   poncha110->mode->min_vblank);
+			// default_exp = PONCHA110_DEFAULT_EXPOSURE > max_exposure ? max_exposure : PONCHA110_DEFAULT_EXPOSURE;
+			// rc = __v4l2_ctrl_modify_range(poncha110->exposure,
+			// 							  poncha110->exposure->minimum,
+			// 							  (int)(1 + max_exposure), poncha110->exposure->step,
+			// 							  (int)(1 + default_exp));
+			// if (rc)
+			// {
+			// 	dev_err(&client->dev, "Error setting exposure range");
+			// }
 
 			// printk(KERN_INFO "[PONCHA110]: Poncha110 VBLANK  = %u.\n",
 			// 	   poncha110->mode->min_vblank);
@@ -2579,7 +2733,6 @@ static int poncha110_start_streaming(struct poncha110 *poncha110)
 			goto err_rpm_put;
 		}
 
-	usleep_range(3000, 50000);
 
 	}
 	else
@@ -2650,8 +2803,6 @@ static int poncha110_start_streaming(struct poncha110 *poncha110)
 	printk(KERN_INFO "[PONCHA110]: Entering v4l2 ctrl grab vflip grab hflip.\n");
 	__v4l2_ctrl_grab(poncha110->hflip, true);
 
-	printk(KERN_INFO "[PONCHA110]: %s Enable illumination trigger.\n", __func__);
-	poncha110->illum_enable = 1;
 	// poncha110_write_illum_trig_regs(poncha110);
 
 	return 0;
@@ -2889,9 +3040,9 @@ static int poncha110_init_controls(struct poncha110 *poncha110)
 
 	poncha110->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &poncha110_ctrl_ops,
 										  V4L2_CID_EXPOSURE,
-										  PONCHA110_EXPOSURE_MIN_US, PONCHA110_EXPOSURE_MAX_US,
+										  PONCHA110_EXPOSURE_MIN, PONCHA110_EXPOSURE_MAX,
 										  1,
-										  PONCHA110_DEFAULT_EXPOSURE_US);
+										  PONCHA110_DEFAULT_EXPOSURE);
 
 	printk(KERN_INFO "[PONCHA110]: %s V4L2_CID_ANALOGUE_GAIN %X.\n", __func__, V4L2_CID_ANALOGUE_GAIN);
 
@@ -3271,13 +3422,13 @@ static int poncha110_probe(struct i2c_client *client)
 
 	/* Initialize default illumination trigger parameters */
 	/* ILLUM_WIDTH is in unit of SEQ_TIME_BASE, equal to (8/PONCHA110_DATA_RATE) us. */
-	poncha110->illum_width = PONCHA110_ILLUM_WIDTH_DEFAULT;
-	/* ILLUM_WIDTH AUTO will match illum to exposure pulse width*/
-	poncha110->illum_width_auto = PONCHA110_ILLUM_SYNC_DEFAULT;
-	/* ILLUM_ENABLE is True or False, enabling it will activate illum trig. */
-	poncha110->illum_enable = PONCHA110_ILLUM_ENABLE_DEFAULT;
-	/* ILLUM_DELAY is in unit of TIME_UNIT, equal to 1 us. In continuous stream mode, zero delay is 1<<19. */
-	poncha110->illum_delay = PONCHA110_ILLUM_DELAY_DEFAULT;
+	// poncha110->illum_width = PONCHA110_ILLUM_WIDTH_DEFAULT;
+	// /* ILLUM_WIDTH AUTO will match illum to exposure pulse width*/
+	// poncha110->illum_width_auto = PONCHA110_ILLUM_SYNC_DEFAULT;
+	// /* ILLUM_ENABLE is True or False, enabling it will activate illum trig. */
+	// poncha110->illum_enable = PONCHA110_ILLUM_ENABLE_DEFAULT;
+	// /* ILLUM_DELAY is in unit of TIME_UNIT, equal to 1 us. In continuous stream mode, zero delay is 1<<19. */
+	// poncha110->illum_delay = PONCHA110_ILLUM_DELAY_DEFAULT;
 	/* Set default mode to max resolution */
 	poncha110->mode = &supported_modes[0];
 
