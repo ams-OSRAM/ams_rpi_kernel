@@ -914,6 +914,13 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 	{434, 0},
 	{435, 234},
 
+
+	{0x33D, 1}
+	};
+
+static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_post_soft_reset[] = {
+	{0xE000, 0},
+	{0xE004, 0},
 	// Below are manually added after reg seq txt
 	{0x0335, 1},  // iref sel
 	{0x0324, 43}, // iref val
@@ -926,15 +933,7 @@ static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_pre_soft_reset
 
 	{0x1df, 1}, // #cp sel
 	{0x0ee, 4}, // #cp trim,
-
-	{0xE000, 0},
-	{0xE004, 0},
-	{0x33D, 1}};
-
-static const struct mira016_reg full_400_400_100fps_10b_1lane_reg_post_soft_reset[] = {
-	// Release Soft Reset
-	{57344, 0},
-};
+	};
 
 // converted_Draco_i2c_configuration_sequence_hex_12bit_1x_200fps_Version3
 static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset[] = {
@@ -1580,6 +1579,16 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 	{434, 1},
 	{435, 21},
 
+
+
+	{0xE000, 0},
+	{0xE004, 0},
+	{0x33D, 1},
+};
+
+static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_post_soft_reset[] = {
+	{0xE000, 0},
+	{0xE004, 0},
 	// Below are manually added after reg seq txt
 	{0x0335, 1},  // iref sel
 	{0x0324, 43}, // iref val
@@ -1592,15 +1601,6 @@ static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_pre_soft_reset
 
 	{0x1df, 1}, // #cp sel
 	{0x0ee, 4}, // #cp trim,
-
-	{0xE000, 0},
-	{0xE004, 0},
-	{0x33D, 1},
-};
-
-static const struct mira016_reg full_400_400_100fps_12b_1lane_reg_post_soft_reset[] = {
-	// Release Soft Reset
-	{57344, 0},
 };
 
 static const struct mira016_reg partial_analog_gain_x1_12bit[] = {
@@ -3592,6 +3592,16 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 	{434, 1},
 	{435, 28},
 
+
+
+	{0xE000, 0},
+	{0xE004, 0},
+	{0x33D, 1},
+};
+
+static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_post_soft_reset[] = {
+	{0xE000, 0},
+	{0xE004, 0},
 	// Below are manually added after reg seq txt
 	{0x0335, 1},  // iref sel
 	{0x0324, 43}, // iref val
@@ -3604,15 +3614,6 @@ static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_pre_soft_reset[
 
 	{0x1df, 1}, // #cp sel
 	{0x0ee, 4}, // #cp trim,
-
-	{0xE000, 0},
-	{0xE004, 0},
-	{0x33D, 1},
-};
-
-static const struct mira016_reg full_400_400_100fps_8b_1lane_reg_post_soft_reset[] = {
-	// Release Soft Reset
-	{57344, 0},
 };
 
 static const char *const mira016_test_pattern_menu[] = {
@@ -3752,7 +3753,7 @@ struct mira016
 	/* current bit depth, may defer from mode->bit_depth */
 	u8 bit_depth;
 	/* OTP_CALIBRATION_VALUE stored in OTP memory */
-	u16 otp_cal_val;
+	u32 otp_cal_val;
 	/* Whether to skip base register sequence upload */
 	u32 skip_reg_upload;
 	/* Whether to reset sensor when stream on/off */
@@ -4060,8 +4061,9 @@ static int mira016_otp_read(struct mira016 *mira016, u8 addr, u32 *val)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	u8 busy_status = 1;
 	int poll_cnt = 0;
-	int poll_cnt_max = 10;
+	int poll_cnt_max = 5;
 	int ret;
+	u8 temp;
 	mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
 	mira016_write(mira016, MIRA016_OTP_COMMAND, 0);
 	mira016_write(mira016, MIRA016_OTP_ADDR, addr);
@@ -4071,6 +4073,8 @@ static int mira016_otp_read(struct mira016 *mira016, u8 addr, u32 *val)
 	for (poll_cnt = 0; poll_cnt < poll_cnt_max; poll_cnt++)
 	{
 		mira016_read(mira016, MIRA016_OTP_BUSY, &busy_status);
+		// printk(KERN_INFO "[MIRA016]: otp busy status : %u.\n", busy_status);
+
 		if (busy_status == 0)
 		{
 			break;
@@ -4079,9 +4083,21 @@ static int mira016_otp_read(struct mira016 *mira016, u8 addr, u32 *val)
 	if (poll_cnt < poll_cnt_max && busy_status == 0)
 	{
 		ret = mira016_read_be32(mira016, MIRA016_OTP_DOUT, val);
+		// printk(KERN_INFO "[MIRA016]: otp read success.\n");
+		printk(KERN_INFO "[MIRA016]: otp read success, anyways readout val : %u.\n", *val);
+		ret = mira016_read(mira016, MIRA016_OTP_DOUT, &temp);
+		// printk(KERN_INFO "[MIRA016]: otp read success.\n");
+		printk(KERN_INFO "[MIRA016]: otp read success, anyways 8bit readout val : %u.\n", temp);
+
+
+
 	}
 	else
 	{
+		printk(KERN_INFO "[MIRA016]: otp read fail.\n");
+		ret = mira016_read_be32(mira016, MIRA016_OTP_DOUT, val);
+		// printk(KERN_INFO "[MIRA016]: otp read fail, anyways readout val : %u.\n", *val);
+
 		dev_dbg(&client->dev, "%s: OTP memory busy, skip raeding addr: 0x%X\n",
 				__func__, addr);
 		ret = -EINVAL;
@@ -4758,6 +4774,50 @@ static int mira016_write_start_streaming_regs(struct mira016 *mira016)
 		return ret;
 	}
 	usleep_range(10, 20);
+
+
+
+
+	// u8 busy_status = 1;
+	// int poll_cnt = 0;
+	// int poll_cnt_max = 5;
+	// u8 temp;
+	// u32 val;
+	// u8 addr;
+	// addr=0X10;
+	// mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
+	// usleep_range(5, 10);
+	// mira016_write(mira016, MIRA016_OTP_COMMAND, 0);
+	// usleep_range(5, 10);
+	// mira016_write(mira016, MIRA016_OTP_ADDR, addr);
+	// usleep_range(5, 10);
+	// mira016_write(mira016, MIRA016_OTP_START, 1);
+	// usleep_range(5, 10);
+	// mira016_write(mira016, MIRA016_OTP_START, 0);
+	// usleep_range(5, 10);
+	// mira016_read(mira016, MIRA016_OTP_BUSY, &busy_status);
+	// usleep_range(50, 10);
+	// mira016_read_be32(mira016, MIRA016_OTP_DOUT, &val);
+	// printk(KERN_INFO "[MIRA016]: OTP reg_addr 0x%X, OTP reg_val 0x%X.\n",addr, val);
+
+	// addr=0X11;
+	// mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
+	// usleep_range(5, 10);
+	// mira016_write(mira016, MIRA016_OTP_COMMAND, 0);
+	// usleep_range(5, 10);
+	// mira016_write(mira016, MIRA016_OTP_ADDR, addr);
+	// usleep_range(5, 10);
+	// mira016_write(mira016, MIRA016_OTP_START, 1);
+	// usleep_range(5, 10);
+	// mira016_write(mira016, MIRA016_OTP_START, 0);
+	// usleep_range(5, 10);
+	// mira016_read(mira016, MIRA016_OTP_BUSY, &busy_status);
+	// usleep_range(50, 10);
+	// mira016_read_be32(mira016, MIRA016_OTP_DOUT, &val);
+	// printk(KERN_INFO "[MIRA016]: OTP reg_addr 0x%X, OTP reg_val 0x%X.\n", addr, val);
+
+
+
 
 	return ret;
 }
@@ -5509,7 +5569,53 @@ static int mira016_set_framefmt(struct mira016 *mira016)
 
 	return -EINVAL;
 }
+/* Verify chip ID */
+static int mira016_identify_module(struct mira016 *mira016)
+{
+	int ret;
+	u8 val;
+	u8 i;
+	u32 otp_cal_val;
+	u32 trim_data;
+	u32 empty;
 
+	ret = mira016_read(mira016, 0x25, &val);
+	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
+		   0x25, val);
+	ret = mira016_read(mira016, 0x3, &val);
+	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
+		   0x3, val);
+	ret = mira016_read(mira016, 0x4, &val);
+	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
+		   0x4, val);
+
+	//otp readout
+	ret = mira016_otp_read(mira016, 0x10, &otp_cal_val);
+	printk(KERN_INFO "[MIRA016]: otp wafermap val reg 0x%4.4x, val = 0x%x.\n",
+		   0x10, otp_cal_val);
+	ret = mira016_otp_read(mira016, 0x0, &trim_data);
+	printk(KERN_INFO "[MIRA016]: otp trim data val reg 0x%4.4x, val = 0x%x.\n",
+		   0x0, trim_data);
+	ret = mira016_otp_read(mira016, 0x50, &empty);
+	printk(KERN_INFO "[MIRA016]: otp empty data val reg 0x%4.4x, val = 0x%x.\n",
+		   0x50, empty);
+	ret = mira016_otp_read(mira016, 0x20, &empty);
+	printk(KERN_INFO "[MIRA016]: otp empty data val reg 0x%4.4x, val = 0x%x.\n",
+		   0x20, empty);
+
+	for (i = 0; i < 0x31; i++)
+	{
+		empty = 0;
+		usleep_range(10, 20);
+		ret = mira016_otp_read(mira016, i, &empty);
+		printk(KERN_INFO "[MIRA016]: otp  data val reg 0x%4.4x, val = 0x%x.\n",
+		   i, empty);
+
+	}
+
+
+	return 0;
+}
 static const struct v4l2_rect *
 __mira016_get_pad_crop(struct mira016 *mira016, struct v4l2_subdev_state *sd_state,
 					   unsigned int pad, enum v4l2_subdev_format_whence which)
@@ -5569,6 +5675,8 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	const struct mira016_reg_list *reg_list;
 	u32 otp_cal_val;
+	u32 otp_cal_val2;
+
 	int ret;
 
 	printk(KERN_INFO "[MIRA016]: Entering start streaming function.\n");
@@ -5606,17 +5714,7 @@ static int mira016_start_streaming(struct mira016 *mira016)
 			goto err_rpm_put;
 		}
 
-		usleep_range(10, 50);
 
-		/* Apply post soft reset default values of current mode */
-		reg_list = &mira016->mode->reg_list_post_soft_reset;
-		printk(KERN_INFO "[MIRA016]: Write %d regs.\n", reg_list->num_of_regs);
-		ret = mira016_write_regs(mira016, reg_list->regs, reg_list->num_of_regs);
-		if (ret)
-		{
-			dev_err(&client->dev, "%s failed to set mode\n", __func__);
-			goto err_rpm_put;
-		}
 	}
 	else
 	{
@@ -5631,10 +5729,22 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	if (ret)
 		goto err_rpm_put;
 
+
+
+
 	/* Read OTP memory for OTP_CALIBRATION_VALUE */
-	ret = mira016_otp_read(mira016, 0x01, &otp_cal_val);
+	ret = mira016_otp_read(mira016, 0x10, &otp_cal_val);
+	printk(KERN_INFO "[MIRA016]: Due to OTP trim val 0x10 : %u. pointer address %p\n", otp_cal_val, &otp_cal_val);
+
+
+
+	// /* Read OTP memory for OTP_CALIBRATION_VALUE */
+	// ret = mira016_otp_read(mira016, 0x0, &otp_cal_val2);
+	// printk(KERN_INFO "[MIRA016]: Due to OTP trim val 0x00 : %u.\n", otp_cal_val2);
+
+
 	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
-	mira016->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
+	mira016->otp_cal_val = otp_cal_val ;
 	if (ret)
 	{
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
@@ -5646,21 +5756,22 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	else
 	{
 		printk(KERN_INFO "[MIRA016]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira016->otp_cal_val, otp_cal_val);
-		if ((otp_cal_val & 0xFFFF0000) != 0xFFFF0000)
+		if ((otp_cal_val ) < 0xFFFFF000 && otp_cal_val != 0xFFFFFFFF)
 		{
-			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
-			printk(KERN_INFO "[MIRA016]: Due to higher 16-bit not all 1, use default mira016->otp_cal_val : %u.\n", mira016->otp_cal_val);
+			printk(KERN_INFO "[MIRA016]: UNPROGRAMMED OTP : %u.\n", mira016->otp_cal_val);
+					usleep_range(10, 50);
+
+			/* Apply default trimming values */
+			reg_list = &mira016->mode->reg_list_post_soft_reset;
+			printk(KERN_INFO "[MIRA016]: Write %d regs.\n", reg_list->num_of_regs);
+			ret = mira016_write_regs(mira016, reg_list->regs, reg_list->num_of_regs);
+			if (ret)
+			{
+				dev_err(&client->dev, "%s failed to set mode\n", __func__);
+				goto err_rpm_put;
+			}
 		}
-		else if (mira016->otp_cal_val < MIRA016_OTP_CAL_VALUE_MIN)
-		{
-			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
-			printk(KERN_INFO "[MIRA016]: Due to extracted value < %u, likely an error, use default mira016->otp_cal_val : %u.\n", MIRA016_OTP_CAL_VALUE_MIN, mira016->otp_cal_val);
-		}
-		else if (mira016->otp_cal_val > MIRA016_OTP_CAL_VALUE_MAX)
-		{
-			mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
-			printk(KERN_INFO "[MIRA016]: Due to extracted value > %u, likely an error, use default mira016->otp_cal_val : %u.\n", MIRA016_OTP_CAL_VALUE_MAX, mira016->otp_cal_val);
-		}
+
 	}
 
 	if (mira016->skip_reg_upload == 0 ||
@@ -5679,6 +5790,7 @@ static int mira016_start_streaming(struct mira016 *mira016)
 		printk(KERN_INFO "[MIRA016]: Skip write_start_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
 			   mira016->skip_reg_upload, mira016->force_stream_ctrl);
 	}
+	ret = mira016_identify_module(mira016);
 
 	/* vflip and hflip cannot change during streaming */
 	printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl grab vflip grab vflip.\n");
@@ -5690,6 +5802,8 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	mira016->illum_enable = 1;
 	mira016_write_illum_trig_regs(mira016);
 
+	// identify module
+	// mira016_identify_module(mira016);
 	return 0;
 
 err_rpm_put:
@@ -5827,24 +5941,7 @@ static int mira016_get_regulators(struct mira016 *mira016)
 								   mira016->supplies);
 }
 
-/* Verify chip ID */
-static int mira016_identify_module(struct mira016 *mira016)
-{
-	int ret;
-	u8 val;
 
-	ret = mira016_read(mira016, 0x25, &val);
-	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		   0x25, val);
-	ret = mira016_read(mira016, 0x3, &val);
-	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		   0x3, val);
-	ret = mira016_read(mira016, 0x4, &val);
-	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		   0x4, val);
-
-	return 0;
-}
 
 static const struct v4l2_subdev_core_ops mira016_core_ops = {
 	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
@@ -6285,7 +6382,6 @@ static int mira016_probe(struct i2c_client *client)
 	}
 
 	dev_err(dev, "[MIRA016] Sleep for 1 second to let PMIC driver complete init.\n");
-	usleep_range(1000000, 1000000 + 100);
 	// set some defaults
 
 	/*
@@ -6295,10 +6391,11 @@ static int mira016_probe(struct i2c_client *client)
 	ret = mira016_power_on(dev);
 	if (ret)
 		return ret;
+	usleep_range(100000, 100000 + 500);
 
 	printk(KERN_INFO "[MIRA016]: Entering identify function.\n");
 
-	ret = mira016_identify_module(mira016);
+	// ret = mira016_identify_module(mira016);
 	if (ret)
 		goto error_power_off;
 
@@ -6358,6 +6455,7 @@ static int mira016_probe(struct i2c_client *client)
 
 	/* For debug purpose */
 	// mira016_start_streaming(mira016);
+	// mira016_identify_module(mira016);
 
 	/* Enable runtime PM and turn off the device */
 	pm_runtime_set_active(dev);
