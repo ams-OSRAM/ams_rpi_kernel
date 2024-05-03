@@ -200,9 +200,9 @@
 #define MIRA016_OTP_START 0x0064
 #define MIRA016_OTP_BUSY 0x0065
 #define MIRA016_OTP_DOUT 0x006C
-#define MIRA016_OTP_CAL_VALUE_DEFAULT 2250
-#define MIRA016_OTP_CAL_VALUE_MIN 2000
-#define MIRA016_OTP_CAL_VALUE_MAX 2400
+// #define MIRA016_OTP_CAL_VALUE_DEFAULT 2250
+// #define MIRA016_OTP_CAL_VALUE_MIN 2000
+// #define MIRA016_OTP_CAL_VALUE_MAX 2400
 
 /* Illumination trigger */
 #define MIRA016_EN_TRIG_ILLUM 0x001C
@@ -3753,7 +3753,7 @@ struct mira016
 	/* current bit depth, may defer from mode->bit_depth */
 	u8 bit_depth;
 	/* OTP_CALIBRATION_VALUE stored in OTP memory */
-	u32 otp_cal_val;
+	u32 otp_wafermap_val;
 	/* Whether to skip base register sequence upload */
 	u32 skip_reg_upload;
 	/* Whether to reset sensor when stream on/off */
@@ -4063,17 +4063,18 @@ static int mira016_otp_read(struct mira016 *mira016, u8 addr, u32 *val)
 	int poll_cnt = 0;
 	int poll_cnt_max = 5;
 	int ret;
-	u8 temp;
+	// u8 temp;
 	mira016_write(mira016, MIRA016_BANK_SEL_REG, 0);
 	mira016_write(mira016, MIRA016_OTP_COMMAND, 0);
 	mira016_write(mira016, MIRA016_OTP_ADDR, addr);
 	mira016_write(mira016, MIRA016_OTP_START, 1);
 	usleep_range(5, 10);
 	mira016_write(mira016, MIRA016_OTP_START, 0);
+	usleep_range(5, 10);
 	for (poll_cnt = 0; poll_cnt < poll_cnt_max; poll_cnt++)
 	{
 		mira016_read(mira016, MIRA016_OTP_BUSY, &busy_status);
-		// printk(KERN_INFO "[MIRA016]: otp busy status : %u.\n", busy_status);
+		printk(KERN_INFO "[MIRA016]: otp busy status : %u.\n", busy_status);
 
 		if (busy_status == 0)
 		{
@@ -4084,10 +4085,9 @@ static int mira016_otp_read(struct mira016 *mira016, u8 addr, u32 *val)
 	{
 		ret = mira016_read_be32(mira016, MIRA016_OTP_DOUT, val);
 		// printk(KERN_INFO "[MIRA016]: otp read success.\n");
-		printk(KERN_INFO "[MIRA016]: otp read success, anyways readout val : %u.\n", *val);
-		ret = mira016_read(mira016, MIRA016_OTP_DOUT, &temp);
+		// printk(KERN_INFO "[MIRA016]: otp read success, anyways readout val : %u.\n", *val);
+		// ret = mira016_read(mira016, MIRA016_OTP_DOUT, &temp);
 		// printk(KERN_INFO "[MIRA016]: otp read success.\n");
-		printk(KERN_INFO "[MIRA016]: otp read success, anyways 8bit readout val : %u.\n", temp);
 
 
 
@@ -4674,7 +4674,53 @@ static u32 mira016_calculate_max_exposure_time(u32 row_length, u32 vsize,
 	// return row_length * (vsize + vblank) - MIRA016_GLOB_NUM_CLK_CYCLES;
 	return MIRA016_EXPOSURE_MAX_US;
 }
+/* Verify chip ID */
+static int mira016_identify_module(struct mira016 *mira016)
+{
+	int ret;
+	u8 val;
+	u8 i;
+	u32 otp_wafermap_val;
+	u32 trim_data;
+	u32 empty;
 
+	ret = mira016_read(mira016, 0x25, &val);
+	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
+		   0x25, val);
+	ret = mira016_read(mira016, 0x3, &val);
+	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
+		   0x3, val);
+	ret = mira016_read(mira016, 0x4, &val);
+	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
+		   0x4, val);
+
+	//otp readout
+	ret = mira016_otp_read(mira016, 0x10, &otp_wafermap_val);
+	printk(KERN_INFO "[MIRA016]: otp wafermap val reg 0x%4.4x, val = 0x%x.\n",
+		   0x10, otp_wafermap_val);
+	// ret = mira016_otp_read(mira016, 0x0, &trim_data);
+	// printk(KERN_INFO "[MIRA016]: otp trim data val reg 0x%4.4x, val = 0x%x.\n",
+	// 	   0x0, trim_data);
+	// ret = mira016_otp_read(mira016, 0x50, &empty);
+	// printk(KERN_INFO "[MIRA016]: otp empty data val reg 0x%4.4x, val = 0x%x.\n",
+	// 	   0x50, empty);
+	// ret = mira016_otp_read(mira016, 0x20, &empty);
+	// printk(KERN_INFO "[MIRA016]: otp empty data val reg 0x%4.4x, val = 0x%x.\n",
+	// 	   0x20, empty);
+
+	// for (i = 0; i < 0x31; i++)
+	// {
+	// 	u32 empty;
+	// 	usleep_range(10, 20);
+	// 	ret = mira016_otp_read(mira016, i, &empty);
+	// 	printk(KERN_INFO "[MIRA016]: otp  data val reg 0x%4.4x, val = 0x%x.\n",
+	// 	   i, empty);
+
+	// }
+
+
+	return 0;
+}
 static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure)
 {
 	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
@@ -5569,53 +5615,7 @@ static int mira016_set_framefmt(struct mira016 *mira016)
 
 	return -EINVAL;
 }
-/* Verify chip ID */
-static int mira016_identify_module(struct mira016 *mira016)
-{
-	int ret;
-	u8 val;
-	u8 i;
-	u32 otp_cal_val;
-	u32 trim_data;
-	u32 empty;
 
-	ret = mira016_read(mira016, 0x25, &val);
-	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		   0x25, val);
-	ret = mira016_read(mira016, 0x3, &val);
-	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		   0x3, val);
-	ret = mira016_read(mira016, 0x4, &val);
-	printk(KERN_INFO "[MIRA016]: Read reg 0x%4.4x, val = 0x%x.\n",
-		   0x4, val);
-
-	//otp readout
-	ret = mira016_otp_read(mira016, 0x10, &otp_cal_val);
-	printk(KERN_INFO "[MIRA016]: otp wafermap val reg 0x%4.4x, val = 0x%x.\n",
-		   0x10, otp_cal_val);
-	ret = mira016_otp_read(mira016, 0x0, &trim_data);
-	printk(KERN_INFO "[MIRA016]: otp trim data val reg 0x%4.4x, val = 0x%x.\n",
-		   0x0, trim_data);
-	ret = mira016_otp_read(mira016, 0x50, &empty);
-	printk(KERN_INFO "[MIRA016]: otp empty data val reg 0x%4.4x, val = 0x%x.\n",
-		   0x50, empty);
-	ret = mira016_otp_read(mira016, 0x20, &empty);
-	printk(KERN_INFO "[MIRA016]: otp empty data val reg 0x%4.4x, val = 0x%x.\n",
-		   0x20, empty);
-
-	for (i = 0; i < 0x31; i++)
-	{
-		empty = 0;
-		usleep_range(10, 20);
-		ret = mira016_otp_read(mira016, i, &empty);
-		printk(KERN_INFO "[MIRA016]: otp  data val reg 0x%4.4x, val = 0x%x.\n",
-		   i, empty);
-
-	}
-
-
-	return 0;
-}
 static const struct v4l2_rect *
 __mira016_get_pad_crop(struct mira016 *mira016, struct v4l2_subdev_state *sd_state,
 					   unsigned int pad, enum v4l2_subdev_format_whence which)
@@ -5674,8 +5674,7 @@ static int mira016_start_streaming(struct mira016 *mira016)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira016->sd);
 	const struct mira016_reg_list *reg_list;
-	u32 otp_cal_val;
-	u32 otp_cal_val2;
+	u32 otp_wafermap_val;
 
 	int ret;
 
@@ -5729,36 +5728,38 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	if (ret)
 		goto err_rpm_put;
 
+	usleep_range(80000, 50000);
 
-
+	ret = mira016_otp_read(mira016, 0x10, &otp_wafermap_val);
+	printk(KERN_INFO "[MIRA016]: otp wafermap val reg 0x%4.4x, val = 0x%x.\n",
+		   0x10, otp_wafermap_val);
 
 	/* Read OTP memory for OTP_CALIBRATION_VALUE */
-	ret = mira016_otp_read(mira016, 0x10, &otp_cal_val);
-	printk(KERN_INFO "[MIRA016]: Due to OTP trim val 0x10 : %u. pointer address %p\n", otp_cal_val, &otp_cal_val);
+	ret = mira016_otp_read(mira016, 0x10, &otp_wafermap_val);
+	printk(KERN_INFO "[MIRA016]: Due to OTP trim val 0x10 : %u. pointer address %p\n", otp_wafermap_val, &otp_wafermap_val);
 
 
 
 	// /* Read OTP memory for OTP_CALIBRATION_VALUE */
-	// ret = mira016_otp_read(mira016, 0x0, &otp_cal_val2);
-	// printk(KERN_INFO "[MIRA016]: Due to OTP trim val 0x00 : %u.\n", otp_cal_val2);
+	// ret = mira016_otp_read(mira016, 0x0, &otp_wafermap_val2);
+	// printk(KERN_INFO "[MIRA016]: Due to OTP trim val 0x00 : %u.\n", otp_wafermap_val2);
 
 
 	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
-	mira016->otp_cal_val = otp_cal_val ;
+	mira016->otp_wafermap_val = otp_wafermap_val ;
 	if (ret)
 	{
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
 		/* Even if OTP reading fails, continue with the rest. */
-		mira016->otp_cal_val = MIRA016_OTP_CAL_VALUE_DEFAULT;
-		printk(KERN_INFO "[MIRA016]: Due to OTP reading failure, use default mira016->otp_cal_val : %u.\n", mira016->otp_cal_val);
+		printk(KERN_INFO "[MIRA016]: Due to OTP reading failure, use default mira016->otp_wafermap_val : %u.\n", mira016->otp_wafermap_val);
 		/* goto err_rpm_put; */
 	}
 	else
 	{
-		printk(KERN_INFO "[MIRA016]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira016->otp_cal_val, otp_cal_val);
-		if ((otp_cal_val ) < 0xFFFFF000 && otp_cal_val != 0xFFFFFFFF)
+		printk(KERN_INFO "[MIRA016]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira016->otp_wafermap_val, otp_wafermap_val);
+		if ((otp_wafermap_val ) < 0xFFFFF000 && otp_wafermap_val != 0xFFFFFFFF)
 		{
-			printk(KERN_INFO "[MIRA016]: UNPROGRAMMED OTP : %u.\n", mira016->otp_cal_val);
+			printk(KERN_INFO "[MIRA016]: UNPROGRAMMED OTP : %u.\n", mira016->otp_wafermap_val);
 					usleep_range(10, 50);
 
 			/* Apply default trimming values */
@@ -5790,7 +5791,6 @@ static int mira016_start_streaming(struct mira016 *mira016)
 		printk(KERN_INFO "[MIRA016]: Skip write_start_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
 			   mira016->skip_reg_upload, mira016->force_stream_ctrl);
 	}
-	ret = mira016_identify_module(mira016);
 
 	/* vflip and hflip cannot change during streaming */
 	printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl grab vflip grab vflip.\n");
@@ -6453,15 +6453,16 @@ static int mira016_probe(struct i2c_client *client)
 		goto error_media_entity;
 	}
 
-	/* For debug purpose */
-	// mira016_start_streaming(mira016);
-	// mira016_identify_module(mira016);
+
 
 	/* Enable runtime PM and turn off the device */
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
 	pm_runtime_idle(dev);
 
+	/* For debug purpose */
+	// mira016_start_streaming(mira016);
+	// mira016_identify_module(mira016);
 	return 0;
 
 error_media_entity:
