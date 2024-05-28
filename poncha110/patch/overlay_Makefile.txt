@@ -1,1 +1,2 @@
-        mira016.dtbo \
+poncha110.dtbo \
+poncha110color.dtbo \

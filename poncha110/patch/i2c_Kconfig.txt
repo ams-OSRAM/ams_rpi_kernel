@@ -11,3 +11,15 @@ config VIDEO_PONCHA110
 	  To compile this driver as a module, choose M here: the
 	  module will be called poncha110.
 
+config VIDEO_PONCHA110COLOR
+	tristate "ams PONCHA110COLOR sensor support"
+	depends on I2C && VIDEO_DEV
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the ams
+	  PONCHA110 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called poncha110.

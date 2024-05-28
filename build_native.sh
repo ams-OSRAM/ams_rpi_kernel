@@ -60,7 +60,7 @@ echo "#############################"
 # Install driver to deb package folder
 (cd poncha110/src && make INSTALL_MOD_PATH=$PKGDIR install)
 # Install dtbo to deb package folder
-(cd poncha110/src && cp poncha110.dtbo $PKGDIR/boot/overlays/)
+(cd poncha110/src && cp poncha110.dtbo poncha110color.dtbo $PKGDIR/boot/overlays/)
 # Cleanup artifacts from source folder
 (cd poncha110/src && make clean)
 

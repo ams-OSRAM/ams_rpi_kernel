@@ -1,1 +1,2 @@
 obj-$(CONFIG_VIDEO_PONCHA110)	+= poncha110.o
+obj-$(CONFIG_VIDEO_PONCHA110COLOR)	+= poncha110color.o

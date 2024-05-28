@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Definitions for PONCHA110 camera module on VC I2C bus
+// Definitions for poncha110 camera module on VC I2C bus
 /dts-v1/;
 /plugin/;
 
@@ -7,7 +7,7 @@
 #include "poncha110_mono_color-overlay.dtsi"
 
 &poncha110 {
-        compatible = "ams,poncha110";
-	reg-name = "poncha110";
+        compatible = "ams,poncha110color";
+	reg-name = "poncha110color";
 };
 

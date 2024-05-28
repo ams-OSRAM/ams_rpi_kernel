@@ -1055,7 +1055,7 @@ static const char *const poncha110_supply_name[] = {
  * is monochrome
  */
 static const u32 codes[] = {
-	MEDIA_BUS_FMT_SGRBG10_1X10,
+	MEDIA_BUS_FMT_SBGGR10_1X10,
 };
 
 /* Mode configs */
@@ -1085,7 +1085,7 @@ static const struct poncha110_mode supported_modes[] = {
 		.max_vblank = PONCHA110_MAX_VBLANK,
 		.hblank = PONCHA110_HBLANK, // TODO
 		.bit_depth = 10,
-		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
+		.code = MEDIA_BUS_FMT_SBGGR10_1X10,
 	},
 
 };
@@ -2100,7 +2100,7 @@ static void poncha110_set_default_format(struct poncha110 *poncha110)
 	struct v4l2_mbus_framefmt *fmt;
 
 	fmt = &poncha110->fmt;
-	fmt->code = MEDIA_BUS_FMT_SGRBG10_1X10; // MEDIA_BUS_FMT_Y10_1X10;
+	fmt->code = MEDIA_BUS_FMT_SBGGR10_1X10; // MEDIA_BUS_FMT_Y10_1X10;
 	poncha110->bit_depth = 10;
 	fmt->colorspace = V4L2_COLORSPACE_RAW;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
@@ -2128,7 +2128,7 @@ static int poncha110_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_fmt_img->width = supported_modes[0].width;
 	try_fmt_img->height = supported_modes[0].height;
 	try_fmt_img->code = poncha110_validate_format_code_or_default(poncha110,
-																MEDIA_BUS_FMT_SGRBG10_1X10);
+																MEDIA_BUS_FMT_SBGGR10_1X10);
 	try_fmt_img->field = V4L2_FIELD_NONE;
 
 	/* TODO(jalv): Initialize try_fmt for the embedded metadata pad */
@@ -2519,7 +2519,7 @@ static int poncha110_set_pad_format(struct v4l2_subdev *sd,
 	if (fmt->pad == IMAGE_PAD)
 	{
 		printk(KERN_INFO "[PONCHA110]: fmt format code = %d.   \n", fmt->format.code);
-		printk(KERN_INFO "[PONCHA110]: some code is  = %d.   \n", MEDIA_BUS_FMT_SGRBG10_1X10);
+		printk(KERN_INFO "[PONCHA110]: some code is  = %d.   \n", MEDIA_BUS_FMT_SBGGR10_1X10);
 
 		/* Validate format or use default */
 		fmt->format.code = poncha110_validate_format_code_or_default(poncha110,
@@ -2527,7 +2527,7 @@ static int poncha110_set_pad_format(struct v4l2_subdev *sd,
 
 		switch (fmt->format.code)
 		{
-		case MEDIA_BUS_FMT_SGRBG10_1X10:
+		case MEDIA_BUS_FMT_SBGGR10_1X10:
 			printk(KERN_INFO "[PONCHA110]: fmt->format.code() selects 10 bit mode.\n");
 			poncha110->mode = &supported_modes[0];
 			poncha110->bit_depth = 10;
@@ -2624,7 +2624,7 @@ static int poncha110_set_framefmt(struct poncha110 *poncha110)
 	// TODO: There is no easy way to change frame format
 	switch (poncha110->fmt.code)
 	{
-	case MEDIA_BUS_FMT_SGRBG10_1X10:
+	case MEDIA_BUS_FMT_SBGGR10_1X10:
 		printk(KERN_INFO "[PONCHA110]: poncha110_set_framefmt() selects 10 bit mode.\n");
 		poncha110->mode = &supported_modes[0];
 		poncha110->bit_depth = 10;
