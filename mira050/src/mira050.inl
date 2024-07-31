@@ -208,7 +208,7 @@
 
 #define MIRA050_CURRENT_ACTIVE_CONTEXT 0x4002
 
-#define MIRA050_GDIG_AMP 0x0024
+#define MIRA050_GDIG_PREAMP 0x0024
 #define MIRA050_BIAS_RG_ADCGAIN 0x01F0
 #define MIRA050_BIAS_RG_MULT 0x01F3
 #define MIRA050_OFFSET_CLIPPING 0x0193
@@ -253,14 +253,14 @@ struct mira050_reg
 
 // struct mira050_fine_gain_lut
 // {
-// 	u8 gdig_amp;
+// 	u8 gdig_preamp;
 // 	u8 rg_adcgain;
 // 	u8 rg_mult;
 // };
 struct mira050_fine_gain_lut_new
 {
 	u32 analog_gain;
-	u8 gdig_amp;
+	u8 gdig_preamp;
 	u8 rg_adcgain;
 	u8 rg_mult;
 };
@@ -372,8 +372,8 @@ static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_pre_soft_reset[
 	{0x023D, 0xF0},
 	{0x023E, 0x03},
 	{0x023F, 0x87},
-	{0x0240, 0x00},
-	{0x0241, 0x0A},
+	{0x0240, 0x02},
+	{0x0241, 0x3A},
 	{0x0242, 0x00},
 	{0x0243, 0x0B},
 	{0x0244, 0x01},
@@ -418,8 +418,8 @@ static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_pre_soft_reset[
 	{0x026B, 0x00},
 	{0x026C, 0x02},
 	{0x026D, 0x87},
-	{0x026E, 0x00},
-	{0x026F, 0x01},
+	{0x026E, 0x02},
+	{0x026F, 0x31},
 	{0x0270, 0x03},
 	{0x0271, 0xFF},
 	{0x0272, 0x03},
@@ -586,8 +586,10 @@ static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_pre_soft_reset[
 	{0x01C2, 0xF6},
 	{0x01C3, 0xFF},
 	{0x01B8, 0x01},
-	{0x01BA, 0x33},
-	{0x01C9, 0x07},
+	{0x01BA, 0x32},
+	{0x01BD, 0x08},
+	{0x01CA, 0x1E},
+	{0x01C9, 0x1E},
 	{0x01BF, 0x3C},
 	{0x01C0, 0x5C},
 	{0x0071, 0x01},
@@ -676,52 +678,52 @@ static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_pre_soft_reset[
 	{0x0167, 0x4C},
 	//# Analog Gain
 	{0xE000, 0x00},
-	{0x01BB, 0x99},
-	{0x01BC, 0x91},
+	{0x01BB, 0xC8},
+	{0x01BC, 0xC0},
 	{0x00D0, 0x00},
 	{0x01F0, 0x08},
-	{0x01F3, 0x00},
-	{0x016E, 0xFF},
-	{0x0172, 0xFF},
-	{0x0173, 0x2E},
+	{0x01F3, 0x02},
+	{0x016E, 0xCE},
+	{0x0172, 0x00},
+	{0x0173, 0x00},
 	{0x016F, 0xFF},
 	{0x0170, 0xFF},
-	{0x0171, 0xFF},
-	{0x0174, 0xFF},
-	{0x0175, 0xAB},
-	{0x018B, 0x08},
-	{0x018C, 0xCA},
+	{0x0171, 0xCE},
+	{0x0174, 0x00},
+	{0x0175, 0x20},
+	{0x018B, 0x03},
+	{0x018C, 0x52},
 	{0x018D, 0x02},
 	{0x018E, 0x56},
-	{0x018F, 0x12},
-	{0x0190, 0xBE},
-	{0x01EE, 0x14},
-	{0x01EF, 0xA2},
-	{0x01A2, 0x06},
-	{0x01A3, 0xA5},
-	{0x031F, 0x06},
-	{0x0320, 0xAE},
-	{0x01A6, 0x07},
-	{0x01A7, 0x3C},
-	{0x01A4, 0x0F},
-	{0x01A5, 0x27},
-	{0x0321, 0x0F},
-	{0x0322, 0x30},
-	{0x01A8, 0x0F},
-	{0x01A9, 0xBE},
-	{0x01A0, 0x01},
-	{0x01A1, 0x25},
-	{0x01B2, 0x01},
-	{0x01B3, 0x3D},
-	{0x01B0, 0x01},
-	{0x01B1, 0x38},
-	{0x01AC, 0x01},
-	{0x01AD, 0x43},
+	{0x018F, 0x0B},
+	{0x0190, 0xCF},
+	{0x01EE, 0x15},
+	{0x01EF, 0x6A},
+	{0x01A2, 0x05},
+	{0x01A3, 0xDD},
+	{0x031F, 0x05},
+	{0x0320, 0xE6},
+	{0x01A6, 0x06},
+	{0x01A7, 0x74},
+	{0x01A4, 0x0B},
+	{0x01A5, 0x46},
+	{0x0321, 0x0B},
+	{0x0322, 0x4F},
+	{0x01A8, 0x0B},
+	{0x01A9, 0xDD},
+	{0x01A0, 0x00},
+	{0x01A1, 0xB1},
+	{0x01B2, 0x00},
+	{0x01B3, 0xC9},
+	{0x01B0, 0x00},
+	{0x01B1, 0xC4},
+	{0x01AC, 0x00},
+	{0x01AD, 0xCF},
 	//# Black Level
 	{0xE000, 0x00},
-	{0x0193, 0x11},
-	{0x0194, 0x14},
-	// # Release Soft Reset
+	{0x0193, 0x0E},
+	{0x0194, 0xEB},
+	//# Release Soft Reset
 	{0xE000, 0x00},
 	{0xE009, 0x01},
 	{0x212F, 0x01},
@@ -843,11 +845,11 @@ static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_pre_soft_reset[
 	{0x0014, 0x00},
 	{0x0015, 0x00},
 	{0xE004, 0x00},
-	{0x0032, 0x0B},
-	{0x0033, 0xFD},
+	{0x0032, 0x09},
+	{0x0033, 0x7A},
 	{0xE004, 0x01},
-	{0x0032, 0x0B},
-	{0x0033, 0xFD},
+	{0x0032, 0x09},
+	{0x0033, 0x7A},
 	{0xE004, 0x00},
 	{0x0007, 0x01},
 	{0x0008, 0x00},
@@ -951,6 +953,7 @@ static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_pre_soft_reset[
 	{0x001D, 0x00},
 
 
+
 };
 
 static const struct mira050_reg full_576_768_50fps_12b_1lane_reg_post_soft_reset[] = {
@@ -1024,8 +1027,8 @@ static const struct mira050_reg full_576_768_50fps_10b_hs_1lane_reg_pre_soft_res
 {0x023D, 0xF0},
 {0x023E, 0x03},
 {0x023F, 0x87},
-{0x0240, 0x00},
-{0x0241, 0x0A},
+{0x0240, 0x02},
+{0x0241, 0x3A},
 {0x0242, 0x00},
 {0x0243, 0x0B},
 {0x0244, 0x01},
@@ -1070,8 +1073,8 @@ static const struct mira050_reg full_576_768_50fps_10b_hs_1lane_reg_pre_soft_res
 {0x026B, 0x00},
 {0x026C, 0x02},
 {0x026D, 0x87},
-{0x026E, 0x00},
-{0x026F, 0x01},
+{0x026E, 0x02},
+{0x026F, 0x31},
 {0x0270, 0x03},
 {0x0271, 0xFF},
 {0x0272, 0x03},
@@ -1238,8 +1241,10 @@ static const struct mira050_reg full_576_768_50fps_10b_hs_1lane_reg_pre_soft_res
 {0x01C2, 0xF6},
 {0x01C3, 0xFF},
 {0x01B8, 0x01},
-{0x01BA, 0x33},
-{0x01C9, 0x07},
+{0x01BA, 0x32},
+{0x01BD, 0x08},
+{0x01CA, 0x1E},
+{0x01C9, 0x1E},
 {0x01BF, 0x3C},
 {0x01C0, 0x5C},
 {0x0071, 0x01},
@@ -1602,6 +1607,8 @@ static const struct mira050_reg full_576_768_50fps_10b_hs_1lane_reg_pre_soft_res
 {0x001C, 0x00},
 {0x001D, 0x00},
 
+
+
 };
 
 static const struct mira050_reg full_576_768_50fps_10b_hs_1lane_reg_post_soft_reset[] = {
@@ -1676,8 +1683,8 @@ static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_pre_soft_reset[]
 {0x023D, 0xF0},
 {0x023E, 0x03},
 {0x023F, 0x87},
-{0x0240, 0x00},
-{0x0241, 0x0A},
+{0x0240, 0x02},
+{0x0241, 0x3A},
 {0x0242, 0x00},
 {0x0243, 0x0B},
 {0x0244, 0x01},
@@ -1722,8 +1729,8 @@ static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_pre_soft_reset[]
 {0x026B, 0x00},
 {0x026C, 0x02},
 {0x026D, 0x87},
-{0x026E, 0x00},
-{0x026F, 0x01},
+{0x026E, 0x02},
+{0x026F, 0x31},
 {0x0270, 0x03},
 {0x0271, 0xFF},
 {0x0272, 0x03},
@@ -1890,8 +1897,10 @@ static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_pre_soft_reset[]
 {0x01C2, 0xF6},
 {0x01C3, 0xFF},
 {0x01B8, 0x01},
-{0x01BA, 0x33},
-{0x01C9, 0x07},
+{0x01BA, 0x32},
+{0x01BD, 0x08},
+{0x01CA, 0x1E},
+{0x01C9, 0x1E},
 {0x01BF, 0x3C},
 {0x01C0, 0x5C},
 {0x0071, 0x01},
@@ -2024,8 +2033,8 @@ static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_pre_soft_reset[]
 {0xE195, 0x03},
 //# Black Level
 {0xE000, 0x00},
-{0x0193, 0x07},
-{0x0194, 0xB6},
+{0x0193, 0x08},
+{0x0194, 0x16},
 //# Release Soft Reset
 {0xE000, 0x00},
 {0xE009, 0x01},
@@ -2257,6 +2266,7 @@ static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_pre_soft_reset[]
 
 
 
+
 };
 
 static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_post_soft_reset[] = {
@@ -2264,53 +2274,53 @@ static const struct mira050_reg full_576_768_50fps_8b_1lane_reg_post_soft_reset[
 };
 
 static const struct mira050_reg partial_analog_gain_x1_12bit[] = {
-//# Analog Gain
-{0xE000, 0x00},
-{0x01BB, 0xC8},
-{0x01BC, 0xC0},
-{0x00D0, 0x00},
-{0x01F0, 0x08},
-{0x01F3, 0x02},
-{0x016E, 0xCE},
-{0x0172, 0x00},
-{0x0173, 0x00},
-{0x016F, 0xFF},
-{0x0170, 0xFF},
-{0x0171, 0xCE},
-{0x0174, 0x00},
-{0x0175, 0x20},
-{0x018B, 0x03},
-{0x018C, 0x52},
-{0x018D, 0x02},
-{0x018E, 0x56},
-{0x018F, 0x0B},
-{0x0190, 0xCF},
-{0x01EE, 0x15},
-{0x01EF, 0x6A},
-{0x01A2, 0x05},
-{0x01A3, 0xDD},
-{0x031F, 0x05},
-{0x0320, 0xE6},
-{0x01A6, 0x06},
-{0x01A7, 0x74},
-{0x01A4, 0x0B},
-{0x01A5, 0x46},
-{0x0321, 0x0B},
-{0x0322, 0x4F},
-{0x01A8, 0x0B},
-{0x01A9, 0xDD},
-{0x01A0, 0x00},
-{0x01A1, 0xB1},
-{0x01B2, 0x00},
-{0x01B3, 0xC9},
-{0x01B0, 0x00},
-{0x01B1, 0xC4},
-{0x01AC, 0x00},
-{0x01AD, 0xCF},
-	// Black Level
-	{57344, 0},
-	{403, 6},
-	{404, 36},
+	//# Analog Gain
+	{0xE000, 0x00},
+	{0x01BB, 0xC8},
+	{0x01BC, 0xC0},
+	{0x00D0, 0x00},
+	{0x01F0, 0x08},
+	{0x01F3, 0x02},
+	{0x016E, 0xCE},
+	{0x0172, 0x00},
+	{0x0173, 0x00},
+	{0x016F, 0xFF},
+	{0x0170, 0xFF},
+	{0x0171, 0xCE},
+	{0x0174, 0x00},
+	{0x0175, 0x20},
+	{0x018B, 0x03},
+	{0x018C, 0x52},
+	{0x018D, 0x02},
+	{0x018E, 0x56},
+	{0x018F, 0x0B},
+	{0x0190, 0xCF},
+	{0x01EE, 0x15},
+	{0x01EF, 0x6A},
+	{0x01A2, 0x05},
+	{0x01A3, 0xDD},
+	{0x031F, 0x05},
+	{0x0320, 0xE6},
+	{0x01A6, 0x06},
+	{0x01A7, 0x74},
+	{0x01A4, 0x0B},
+	{0x01A5, 0x46},
+	{0x0321, 0x0B},
+	{0x0322, 0x4F},
+	{0x01A8, 0x0B},
+	{0x01A9, 0xDD},
+	{0x01A0, 0x00},
+	{0x01A1, 0xB1},
+	{0x01B2, 0x00},
+	{0x01B3, 0xC9},
+	{0x01B0, 0x00},
+	{0x01B1, 0xC4},
+	{0x01AC, 0x00},
+	{0x01AD, 0xCF},
+	//# Black Level
+	{0xE000, 0x00},
+	{0x0193, 0x0E},
+	{0x0194, 0xEB},
 
 };
 
@@ -2358,61 +2368,60 @@ static const struct mira050_reg partial_analog_gain_x2_12bit[] = {
 {0x01B1, 0xEE},
 {0x01AC, 0x00},
 {0x01AD, 0xF9},
-	// Black Level
-	{57344, 0},
-	{403, 10},
-	{404, 20},
-
+//# Black Level
+{0xE000, 0x00},
+{0x0193, 0x1B},
+{0x0194, 0xB1},
 };
 
 static const struct mira050_reg partial_analog_gain_x4_12bit[] = {
-//# Analog Gain
-{0xE000, 0x00},
-{0x01BB, 0x99},
-{0x01BC, 0x91},
-{0x00D0, 0x00},
-{0x01F0, 0x08},
-{0x01F3, 0x00},
-{0x016E, 0xFF},
-{0x0172, 0xFF},
-{0x0173, 0x2E},
-{0x016F, 0xFF},
-{0x0170, 0xFF},
-{0x0171, 0xFF},
-{0x0174, 0xFF},
-{0x0175, 0xAB},
-{0x018B, 0x08},
-{0x018C, 0xCA},
-{0x018D, 0x02},
-{0x018E, 0x56},
-{0x018F, 0x12},
-{0x0190, 0xBE},
-{0x01EE, 0x14},
-{0x01EF, 0xA2},
-{0x01A2, 0x06},
-{0x01A3, 0xA5},
-{0x031F, 0x06},
-{0x0320, 0xAE},
-{0x01A6, 0x07},
-{0x01A7, 0x3C},
-{0x01A4, 0x0F},
-{0x01A5, 0x27},
-{0x0321, 0x0F},
-{0x0322, 0x30},
-{0x01A8, 0x0F},
-{0x01A9, 0xBE},
-{0x01A0, 0x01},
-{0x01A1, 0x25},
-{0x01B2, 0x01},
-{0x01B3, 0x3D},
-{0x01B0, 0x01},
-{0x01B1, 0x38},
-{0x01AC, 0x01},
-{0x01AD, 0x43},
-	// Black Level
-	{57344, 0},
-	{403, 17},
-	{404, 20},
+	//# Analog Gain
+	{0xE000, 0x00},
+	{0x01BB, 0x99},
+	{0x01BC, 0x91},
+	{0x00D0, 0x00},
+	{0x01F0, 0x08},
+	{0x01F3, 0x00},
+	{0x016E, 0xFF},
+	{0x0172, 0xFF},
+	{0x0173, 0x2E},
+	{0x016F, 0xFF},
+	{0x0170, 0xFF},
+	{0x0171, 0xFF},
+	{0x0174, 0xFF},
+	{0x0175, 0xAB},
+	{0x018B, 0x08},
+	{0x018C, 0xCA},
+	{0x018D, 0x02},
+	{0x018E, 0x56},
+	{0x018F, 0x12},
+	{0x0190, 0xBE},
+	{0x01EE, 0x14},
+	{0x01EF, 0xA2},
+	{0x01A2, 0x06},
+	{0x01A3, 0xA5},
+	{0x031F, 0x06},
+	{0x0320, 0xAE},
+	{0x01A6, 0x07},
+	{0x01A7, 0x3C},
+	{0x01A4, 0x0F},
+	{0x01A5, 0x27},
+	{0x0321, 0x0F},
+	{0x0322, 0x30},
+	{0x01A8, 0x0F},
+	{0x01A9, 0xBE},
+	{0x01A0, 0x01},
+	{0x01A1, 0x25},
+	{0x01B2, 0x01},
+	{0x01B3, 0x3D},
+	{0x01B0, 0x01},
+	{0x01B1, 0x38},
+	{0x01AC, 0x01},
+	{0x01AD, 0x43},
+	//# Black Level
+	{0xE000, 0x00},
+	{0x0193, 0x34},
+	{0x0194, 0x5E},
 
 };
 
@@ -2468,7 +2477,7 @@ static const struct mira050_fine_gain_lut_new fine_gain_lut_10bit_hs_4x[] = {
 
 };
 static const struct mira050_fine_gain_lut_new fine_gain_lut_8bit_16x[] = {
-	// gain_256,gdig_amp,rg_bias,rg_mult
+	// gain_256,gdig_preamp,rg_bias,rg_mult
 	{256, 3, 36, 3},
 	{261, 3, 35, 3},
 	{270, 3, 33, 3},
@@ -2716,8 +2725,12 @@ struct mira050
 	/* current bit depth, may defer from mode->bit_depth */
 	u8 bit_depth;
 	/* OTP_CALIBRATION_VALUE stored in OTP memory */
-	u16 otp_cal_val;
-	u16 otp_cal_fine_val;
+
+	u16 otp_dark_cal_8bit;
+	u16 otp_dark_cal_10bit_hs;
+	u16 otp_dark_cal_10bit;
+	u16 otp_dark_cal_12bit;
+
 
 	/* Whether to skip base register sequence upload */
 	u32 skip_reg_upload;
@@ -3805,111 +3818,135 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 	u32 ret = 0;
 	u32 wait_us = 20000;
 	u16 target_black_level = 128;
-	u16 adc_offset = 1700;
-	u16 scale_factor = 1;
-	u16 otp_cal_val = mira050->otp_cal_val;
-	u16 otp_cal_fine_val = mira050->otp_cal_fine_val;
+	u16 cds_offset = 1700;
+	u16 dark_offset_100 = 1794 ; //noncont clock 
+	u16 scale_factor = 1 ;
+	u16 preamp_gain = 1 ;
+	u16 analog_gain = 1 ;
+	u16 offset_clipping = 0;
+	u16 scaled_offset = 0;
 
 	// Select partial register sequence according to bit depth
 	if (mira050->bit_depth == 12)
 	{
 		mira050_write_stop_streaming_regs(mira050);
 		usleep_range(wait_us, wait_us + 100);
+		scale_factor = 1;
+
 		// Select register sequence according to gain value
 		if (gain == 0)
 		{
-
+			analog_gain = 1;
 			// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x1 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
 			ret = mira050_write_regs(mira050, partial_analog_gain_x1_12bit, num_of_regs);
-			adc_offset = 1700;
-			scale_factor = 4;
+			cds_offset = 1700;
 		}
 		else if (gain == 1)
 		{
-
+			analog_gain = 2 ;
 			// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x2 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x2_12bit);
 			ret = mira050_write_regs(mira050, partial_analog_gain_x2_12bit, num_of_regs);
-			adc_offset = 2708;
-			scale_factor = 2;
+			cds_offset = 2708;
 		}
 		else if (gain == 2)
 		{
+			analog_gain = 4;
 
 			// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain x4 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x4_12bit);
 			ret = mira050_write_regs(mira050, partial_analog_gain_x4_12bit, num_of_regs);
-			adc_offset = 4500;
-			scale_factor = 1;
+			cds_offset = 4500;
 		}
 		else
 		{
 			// Other gains are not supported
 			// printk(KERN_INFO "[MIRA050]: Ignore analog gain %u in 12 bit mode", gain);
 		}
-		int scaled_calibration_value = ((otp_cal_val - 2250) / scale_factor - target_black_level);
+		u16 part1 = (mira050->otp_dark_cal_12bit + dark_offset_100)/100;
+		u16 part3 = (dark_offset_100/100);
+		u16 part2 =  analog_gain / (scale_factor*preamp_gain);
+		scaled_offset = (u16)((mira050->otp_dark_cal_12bit + dark_offset_100)/100 * analog_gain / (scale_factor*preamp_gain))-(u16)(dark_offset_100/100);
+		printk(KERN_INFO "[MIRA050]: scaled offset  12 bit mode is %u dark cal is %u",scaled_offset,mira050->otp_dark_cal_12bit  );
+		printk(KERN_INFO "[MIRA050]: scaled offset  12 bit mode part1 %u part2 %u part3 %u ", part1 , part2 , part3 );
 
 		/* Avoid negative offset_clipping value. */
-		u16 offset_clipping = ((int)(adc_offset + scaled_calibration_value) < 0 ? 0 : (adc_offset + scaled_calibration_value));
+		offset_clipping = ((int)(cds_offset - target_black_level/preamp_gain  + scaled_offset) < 0 ? 0 : (int)(cds_offset - target_black_level/preamp_gain  + scaled_offset));
 		/* Stop streaming and wait for frame data transmission done */
 		// mira050_write_stop_streaming_regs(mira050);
+		printk(KERN_INFO "[MIRA050]: offset clip  12 bit mode is  %u",offset_clipping  );
+
 		usleep_range(wait_us, wait_us + 100);
 		/* Write fine gain registers */
 		// printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 10 bit mode", gain);
-		// printk(KERN_INFO "[MIRA050]: gdig_amp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
-		// 		gdig_amp, rg_adcgain, rg_mult, offset_clipping);
+		// printk(KERN_INFO "[MIRA050]: gdig_preamp: %u, rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
+		// 		gdig_preamp, rg_adcgain, rg_mult, offset_clipping);
 		// mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
-		// mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
-		// mira050_write_be16(mira050, MIRA050_OFFSET_CLIPPING, offset_clipping);
-		// printk(KERN_INFO "[MIRA050]: Write offset clipping, val = 0x%x.\n",
-		// 		offset_clipping);
+		mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
+		mira050_write_be16(mira050, MIRA050_OFFSET_CLIPPING, offset_clipping);
+		printk(KERN_INFO "[MIRA050]: Write offset clipping, val = 0x%x.\n",
+				offset_clipping);
 		mira050_write_start_streaming_regs(mira050);
 
 		// mira050_write_start_streaming_regs(mira050);
 	}
-	else if (mira050->bit_depth == 10)
+	else if (mira050->bit_depth == 10) //10bit high speed mode gain 1-4
 	{
+		dark_offset_100 = 291; //noncont clock
+		scale_factor = 4 ;
+		cds_offset = 1540;
+		target_black_level = 32;
+
+
 		if (gain < ARRAY_SIZE(fine_gain_lut_10bit_hs_4x))
 		{
 			u32 analog_gain = fine_gain_lut_10bit_hs_4x[gain].analog_gain;
-			u8 gdig_amp = fine_gain_lut_10bit_hs_4x[gain].gdig_amp;
+			u8 gdig_preamp = fine_gain_lut_10bit_hs_4x[gain].gdig_preamp;
 			u8 rg_adcgain = fine_gain_lut_10bit_hs_4x[gain].rg_adcgain;
 			u8 rg_mult = fine_gain_lut_10bit_hs_4x[gain].rg_mult;
 			/* otp_cal_val should come from OTP, but OTP may have incorrect value. */
-			u8 target_black_level = 32;
-			u16 adc_offset = 1540;
-			u16 digital_gain = 16 / (gdig_amp + 1);
-			u16 offset_clipping = 0;
+			u16 preamp_gain_inv = 16 / (gdig_preamp + 1); // invert because fixed point arithmetic
+
+			// newly added.
+			u16 scaled_offset = (u16)((mira050->otp_dark_cal_10bit + dark_offset_100)/100 * analog_gain*preamp_gain_inv / (scale_factor))-(u16)(dark_offset_100/100);
+			printk(KERN_INFO "[MIRA050]: scaled offset  12 bit mode is %u dark cal is %u",scaled_offset,mira050->otp_dark_cal_12bit  );
+
+			/* Avoid negative offset_clipping value. */
+			u16 offset_clipping = ((int)(cds_offset - target_black_level*preamp_gain_inv  + scaled_offset) < 0 ? 0 : (int)(cds_offset - target_black_level*preamp_gain_inv  + scaled_offset));
+			/* Stop streaming and wait for frame data transmission done */
+			// mira050_write_stop_streaming_regs(mira050);
+			printk(KERN_INFO "[MIRA050]: offset clip  12 bit mode is  %u",offset_clipping  );
+
 
 			// int part1 = (int)(otp_cal_val + 2.5) ;
-			// int part2 = (int)(part1*analog_gain / (int)(gdig_amp + 1)) ;
-			// int estimated_offset = (part2>>8) - 2;
-			// int scaled_calibration_value = ((otp_cal_val - 1540) / 4 - target_black_level) * 16 / (gdig_amp + 1);
+			// int part2 = (int)(part1*analog_gain / (int)(gdig_preamp + 1)) ;
+			// int offset_clipping = (part2>>8) - 2;
+			// int scaled_offset = ((otp_cal_val - 1540) / 4 - target_black_level) * 16 / (gdig_preamp + 1);
 			/* Avoid negative offset_clipping value. */
-			int estimated_offset = (int)((otp_cal_fine_val + 4) * analog_gain / (int)(gdig_amp + 1) / 256 - 4);
+			// int offset_clipping = (int)((otp_cal_fine_val + 4) * analog_gain / (int)(gdig_preamp + 1) / 256 - 4);
 
-			int offset_clipping_calc = (int)(adc_offset - (target_black_level  - estimated_offset));
+			// int offset_clipping_calc = (int)(cds_offset - (target_black_level  - offset_clipping));
 						/*preamp_gain, _, _ = gain_settings._gain_lut[gain]
 			scaled_offset = (calibration_value + 2.5) * gain/(16*preamp_gain) - 2.5
 			mira_xs_api.write_register(
 			'OFFSET_CLIPPING',
 			2*act1 - round(target_black_level/preamp_gain - scaled_offset)
-				estimated_offset = (calibration_value + 2.5) * (analog_gain/4) - 2.5
-			adc_offset = 1540
-			offset_clip = int(adc_offset - round(target/digital_gain - estimated_offset))
+				offset_clipping = (calibration_value + 2.5) * (analog_gain/4) - 2.5
+			cds_offset = 1540
+			offset_clip = int(cds_offset - round(target/digital_gain - offset_clipping))
 			*/
-			if (offset_clipping_calc < 0)
-			{
-				offset_clipping = 0;
-			}
-			else
-			{
-				offset_clipping = (uint16_t)(offset_clipping_calc);
-			}
+			// if (offset_clipping_calc < 0)
+			// {
+			// 	offset_clipping = 0;
+			// }
+			// else
+			// {
+			// 	offset_clipping = (uint16_t)(offset_clipping_calc);
+			// }
 			printk(KERN_INFO "[MIRA050]: est offset: %u,offset_clipping_calc: %u rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
-				   analog_gain / 256, gdig_amp, rg_adcgain, rg_mult, offset_clipping);
-			//  = (int)(adc_offset - (target_black_level*digital_gain - estimated_offset)) < 0 ? 0 : (int)(adc_offset - (target_black_level*digital_gain - estimated_offset));
+				   analog_gain / 256, gdig_preamp, rg_adcgain, rg_mult, offset_clipping);
+			//  = (int)(cds_offset - (target_black_level*digital_gain - offset_clipping)) < 0 ? 0 : (int)(cds_offset - (target_black_level*digital_gain - offset_clipping));
 
 			// u16 offset_clipping = (offset_clipping_calc < 0) ? 0 : (int)(offset_clipping_calc);
 			/* Stop streaming and wait for frame data transmission done */
@@ -3917,11 +3954,11 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 			usleep_range(wait_us, wait_us + 100);
 			/* Write fine gain registers */
 			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 10 bit mode", gain);
-			printk(KERN_INFO "[MIRA050]: analoggain: %u,gdig_amp: %u rg_adcgain: %u, rg_mult: %u, offset_clipping: %u,  offset_clipping_calc: %u,  estimated_offset: %u\n",
-				   analog_gain , gdig_amp, rg_adcgain, rg_mult, offset_clipping, offset_clipping_calc,estimated_offset);
+			printk(KERN_INFO "[MIRA050]: analoggain: %u,gdig_preamp: %u rg_adcgain: %u, rg_mult: %u, offset_clipping: %u,   offset_clipping: %u\n",
+				   analog_gain , gdig_preamp, rg_adcgain, rg_mult, offset_clipping,offset_clipping);
 			mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
 			mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
-			mira050_write(mira050, MIRA050_GDIG_AMP, gdig_amp);
+			mira050_write(mira050, MIRA050_GDIG_PREAMP, gdig_preamp);
 			mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
 			mira050_write(mira050, MIRA050_BIAS_RG_ADCGAIN, rg_adcgain);
 			mira050_write(mira050, MIRA050_BIAS_RG_MULT, rg_mult);
@@ -3932,65 +3969,84 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 	}
 	else if (mira050->bit_depth == 8)
 	{
+		dark_offset_100 = 72; //noncont clock
+		scale_factor = 16 ;
+		cds_offset = 1540;
+		target_black_level = 32;
+
+
 		if (gain < ARRAY_SIZE(fine_gain_lut_8bit_16x))
 		{
 			u32 analog_gain = fine_gain_lut_8bit_16x[gain].analog_gain;
-			u8 gdig_amp = fine_gain_lut_8bit_16x[gain].gdig_amp;
+			u8 gdig_preamp = fine_gain_lut_8bit_16x[gain].gdig_preamp;
 			u8 rg_adcgain = fine_gain_lut_8bit_16x[gain].rg_adcgain;
 			u8 rg_mult = fine_gain_lut_8bit_16x[gain].rg_mult;
 			/* otp_cal_val should come from OTP, but OTP may have incorrect value. */
-			u8 target_black_level = 16;
-			u16 adc_offset = 1540;
-			u16 digital_gain = 16 / (gdig_amp + 1);
-			u16 offset_clipping = 0;
-			u16 linear_offset = 1;
+			u16 preamp_gain_inv = 16 / (gdig_preamp + 1);
+
 
 			// int part1 = (int)(otp_cal_val + 2.5) ;
-			// int part2 = (int)(part1*analog_gain / (int)(gdig_amp + 1)) ;
-			// int estimated_offset = (part2>>8) - 2;
-			// int scaled_calibration_value = ((otp_cal_val - 1540) / 4 - target_black_level) * 16 / (gdig_amp + 1);
+			// int part2 = (int)(part1*analog_gain / (int)(gdig_preamp + 1)) ;
+			// int offset_clipping = (part2>>8) - 2;
+			// int scaled_offset = ((otp_cal_val - 1540) / 4 - target_black_level) * 16 / (gdig_preamp + 1);
 			/* Avoid negative offset_clipping value. */
-			int estimated_offset = (int)((otp_cal_fine_val + linear_offset) * analog_gain / (gdig_amp + 1) / 256 - linear_offset);
+			
+			// newly added.
+			u16 scaled_offset = (u16)((mira050->otp_dark_cal_10bit + dark_offset_100)/100 * analog_gain*preamp_gain_inv / (scale_factor))-(u16)(dark_offset_100/100);
+			printk(KERN_INFO "[MIRA050]: scaled offset  12 bit mode is %u dark cal is %u",scaled_offset,mira050->otp_dark_cal_12bit  );
 
-			int offset_clipping_calc = (int)(adc_offset - (target_black_level * digital_gain - estimated_offset));
+			/* Avoid negative offset_clipping value. */
+			u16 offset_clipping = ((int)(cds_offset - target_black_level*preamp_gain_inv  + scaled_offset) < 0 ? 0 : (int)(cds_offset - target_black_level*preamp_gain_inv  + scaled_offset));
+			/* Stop streaming and wait for frame data transmission done */
+			// mira050_write_stop_streaming_regs(mira050);
+			printk(KERN_INFO "[MIRA050]: offset clip  12 bit mode is  %u",offset_clipping  );
+
+
+			// int part1 = (int)(otp_cal_val + 2.5) ;
+			// int part2 = (int)(part1*analog_gain / (int)(gdig_preamp + 1)) ;
+			// int offset_clipping = (part2>>8) - 2;
+			// int scaled_offset = ((otp_cal_val - 1540) / 4 - target_black_level) * 16 / (gdig_preamp + 1);
+			/* Avoid negative offset_clipping value. */
+			// int offset_clipping = (int)((otp_cal_fine_val + 4) * analog_gain / (int)(gdig_preamp + 1) / 256 - 4);
+
+			// int offset_clipping_calc = (int)(cds_offset - (target_black_level  - offset_clipping));
 						/*preamp_gain, _, _ = gain_settings._gain_lut[gain]
 			scaled_offset = (calibration_value + 2.5) * gain/(16*preamp_gain) - 2.5
 			mira_xs_api.write_register(
 			'OFFSET_CLIPPING',
 			2*act1 - round(target_black_level/preamp_gain - scaled_offset)
-				estimated_offset = (calibration_value + 2.5) * (analog_gain/4) - 2.5
-			adc_offset = 1540
-			offset_clip = int(adc_offset - round(target/digital_gain - estimated_offset))
+				offset_clipping = (calibration_value + 2.5) * (analog_gain/4) - 2.5
+			cds_offset = 1540
+			offset_clip = int(cds_offset - round(target/digital_gain - offset_clipping))
 			*/
-			if (offset_clipping_calc < 0)
-			{
-				offset_clipping = 0;
-			}
-			else
-			{
-				offset_clipping = (uint16_t)(offset_clipping_calc);
-			}
-			printk(KERN_INFO "[MIRA050]: est offset: %u,offset_clipping_calc: %u rg_adcgain: %u, rg_mult: %u, offset_clipping: %u, otp_cal_fine_val: %u\n",
-				   analog_gain / 256, gdig_amp, rg_adcgain, rg_mult, offset_clipping, otp_cal_fine_val);
-			//  = (int)(adc_offset - (target_black_level*digital_gain - estimated_offset)) < 0 ? 0 : (int)(adc_offset - (target_black_level*digital_gain - estimated_offset));
+			// if (offset_clipping_calc < 0)
+			// {
+			// 	offset_clipping = 0;
+			// }
+			// else
+			// {
+			// 	offset_clipping = (uint16_t)(offset_clipping_calc);
+			// }
+			printk(KERN_INFO "[MIRA050]: est offset: %u,offset_clipping_calc: %u rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
+				   analog_gain / 256, gdig_preamp, rg_adcgain, rg_mult, offset_clipping);
+			//  = (int)(cds_offset - (target_black_level*digital_gain - offset_clipping)) < 0 ? 0 : (int)(cds_offset - (target_black_level*digital_gain - offset_clipping));
 
 			// u16 offset_clipping = (offset_clipping_calc < 0) ? 0 : (int)(offset_clipping_calc);
 			/* Stop streaming and wait for frame data transmission done */
 			mira050_write_stop_streaming_regs(mira050);
 			usleep_range(wait_us, wait_us + 100);
 			/* Write fine gain registers */
-			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 8 bit mode", gain);
-			printk(KERN_INFO "[MIRA050]: analoggain: %u,gdig_amp: %u rg_adcgain: %u, rg_mult: %u, offset_clipping: %u,  offset_clipping_calc: %u,  estimated_offset: %u\n",
-				   analog_gain , gdig_amp, rg_adcgain, rg_mult, offset_clipping, offset_clipping_calc,estimated_offset);
+			printk(KERN_INFO "[MIRA050]: Write reg sequence for analog gain %u in 10 bit mode", gain);
+			printk(KERN_INFO "[MIRA050]: analoggain: %u,gdig_preamp: %u rg_adcgain: %u, rg_mult: %u, offset_clipping: %u,   offset_clipping: %u\n",
+				   analog_gain , gdig_preamp, rg_adcgain, rg_mult, offset_clipping,offset_clipping);
 			mira050_write(mira050, MIRA050_RW_CONTEXT_REG, 0);
 			mira050_write(mira050, MIRA050_BANK_SEL_REG, 1);
-			mira050_write(mira050, MIRA050_GDIG_AMP, gdig_amp);
+			mira050_write(mira050, MIRA050_GDIG_PREAMP, gdig_preamp);
 			mira050_write(mira050, MIRA050_BANK_SEL_REG, 0);
 			mira050_write(mira050, MIRA050_BIAS_RG_ADCGAIN, rg_adcgain);
 			mira050_write(mira050, MIRA050_BIAS_RG_MULT, rg_mult);
 			mira050_write_be16(mira050, MIRA050_OFFSET_CLIPPING, offset_clipping);
 			/* Resume streaming */
-			usleep_range(wait_us, wait_us + 100);
 			mira050_write_start_streaming_regs(mira050);
 		}
 	}
@@ -4664,9 +4720,11 @@ static int mira050_start_streaming(struct mira050 *mira050)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&mira050->sd);
 	const struct mira050_reg_list *reg_list;
-	u32 otp_cal_val;
-	u32 otp_cal_fine_val;
 
+	u32 otp_dark_cal_8bit;
+	u32 otp_dark_cal_10bit_hs;
+	u32 otp_dark_cal_10bit;
+	u32 otp_dark_cal_12bit;
 	int ret;
 
 	printk(KERN_INFO "[MIRA050]: Entering start streaming function.\n");
@@ -4728,71 +4786,61 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	if (ret)
 		goto err_rpm_put;
 
-	/* Read OTP memory for OTP_CALIBRATION_VALUE */
-	ret = mira050_otp_read(mira050, 0x01, &otp_cal_val);
-
+	/* ********* READ OTP VALUES for revB - all modes ********** */
+	ret = mira050_otp_read(mira050, 0x04, &otp_dark_cal_8bit);
 	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
-	mira050->otp_cal_val = (u16)(otp_cal_val & 0x0000FFFF);
+	mira050->otp_dark_cal_8bit = (u16)(otp_dark_cal_8bit & 0x0000FFFF);
 	if (ret)
 	{
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
-		/* Even if OTP reading fails, continue with the rest. */
-		mira050->otp_cal_val = MIRA050_OTP_CAL_VALUE_DEFAULT;
-		printk(KERN_INFO "[MIRA050]: Due to OTP reading failure, use default mira050->otp_cal_val : %u.\n", mira050->otp_cal_val);
-		/* goto err_rpm_put; */
+
 	}
 	else
 	{
-		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_cal_val, otp_cal_val);
-		if ((otp_cal_val & 0xFFFF0000) != 0xFFFF0000)
-		{
-			mira050->otp_cal_val = MIRA050_OTP_CAL_VALUE_DEFAULT;
-			printk(KERN_INFO "[MIRA050]: Due to higher 16-bit not all 1, use default mira050->otp_cal_val : %u.\n", mira050->otp_cal_val);
-		}
-		else if (mira050->otp_cal_val < MIRA050_OTP_CAL_VALUE_MIN)
-		{
-			mira050->otp_cal_val = MIRA050_OTP_CAL_VALUE_DEFAULT;
-			printk(KERN_INFO "[MIRA050]: Due to extracted value < %u, likely an error, use default mira050->otp_cal_val : %u.\n", MIRA050_OTP_CAL_VALUE_MIN, mira050->otp_cal_val);
-		}
-		else if (mira050->otp_cal_val > MIRA050_OTP_CAL_VALUE_MAX)
-		{
-			mira050->otp_cal_val = MIRA050_OTP_CAL_VALUE_DEFAULT;
-			printk(KERN_INFO "[MIRA050]: Due to extracted value > %u, likely an error, use default mira050->otp_cal_val : %u.\n", MIRA050_OTP_CAL_VALUE_MAX, mira050->otp_cal_val);
-		}
+		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_dark_cal_8bit, otp_dark_cal_8bit);
+		
 	}
-
-	/* Read OTP memory for OTP_CALIBRATION_VALUE */
-	ret = mira050_otp_read(mira050, 0x04, &otp_cal_fine_val);
-
+	ret = mira050_otp_read(mira050, 0x05, &otp_dark_cal_10bit_hs);
 	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
-	mira050->otp_cal_fine_val = (u16)(otp_cal_fine_val & 0x0000FFFF);
+	mira050->otp_dark_cal_10bit_hs = (u16)(otp_dark_cal_10bit_hs & 0x0000FFFF);
 	if (ret)
 	{
 		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
-		/* Even if OTP reading fails, continue with the rest. */
-		mira050->otp_cal_fine_val = MIRA050_OTP_CAL_FINE_VALUE_DEFAULT;
-		printk(KERN_INFO "[MIRA050]: Due to OTP reading failure, use default mira050->otp_cal_fine_val : %u.\n", mira050->otp_cal_fine_val);
-		/* goto err_rpm_put; */
+
 	}
 	else
 	{
-		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_cal_fine_val, otp_cal_fine_val);
-		// if ((otp_cal_fine_val & 0xFFFF0000) != 0xFFFF0000)
-		// {
-		// 	mira050->otp_cal_fine_val = MIRA050_OTP_CAL_FINE_VALUE_DEFAULT;
-		// 	printk(KERN_INFO "[MIRA050]: Due to higher 16-bit not all 1, use default mira050->otp_cal_fine_val : %u.\n", mira050->otp_cal_fine_val);
-		// }
-		if (mira050->otp_cal_fine_val < MIRA050_OTP_CAL_FINE_VALUE_MIN)
-		{
-			mira050->otp_cal_fine_val = MIRA050_OTP_CAL_FINE_VALUE_DEFAULT;
-			printk(KERN_INFO "[MIRA050]: Due to extracted value < %u, likely an error, use default mira050->otp_cal_fine_val : %u.\n", MIRA050_OTP_CAL_FINE_VALUE_MIN, mira050->otp_cal_fine_val);
-		}
-		else if (mira050->otp_cal_fine_val > MIRA050_OTP_CAL_FINE_VALUE_MAX)
-		{
-			mira050->otp_cal_fine_val = MIRA050_OTP_CAL_FINE_VALUE_DEFAULT;
-			printk(KERN_INFO "[MIRA050]: Due to extracted value > %u, likely an error, use default mira050->otp_cal_fine_val : %u.\n", MIRA050_OTP_CAL_FINE_VALUE_MAX, mira050->otp_cal_fine_val);
-		}
+		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_dark_cal_10bit_hs, otp_dark_cal_10bit_hs);
+		
 	}
+	ret = mira050_otp_read(mira050, 0x06, &otp_dark_cal_10bit);
+	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
+	mira050->otp_dark_cal_10bit = (u16)(otp_dark_cal_10bit & 0x0000FFFF);
+	if (ret)
+	{
+		dev_err(&client->dev, "%s failed to read OTP addr 0x01.\n", __func__);
+
+	}
+	else
+	{
+		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_dark_cal_10bit, otp_dark_cal_10bit);
+		
+	}
+	//12 bit
+	ret = mira050_otp_read(mira050, 0x07, &otp_dark_cal_12bit);
+	/* OTP_CALIBRATION_VALUE is little-endian, LSB at [7:0], MSB at [15:8] */
+	mira050->otp_dark_cal_12bit = (u16)(otp_dark_cal_12bit & 0x0000FFFF);
+	if (ret)
+	{
+		dev_err(&client->dev, "%s failed to read OTP addr 0x07.\n", __func__);
+
+	}
+	else
+	{
+		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE: %u, extracted from 32-bit 0x%X.\n", mira050->otp_dark_cal_12bit, otp_dark_cal_12bit);
+		
+	}
+
 
 
 	if (mira050->skip_reg_upload == 0 ||

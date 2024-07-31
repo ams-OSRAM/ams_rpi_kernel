@@ -127,13 +127,7 @@ F = fine
 
 // Some timings
 #define PONCHA110_DATA_RATE 500 // Mbit/s
-#define PONCHA110_SEQ_TIME_BASE 8 / PONCHA110_DATA_RATE
-#define PONCHA110_LPS_CYCLE_TIME 1145
-#define PONCHA110_ROW_LENGTH 2563 // 12b
-#define PONCHA110_LPS_DISABLED 0
-#define PONCHA110_TROW_US PONCHA110_ROW_LENGTH * 8 / PONCHA110_DATA_RATE
-
-#define PONCHA110_READOUT_TIME PONCHA110_TROW_US * (11 + PONCHA110_PIXEL_ARRAY_HEIGHT)
+#define PONCHA110_ROW_LENGTH 3281 // 1-4 gain
 
 
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
@@ -175,12 +169,7 @@ F = fine
 /* From Jetson driver */
 
 
-#define PONCHA110_CURRENT_ACTIVE_CONTEXT 0x4002
 
-#define PONCHA110_GDIG_AMP 0x0024
-#define PONCHA110_BIAS_RG_ADCGAIN 0x01F0
-#define PONCHA110_BIAS_RG_MULT 0x01F3
-#define PONCHA110_OFFSET_CLIPPING 0x0193
 
 #define PONCHA110_OTP_COMMAND 0x0066
 #define PONCHA110_OTP_ADDR 0x0067
@@ -194,29 +183,26 @@ F = fine
 
 
 
-/*relevant params for poncha*/
-#define PONCHA110_PIXEL_RATE (100000000)
+/*relevant params for poncha */
+#define PONCHA110_PIXEL_RATE (98400000) //=sequencer clock. row time = row_len /pixel rate
 /* Should match device tree link freq */
 #define PONCHA110_DEFAULT_LINK_FREQ 456000000
-#define PONCHA110_ADC_DURATION (1000000000)
 
-#define PONCHA110_T_SEQ_NS 0x0010
 /*relevant registers for Poncha*/
 #define PONCHA110_TARGET_FRAME_TIME_REG 0x000A
 #define PONCHA110_ROW_LENGTH_REG 0x0010 //multiples of t_seq
 #define PONCHA110_EXPOSURE_REG 0x000E
 
 // #define PONCHA110_MIN_VBLANK 353 // for 10b or 8b, 360fps
-#define PONCHA110_MIN_VBLANK 218  // 30 fps
-#define PONCHA110_MAX_VBLANK 218	   //1000000
-#define PONCHA110_DEFAULT_VBLANK_30 218  // 200 fps
+#define PONCHA110_MIN_VBLANK 15  // 23 fps
+#define PONCHA110_MAX_VBLANK 1000	   //1000000
+#define PONCHA110_DEFAULT_VBLANK_30 15  // 200 fps
 
 #define PONCHA110_EXPOSURE_MIN 1
 #define PONCHA110_DEFAULT_EXPOSURE 0x5FF
 
-#define PONCHA110_EXPOSURE_MAX 0xFFF //long enough..
+#define PONCHA110_EXPOSURE_MAX 0xFFFF //long enough..
 
-#define PONCHA110_ROW_LENGTH 2563 //multiples of t_seq
 
 #define PONCHA110_HBLANK (PONCHA110_ROW_LENGTH - PONCHA110_PIXEL_ARRAY_WIDTH)
 
@@ -1365,8 +1351,6 @@ static const struct poncha110_reg full_10b_1lane_reg_pre_soft_reset[] = {
 { 0x01e2, 0x08 },
 //TRIM_VAL_VSS16N
 { 0x01ec, 0x00 },
-//IDAC_SET_2
-{ 0x0201, 0x02 },
 
 
 };
@@ -2247,6 +2231,40 @@ static int poncha110_write_analog_gain_reg(struct poncha110 *poncha110, u8 gain)
 		gainval = (gain<<5) | PONCHA110_ANALOG_GAIN_TRIM;
 		ret |= poncha110_write(poncha110, PONCHA110_ANALOG_GAIN_REG, gainval);
 		printk(KERN_INFO "[PONCHA110]: ANALOG GAIN gainval reg %u, gain %u.\n",gainval, gain);
+		if (gain==0) {
+			ret |= poncha110_write(poncha110, 0x00dd, 0x00);
+			ret |= poncha110_write(poncha110, 0x00de, 0x78);
+			ret |= poncha110_write(poncha110, 0x00df, 0x02);
+			ret |= poncha110_write(poncha110, 0x00e0, 0x78);
+			ret |= poncha110_write(poncha110, 0x004a, 0x00);
+			ret |= poncha110_write(poncha110, 0x004b, 0xf0);
+
+			// //NR_ADC_CLKS_RST
+			// { 0x00dd, 0x00 };
+			// { 0x00de, 0x78 };
+			// //NR_ADC_CLKS_SIG
+			// { 0x00df, 0x02 };
+			// { 0x00e0, 0x78 };
+			// //OFFSET_CLIPPING
+			// { 0x004a, 0x00 };
+			// { 0x004b, 0xf0 };
+		}
+		else {
+			ret |= poncha110_write(poncha110, 0x00dd, 0x01);
+			ret |= poncha110_write(poncha110, 0x00de, 0xf8);
+			ret |= poncha110_write(poncha110, 0x00df, 0x03);
+			ret |= poncha110_write(poncha110, 0x00e0, 0xf8);
+			ret |= poncha110_write(poncha110, 0x004a, 0x03);
+			ret |= poncha110_write(poncha110, 0x004b, 0xf0);
+			//NR_ADC_CLKS_RST
+			// { 0x00dd, 0x01 };
+			// { 0x00de, 0xf8 };
+			// { 0x00df, 0x03 };
+			// { 0x00e0, 0xf8 };
+			// { 0x004a, 0x03 };
+			// { 0x004b, 0xf0 };
+
+		}
 
 	}
 	if (ret) {
@@ -2865,7 +2883,7 @@ static int poncha110_set_pad_format(struct v4l2_subdev *sd,
 	struct poncha110 *poncha110 = to_poncha110(sd);
 	const struct poncha110_mode *mode;
 	struct v4l2_mbus_framefmt *framefmt;
-	u32 max_exposure = 0, default_exp = 0;
+	u32 max_exposure = 0;
 	int rc = 0;
 	printk(KERN_INFO "[PONCHA110]: poncha110_set_pad_format() .\n");
 
