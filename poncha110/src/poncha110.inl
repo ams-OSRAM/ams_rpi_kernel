@@ -25,7 +25,7 @@
 #include <asm/unaligned.h>
 
 /*
- * Introduce new v4l2 control
+ * Introduce new v4l2 control/
  */
 #include <linux/v4l2-controls.h>
 #define AMS_CAMERA_CID_BASE (V4L2_CTRL_CLASS_CAMERA | 0x2000)
@@ -2231,6 +2231,13 @@ static int poncha110_write_analog_gain_reg(struct poncha110 *poncha110, u8 gain)
 		gainval = (gain<<5) | PONCHA110_ANALOG_GAIN_TRIM;
 		ret |= poncha110_write(poncha110, PONCHA110_ANALOG_GAIN_REG, gainval);
 		printk(KERN_INFO "[PONCHA110]: ANALOG GAIN gainval reg %u, gain %u.\n",gainval, gain);
+		//MODE_SELECT
+		ret |= poncha110_write(poncha110, 0x0007, 0x00);
+		ret |= poncha110_write(poncha110, 0x0007, 0x00);
+
+		usleep_range(60000, 80000);
+
+
 		if (gain==0) {
 			ret |= poncha110_write(poncha110, 0x00dd, 0x00);
 			ret |= poncha110_write(poncha110, 0x00de, 0x78);
@@ -2265,6 +2272,9 @@ static int poncha110_write_analog_gain_reg(struct poncha110 *poncha110, u8 gain)
 			// { 0x004b, 0xf0 };
 
 		}
+	ret |= poncha110_write(poncha110, 0x0007, 0x00);
+
+	ret |= poncha110_write(poncha110, 0x0007, 0x01);
 
 	}
 	if (ret) {
