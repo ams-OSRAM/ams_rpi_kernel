@@ -2226,16 +2226,38 @@ static int poncha110_write_analog_gain_reg(struct poncha110 *poncha110, u8 gain)
 	u32 ret = 0;
 	u8 gainval;
 	if (gain | PONCHA110_ANALOG_GAIN_MAX) {
-
-		ret |= poncha110_write(poncha110, PONCHA110_CONTEXT_REG, 0);
-		gainval = (gain<<5) | PONCHA110_ANALOG_GAIN_TRIM;
-		ret |= poncha110_write(poncha110, PONCHA110_ANALOG_GAIN_REG, gainval);
-		printk(KERN_INFO "[PONCHA110]: ANALOG GAIN gainval reg %u, gain %u.\n",gainval, gain);
 		//MODE_SELECT
 		ret |= poncha110_write(poncha110, 0x0007, 0x00);
 		ret |= poncha110_write(poncha110, 0x0007, 0x00);
 
-		usleep_range(60000, 80000);
+
+		u8 busy_status = 1;
+		int poll_cnt = 0;
+		int poll_cnt_max = 4;
+		int ret;
+		// poncha110_write(poncha110, PONCHA110_OTP_COMMAND, 0);
+		// poncha110_write(poncha110, PONCHA110_OTP_ADDR, addr);
+		// poncha110_write(poncha110, PONCHA110_OTP_START, 1);
+		// poncha110_write(poncha110, PONCHA110_OTP_START, 0);
+		for (poll_cnt = 0; poll_cnt < poll_cnt_max; poll_cnt++)
+		{
+			poncha110_read(poncha110, 0x096, &busy_status); //mipi_ulps_clk_active
+			printk(KERN_INFO "[PONCHA110]: write analog gain, poll status: 0x%X.\n",busy_status);
+			usleep_range(1000, 10000);
+			if (busy_status == 0)
+			{
+			 	break;
+			 }
+		}
+
+
+
+		usleep_range(80000, 150000);
+		ret |= poncha110_write(poncha110, PONCHA110_CONTEXT_REG, 0);
+		gainval = (gain<<5) | PONCHA110_ANALOG_GAIN_TRIM;
+		ret |= poncha110_write(poncha110, PONCHA110_ANALOG_GAIN_REG, gainval);
+		printk(KERN_INFO "[PONCHA110]: ANALOG GAIN gainval reg %u, gain %u.\n",gainval, gain);
+
 
 
 		if (gain==0) {
