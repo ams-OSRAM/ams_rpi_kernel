@@ -3847,7 +3847,7 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 			/* otp_cal_val should come from OTP, but OTP may have incorrect value. */
 			u16 preamp_gain_inv = 16 / (gdig_preamp + 1); // invert because fixed point arithmetic
 
-			u16 scaled_offset = (u16)(((mira050->otp_dark_cal_10bit_hs + dark_offset_100) * analog_gain * preamp_gain_inv / (scale_factor)) - dark_offset_100) / 100;
+			u16 scaled_offset = (u16)(((mira050->otp_dark_cal_10bit_hs + dark_offset_100) * analog_gain * preamp_gain_inv / (scale_factor)/256) - dark_offset_100) / 100; //div by 256 for analog gain
 			// newly added.
 			printk(KERN_INFO "[MIRA050]: scaled offset  10 bit mode is %u dark cal is %u", scaled_offset, mira050->otp_dark_cal_10bit_hs);
 
@@ -3882,8 +3882,6 @@ offset_clip = int(cds_offset - round(target/digital_gain - offset_clipping))
 			// {
 			// 	offset_clipping = (uint16_t)(offset_clipping_calc);
 			// }
-			printk(KERN_INFO "[MIRA050]: est offset: %u,offset_clipping_calc: %u rg_adcgain: %u, rg_mult: %u, offset_clipping: %u\n",
-				   analog_gain / 256, gdig_preamp, rg_adcgain, rg_mult, offset_clipping);
 			//  = (int)(cds_offset - (target_black_level*digital_gain - offset_clipping)) < 0 ? 0 : (int)(cds_offset - (target_black_level*digital_gain - offset_clipping));
 
 			// u16 offset_clipping = (offset_clipping_calc < 0) ? 0 : (int)(offset_clipping_calc);
@@ -3928,7 +3926,7 @@ offset_clip = int(cds_offset - round(target/digital_gain - offset_clipping))
 			/* Avoid negative offset_clipping value. */
 
 			// newly added.
-			u16 scaled_offset = (u16)(((mira050->otp_dark_cal_8bit + dark_offset_100) * analog_gain * preamp_gain_inv / (scale_factor)) - dark_offset_100) / 100;
+			u16 scaled_offset = (u16)(((mira050->otp_dark_cal_8bit + dark_offset_100) * analog_gain * preamp_gain_inv / (scale_factor)/256) - dark_offset_100) / 100;
 			printk(KERN_INFO "[MIRA050]: scaled offset 8 bit mode is %u dark cal is %u", scaled_offset, mira050->otp_dark_cal_8bit);
 
 			/* Avoid negative offset_clipping value. */
