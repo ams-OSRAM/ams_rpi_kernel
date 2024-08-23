@@ -3756,6 +3756,7 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 	u16 analog_gain = 1;
 	u16 offset_clipping = 0;
 	u16 scaled_offset = 0;
+	printk(KERN_INFO "[MIRA050]: Write analog gain %u",gain);
 
 	// Select partial register sequence according to bit depth
 	if (mira050->bit_depth == 12)
@@ -3799,14 +3800,14 @@ static int mira050_write_analog_gain_reg(struct mira050 *mira050, u8 gain)
 		u16 part3 = (dark_offset_100 / 100);
 		u16 part2 = analog_gain / (scale_factor * preamp_gain);
 		scaled_offset = (u16)((mira050->otp_dark_cal_12bit + dark_offset_100) / 100 * analog_gain / (scale_factor * preamp_gain)) - (u16)(dark_offset_100 / 100);
-		printk(KERN_INFO "[MIRA050]: scaled offset  12 bit mode is %u dark cal is %u", scaled_offset, mira050->otp_dark_cal_12bit);
-		printk(KERN_INFO "[MIRA050]: scaled offset  12 bit mode part1 %u part2 %u part3 %u ", part1, part2, part3);
+		// printk(KERN_INFO "[MIRA050]: scaled offset  12 bit mode is %u dark cal is %u", scaled_offset, mira050->otp_dark_cal_12bit);
+		// printk(KERN_INFO "[MIRA050]: scaled offset  12 bit mode part1 %u part2 %u part3 %u ", part1, part2, part3);
 
 
 
 		scaled_offset = (u16)(((mira050->otp_dark_cal_12bit + dark_offset_100) * analog_gain * preamp_gain_inv / (scale_factor)) - dark_offset_100) / 100;
 		// newly added.
-		printk(KERN_INFO "[MIRA050]: scaled offset  new 12 bit mode is %u dark cal is %u", scaled_offset, mira050->otp_dark_cal_12bit);
+		// printk(KERN_INFO "[MIRA050]: scaled offset  new 12 bit mode is %u dark cal is %u", scaled_offset, mira050->otp_dark_cal_12bit);
 
 		/* Avoid negative offset_clipping value. */
 		offset_clipping = ((int)(cds_offset - target_black_level * preamp_gain_inv + scaled_offset) < 0 ? 0 : (int)(cds_offset - target_black_level * preamp_gain_inv + scaled_offset));
@@ -4117,6 +4118,8 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		switch (ctrl->id)
 		{
 		case V4L2_CID_ANALOGUE_GAIN:
+			printk(KERN_INFO "[MIRA050]: V4L2_CID_ANALOGUE_GAIN: = %u !!!!!!!!!!!!!\n",
+					ctrl->val);
 			ret = mira050_write_analog_gain_reg(mira050, ctrl->val);
 			break;
 		case V4L2_CID_EXPOSURE:
@@ -4659,7 +4662,7 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	u32 otp_dark_cal_12bit;
 	int ret;
 
-	printk(KERN_INFO "[MIRA050]: Entering start streaming function.\n");
+	printk(KERN_INFO "[MIRA050]: Entering START STREAMING function !!!!!!!!!!.\n");
 
 	/* Follow examples of other camera driver, here use pm_runtime_resume_and_get */
 	ret = pm_runtime_resume_and_get(&client->dev);
@@ -4720,22 +4723,6 @@ static int mira050_start_streaming(struct mira050 *mira050)
 
 
 
-	if (mira050->skip_reg_upload == 0 ||
-		(mira050->skip_reg_upload == 1 && mira050->force_stream_ctrl == 1))
-	{
-		printk(KERN_INFO "[MIRA050]: Writing start streaming regs.\n");
-		ret = mira050_write_start_streaming_regs(mira050);
-		if (ret)
-		{
-			dev_err(&client->dev, "Could not write stream-on sequence");
-			goto err_rpm_put;
-		}
-	}
-	else
-	{
-		printk(KERN_INFO "[MIRA050]: Skip write_start_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
-			   mira050->skip_reg_upload, mira050->force_stream_ctrl);
-	}
 
 	usleep_range(10, 50);
 	/* ********* READ OTP VALUES for revB - all modes ********** */
@@ -4785,6 +4772,25 @@ static int mira050_start_streaming(struct mira050 *mira050)
 	else
 	{
 		printk(KERN_INFO "[MIRA050]: OTP_CALIBRATION_VALUE 12b: %u, extracted from 32-bit 0x%X.\n", mira050->otp_dark_cal_12bit, otp_dark_cal_12bit);
+	}
+
+
+	// ret = mira050_write_analog_gain_reg(mira050, 0);
+	if (mira050->skip_reg_upload == 0 ||
+		(mira050->skip_reg_upload == 1 && mira050->force_stream_ctrl == 1))
+	{
+		printk(KERN_INFO "[MIRA050]: Writing start streaming regs.\n");
+		ret = mira050_write_start_streaming_regs(mira050);
+		if (ret)
+		{
+			dev_err(&client->dev, "Could not write stream-on sequence");
+			goto err_rpm_put;
+		}
+	}
+	else
+	{
+		printk(KERN_INFO "[MIRA050]: Skip write_start_streaming_regs due to skip_reg_upload == %d and force_stream_ctrl == %d.\n",
+			   mira050->skip_reg_upload, mira050->force_stream_ctrl);
 	}
 
 	/* vflip and hflip cannot change during streaming */
