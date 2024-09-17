@@ -133,18 +133,23 @@
 #define MIRA050_MIN_ROW_LENGTH_US (MIRA050_MIN_ROW_LENGTH * 8 / MIRA050_DATA_RATE)
 #define MIRA050_EXPOSURE_MIN_US (int)(1 + (151 + MIRA050_LUT_DEL_008) * MIRA050_GRAN_TG * 8 / MIRA050_DATA_RATE)
 #define MIRA050_EXPOSURE_MAX_US (1000000)
-#define MIRA050_DEFAULT_EXPOSURE_US 1000
+#define MIRA050_EXPOSURE_MIN_LINES (MIRA050_EXPOSURE_MIN_US/MIRA050_DEFAULT_LINE_LENGTH)
+#define MIRA050_EXPOSURE_MAX_LINES (MIRA050_EXPOSURE_MAX_US/MIRA050_DEFAULT_LINE_LENGTH)
+
+#define MIRA050_DEFAULT_EXPOSURE_LINES 1000
+#define MIRA050_DEFAULT_EXPOSURE_US MIRA050_DEFAULT_EXPOSURE_LINES*MIRA050_DEFAULT_LINE_LENGTH
 // Default exposure for V4L2 is in row time
 
 // #define MIRA050_MIN_VBLANK 11 // for 10b or 8b, 360fps
 // 50 fps
-#define MIRA050_MIN_VBLANK_60 15900
+#define MIRA050_MIN_VBLANK_60 900
+
 // 50 fps
-#define MIRA050_MIN_VBLANK_120 7560
+#define MIRA050_MIN_VBLANK_120 65
 
 // 120 fps
 
-#define MIRA050_MAX_VBLANK 1000000
+#define MIRA050_MAX_VBLANK 100000
 
 // Default exposure is adjusted to 1 ms
 // #define MIRA050_LUT_DEL_008			66
@@ -166,9 +171,10 @@
 // set pixel rate equal to width. such that 1 row time is 1 us.
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
 // 1.0Gb/s * 2 * 1 / 12 = 178956970
-#define MIRA050_PIXEL_RATE (576000000)
+#define MIRA050_PIXEL_RATE (57600000) //reduce by factor 10, otherwise driver complains...
 /* Should match device tree link freq */
 #define MIRA050_DEFAULT_LINK_FREQ 456000000
+#define MIRA050_DEFAULT_LINE_LENGTH (10) // pixel rate / (HSIZE+HBLANK)
 
 /* Trick the libcamera with achievable fps via hblank */
 
@@ -197,15 +203,6 @@
 #define MIRA050_EMBEDDED_LINE_WIDTH 16384
 #define MIRA050_NUM_EMBEDDED_LINES 1
 
-/* From Jetson driver */
-#define MIRA050_DEFAULT_LINE_LENGTH (0xA80)
-#define MIRA050_DEFAULT_PIXEL_CLOCK (160)
-#define MIRA050_DEFAULT_FRAME_LENGTH (0x07C0)
-
-#define MIRA050_PLL_LOCKED_REG 0x207C
-#define MIRA050_CSI2_TX_HS_ACTIVE_REG 0x209A
-
-#define MIRA050_CURRENT_ACTIVE_CONTEXT 0x4002
 
 #define MIRA050_GDIG_PREAMP 0x0024
 #define MIRA050_BIAS_RG_ADCGAIN 0x01F0
@@ -3579,15 +3576,17 @@ static u32 mira050_calculate_max_exposure_time(u32 row_length, u32 vsize,
 	(void)(vblank);
 	/* Mira050 does not have a max exposure limit besides register bits */
 	// return row_length * (vsize + vblank) - MIRA050_GLOB_NUM_CLK_CYCLES;
-	return MIRA050_EXPOSURE_MAX_US;
+	return MIRA050_EXPOSURE_MAX_LINES;
 }
 
-static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure)
+static int mira050_write_exposure_reg(struct mira050 *mira050, u32 exposure_lines)
 {
 	struct i2c_client *const client = v4l2_get_subdevdata(&mira050->sd);
 	const u32 min_exposure = MIRA050_EXPOSURE_MIN_US;
 	u32 max_exposure = mira050->exposure->maximum * MIRA050_MIN_ROW_LENGTH_US;
 	u32 ret = 0;
+	u32 exposure = exposure_lines * MIRA050_DEFAULT_LINE_LENGTH;
+
 
 	if (exposure < min_exposure)
 	{
@@ -4094,11 +4093,11 @@ static int mira050_set_ctrl(struct v4l2_ctrl *ctrl)
 		exposure_max = mira050_calculate_max_exposure_time(MIRA050_MIN_ROW_LENGTH,
 														   mira050->mode->height,
 														   ctrl->val);
-		exposure_def = (exposure_max < MIRA050_DEFAULT_EXPOSURE_US) ? exposure_max : MIRA050_DEFAULT_EXPOSURE_US;
+		exposure_def = (exposure_max < MIRA050_DEFAULT_EXPOSURE_LINES) ? exposure_max : MIRA050_DEFAULT_EXPOSURE_LINES;
 		__v4l2_ctrl_modify_range(mira050->exposure,
 								 mira050->exposure->minimum,
-								 (int)(1 + exposure_max / MIRA050_MIN_ROW_LENGTH_US), mira050->exposure->step,
-								 (int)(1 + exposure_def / MIRA050_MIN_ROW_LENGTH_US));
+								 (int)( exposure_max ), mira050->exposure->step,
+								 (int)( exposure_def ));
 	}
 
 	/*
@@ -4497,7 +4496,7 @@ static int mira050_set_pad_format(struct v4l2_subdev *sd,
 															   mira050->mode->height,
 															   mira050->mode->min_vblank);
 
-			default_exp = MIRA050_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : MIRA050_DEFAULT_EXPOSURE_US;
+			default_exp = MIRA050_DEFAULT_EXPOSURE_LINES > max_exposure ? max_exposure : MIRA050_DEFAULT_EXPOSURE_LINES;
 			rc = __v4l2_ctrl_modify_range(mira050->exposure,
 										  mira050->exposure->minimum,
 										  (int)(1 + max_exposure), mira050->exposure->step,
@@ -5034,9 +5033,9 @@ static int mira050_init_controls(struct mira050 *mira050)
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_EXPOSURE %X.\n", __func__, V4L2_CID_EXPOSURE);
 	mira050->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops,
 										  V4L2_CID_EXPOSURE,
-										  MIRA050_EXPOSURE_MIN_US, MIRA050_EXPOSURE_MAX_US,
+										  MIRA050_EXPOSURE_MIN_US/10, MIRA050_EXPOSURE_MAX_US/10,
 										  1,
-										  MIRA050_DEFAULT_EXPOSURE_US);
+										  MIRA050_DEFAULT_EXPOSURE_LINES);
 	printk(KERN_INFO "[MIRA050]: %s V4L2_CID_ANALOGUE_GAIN %X.\n", __func__, V4L2_CID_ANALOGUE_GAIN);
 
 	mira050->gain = v4l2_ctrl_new_std(ctrl_hdlr, &mira050_ctrl_ops, V4L2_CID_ANALOGUE_GAIN,
