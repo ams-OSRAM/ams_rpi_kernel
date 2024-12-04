@@ -79,7 +79,7 @@
 						data-lanes = <1>;
 						// clock-noncontinuous; // mira016 reg seq use continuous clk
 						link-frequencies =
-							/bits/ 64 <456000000>;
+							/bits/ 64 <750000000>;
 					};
 				};
 	

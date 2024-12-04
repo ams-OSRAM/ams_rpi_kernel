@@ -133,15 +133,25 @@
 #define MIRA016_MIN_ROW_LENGTH_US (MIRA016_MIN_ROW_LENGTH * 8 / MIRA016_DATA_RATE)
 #define MIRA016_EXPOSURE_MIN_US (int)(1 + (151 + MIRA016_LUT_DEL_008) * MIRA016_GRAN_TG * 8 / MIRA016_DATA_RATE)
 #define MIRA016_EXPOSURE_MAX_US (1000000)
-#define MIRA016_DEFAULT_EXPOSURE_US 1000
+#define MIRA016_EXPOSURE_MIN_LINES (MIRA016_EXPOSURE_MIN_US/MIRA016_DEFAULT_LINE_LENGTH)
+#define MIRA016_EXPOSURE_MAX_LINES (MIRA016_EXPOSURE_MAX_US/MIRA016_DEFAULT_LINE_LENGTH)
+
+#define MIRA016_DEFAULT_LINE_LENGTH (2) //  (HSIZE+HBLANK)  / pixel rate
+
+#define MIRA016_DEFAULT_EXPOSURE_LINES 1000
+#define MIRA016_DEFAULT_EXPOSURE_US MIRA016_DEFAULT_EXPOSURE_LINES*MIRA016_DEFAULT_LINE_LENGTH
+
+
+
 // Default exposure for V4L2 is in row time
 
 // #define MIRA016_MIN_VBLANK 11 // for 10b or 8b, 360fps
-#define MIRA016_MIN_VBLANK_200 4610 // 200 fps
-#define MIRA016_MIN_VBLANK_360 2400  // 200 fps
-#define MIRA016_MAX_VBLANK	   1000000
+#define MIRA016_MIN_VBLANK_200 2100 // 200 fps
+#define MIRA016_MIN_VBLANK_360 1000  // 200 fps
+#define MIRA016_MAX_VBLANK	   500000
 
-#define MIRA016_DEFAULT_VBLANK_60 16000  // 200 fps
+
+#define MIRA016_DEFAULT_VBLANK_60 8000  // 200 fps
 
 // Power on function timing
 #define MIRA016_XCLR_MIN_DELAY_US 150000
@@ -150,9 +160,9 @@
 // pixel_rate = link_freq * 2 * nr_of_lanes / bits_per_sample
 // 0.9Gb/s * 2 * 1 / 12 = 157286400
 // 1.5 Gbit/s * 2 * 1 / 12 = 250 000 000
-#define MIRA016_PIXEL_RATE (400000000)
+#define MIRA016_PIXEL_RATE (200000000) /*reduce factor 2 because max isp pixel rate is 380Mpix/s*/
 /* Should match device tree link freq */
-#define MIRA016_DEFAULT_LINK_FREQ 456000000
+#define MIRA016_DEFAULT_LINK_FREQ 750000000
 
 /* Trick the libcamera with achievable fps via hblank */
 
@@ -4280,7 +4290,7 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 		//
 		//
 		// printk(KERN_INFO "[MIRA016]: LPS DISABLED. Exposure name is  to %u.\n", mira016->exposure->name);
-		u32 cur_exposure = (mira016->exposure->val) ;
+		u32 cur_exposure = (mira016->exposure->val*MIRA016_DEFAULT_LINE_LENGTH) ;
 
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur is  to %u.\n", mira016->exposure->val);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur IN US  is  to %u.\n", cur_exposure);
@@ -4324,7 +4334,7 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 			printk(KERN_INFO "[MIRA016]: LPS CASE 5 invalid to %u.\n", mira016->illum_width);
 		}
 
-		width_adjust = (lps_time>0 ? lps_time * 1500 / 8 - 30 : 0);
+		width_adjust = (lps_time>0 ? lps_time * MIRA016_DATA_RATE / 8 - 30 : 0);
 		printk(KERN_INFO "[MIRA016]: LPS ENABLE -s width adjust is  %u.\n", width_adjust);
 
 		ret = mira016_write_be24(mira016, MIRA016_ILLUM_WIDTH_REG, mira016->illum_width - width_adjust);
@@ -4670,14 +4680,15 @@ static u32 mira016_calculate_max_exposure_time(u32 row_length, u32 vsize,
 	(void)(vblank);
 	/* Mira016 does not have a max exposure limit besides register bits */
 	// return row_length * (vsize + vblank) - MIRA016_GLOB_NUM_CLK_CYCLES;
-	return MIRA016_EXPOSURE_MAX_US;
+	return MIRA016_EXPOSURE_MAX_LINES;
 }
 
-static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure)
+static int mira016_write_exposure_reg(struct mira016 *mira016, u32 exposure_lines)
 {
 	struct i2c_client *const client = v4l2_get_subdevdata(&mira016->sd);
 	const u32 min_exposure = MIRA016_EXPOSURE_MIN_US;
 	u32 max_exposure = mira016->exposure->maximum;
+	u32 exposure = exposure_lines * MIRA016_DEFAULT_LINE_LENGTH;
 	u32 ret = 0;
 
 	if (exposure < min_exposure)
@@ -5078,11 +5089,12 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 		exposure_max = mira016_calculate_max_exposure_time(MIRA016_MIN_ROW_LENGTH,
 														   mira016->mode->height,
 														   ctrl->val);
-		exposure_def = (exposure_max < MIRA016_DEFAULT_EXPOSURE_US) ? exposure_max : MIRA016_DEFAULT_EXPOSURE_US;
+		exposure_def = (exposure_max < MIRA016_DEFAULT_EXPOSURE_LINES) ? exposure_max : MIRA016_DEFAULT_EXPOSURE_LINES;
 		__v4l2_ctrl_modify_range(mira016->exposure,
 								 mira016->exposure->minimum,
-								 (int)(1 + exposure_max / MIRA016_MIN_ROW_LENGTH_US), mira016->exposure->step,
-								 (int)(1 + exposure_def / MIRA016_MIN_ROW_LENGTH_US));
+								 (int)( exposure_max ), mira016->exposure->step,
+								 (int)( exposure_def ));
+
 	}
 
 	/*
@@ -5489,11 +5501,11 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			max_exposure = mira016_calculate_max_exposure_time(MIRA016_MIN_ROW_LENGTH,
 															   mira016->mode->height,
 															   mira016->mode->min_vblank);
-			default_exp = MIRA016_DEFAULT_EXPOSURE_US > max_exposure ? max_exposure : MIRA016_DEFAULT_EXPOSURE_US;
+			default_exp = MIRA016_DEFAULT_EXPOSURE_LINES > max_exposure ? max_exposure : MIRA016_DEFAULT_EXPOSURE_LINES;
 			rc = __v4l2_ctrl_modify_range(mira016->exposure,
 										  mira016->exposure->minimum,
-										  (int)(1 + max_exposure), mira016->exposure->step,
-										  (int)(1 + default_exp));
+										  (int)( max_exposure), mira016->exposure->step,
+										  (int)( default_exp));
 			if (rc)
 			{
 				dev_err(&client->dev, "Error setting exposure range");
@@ -6017,9 +6029,9 @@ static int mira016_init_controls(struct mira016 *mira016)
 
 	mira016->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
 										  V4L2_CID_EXPOSURE,
-										  MIRA016_EXPOSURE_MIN_US, MIRA016_EXPOSURE_MAX_US,
+										  MIRA016_EXPOSURE_MIN_LINES, MIRA016_EXPOSURE_MAX_LINES,
 										  1,
-										  MIRA016_DEFAULT_EXPOSURE_US);
+										  MIRA016_DEFAULT_EXPOSURE_LINES);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_ANALOGUE_GAIN %X.\n", __func__, V4L2_CID_ANALOGUE_GAIN);
 
