@@ -1012,7 +1012,7 @@ static const struct mira220_reg full_1600_1400_1500_12b_2lanes_reg[] = {
 	{0x1012,0xDF}, //,Initial Upload
 	{0x1013,0x2B}, //,Initial Upload
 	{0x1002,0x4}, //,Initial Upload
-	{0x1003,0x10}, //,Sensor Control Mode.IMAGER_STATE(0)
+	// {0x1003,0x10}, //,Sensor Control Mode.IMAGER_STATE(0)
 	{0x0043,0x0}, //,Sensor Control Mode.SLEEP_POWER_MODE(0)
 	{0x0043,0x0}, //,Sensor Control Mode.IDLE_POWER_MODE(0)
 	{0x0043,0x4}, //,Sensor Control Mode.SYSTEM_CLOCK_ENABLE(0)
@@ -1863,7 +1863,7 @@ static const struct mira220_reg vga_640_480_120fps_12b_2lanes_reg[] = {
 	{0x1012,0xDF}, //,Initial Upload
 	{0x1013,0x2B}, //,Initial Upload
 	{0x1002,0x4}, //,Initial Upload
-	{0x1003,0x10}, //,Sensor Control Mode.IMAGER_STATE(0)
+	// {0x1003,0x10}, //,Sensor Control Mode.IMAGER_STATE(0)
 	{0x0043,0x0}, //,Sensor Control Mode.SLEEP_POWER_MODE(0)
 	{0x0043,0x0}, //,Sensor Control Mode.IDLE_POWER_MODE(0)
 	{0x0043,0x4}, //,Sensor Control Mode.SYSTEM_CLOCK_ENABLE(0)
@@ -2711,7 +2711,7 @@ static const struct mira220_reg full_400_400_250fps_12b_2lanes_reg[] = {
 	{0x1012,0xDF}, //,Initial Upload
 	{0x1013,0x2B}, //,Initial Upload
 	{0x1002,0x4}, //,Initial Upload
-	{0x1003,0x10}, //,Sensor Control Mode.IMAGER_STATE(0)
+	// {0x1003,0x10}, //,Sensor Control Mode.IMAGER_STATE(0)
 	{0x0043,0x0}, //,Sensor Control Mode.SLEEP_POWER_MODE(0)
 	{0x0043,0x0}, //,Sensor Control Mode.IDLE_POWER_MODE(0)
 	{0x0043,0x4}, //,Sensor Control Mode.SYSTEM_CLOCK_ENABLE(0)
