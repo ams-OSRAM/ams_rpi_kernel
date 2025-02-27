@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Definitions for PONCHA110 camera module on VC I2C bus
-/dts-v1/;
-/plugin/;
+
 
 #include <dt-bindings/gpio/gpio.h>
 
@@ -76,8 +75,8 @@
 					poncha110_0: endpoint {
 						remote-endpoint = <&csi_ep>;
 						clock-lanes = <0>;
-						data-lanes = <1>;
-						// clock-noncontinuous; // poncha110 reg seq use continuous clk
+						data-lanes = <1 2>;
+						clock-noncontinuous; // poncha110 reg seq use continuous clk
 						link-frequencies =
 							/bits/ 64 <456000000>;
 					};
@@ -97,7 +96,7 @@
 				csi_ep: endpoint {
 					remote-endpoint = <&poncha110_0>;
 					clock-lanes = <0>;
-					data-lanes = <1>;
+					data-lanes = <1 2>;
 					// clock-noncontinuous; // poncha110 reg seq use continous clk
 				};
 			};
