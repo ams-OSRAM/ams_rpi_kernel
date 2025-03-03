@@ -1023,9 +1023,9 @@ static const struct poncha110_reg full_10b_2lane_gain1_3_reg_pre_soft_reset[] = 
 	//NROF_FRAMES
 	{ 0x0008, 0x00 },
 	//MODE_SELECT
-	{ 0x0007, 0x00 },
+	// { 0x0007, 0x00 },
 	//MODE_SELECT
-	{ 0x0007, 0x01 },
+	// { 0x0007, 0x01 },
 	//RW_CONTEXT
 	{ 0x0000, 0x00 },
 	//RAMPGEN_SET
@@ -1811,9 +1811,9 @@ static const struct poncha110_reg crop_980_10b_2lane_gain1_reg_pre_soft_reset[] 
 	//NROF_FRAMES
 	{ 0x0008, 0x00 },
 	//MODE_SELECT
-	{ 0x0007, 0x00 },
+	// { 0x0007, 0x00 },
 	//MODE_SELECT
-	{ 0x0007, 0x01 },
+	// { 0x0007, 0x01 },
 	//RW_CONTEXT
 	{ 0x0000, 0x00 },
 	//RAMPGEN_SET
@@ -2737,9 +2737,9 @@ static int poncha110_write_analog_gain_reg(struct poncha110 *poncha110, u8 gain)
 
 
 
-	ret |= poncha110_write(poncha110, 0x0007, 0x00);
+	// ret |= poncha110_write(poncha110, 0x0007, 0x00);
 
-	ret |= poncha110_write(poncha110, 0x0007, 0x01);
+	// ret |= poncha110_write(poncha110, 0x0007, 0x01);
 
 	}
 	if (ret) {
