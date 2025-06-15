@@ -219,6 +219,10 @@
 #define MIRA016_EOB_TARGET_10BIT 24
 #define MIRA016_EOB_TARGET_12BIT 96
 
+#define YWIN_DIR_REG 0x0023 // YWIN direction register
+#define YWIN_START_REG 0x002B // YWIN start register
+#define XMIRROR_REG 0xe030 // YWIN start register
+
 enum pad_types
 {
 	IMAGE_PAD,
@@ -1745,11 +1749,44 @@ static int mira016_set_ctrl(struct v4l2_ctrl *ctrl)
 			// TODO: HFLIP requires multiple register writes
 			// ret = mira016_write(mira016, MIRA016_HFLIP_REG,
 			//		        ctrl->val);
+			printk(KERN_ERR "[MIRA016]: HFLIP: set %d.\n", ctrl->val);
+
+			if (ctrl->val == 0)
+			{
+				printk(KERN_ERR "[MIRA016]: HFLIP: disable %d.\n", ctrl->val);
+				ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0x01);
+				ret = mira016_write(mira016, XMIRROR_REG, 0);
+
+			}
+			else
+			{
+				printk(KERN_ERR "[MIRA016]: HFLIP: enable %d.\n", ctrl->val);
+				ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0x01);
+				ret = mira016_write(mira016, XMIRROR_REG, 1);
+			}
 			break;
 		case V4L2_CID_VFLIP:
+			// {0x0029, 0x1},	// None
+			// {0x002A, 0x90}, // None
+			// {0x002B, 0x0},	// None
+			// {0x002C, 0xE},	// None
 			// TODO: VFLIP seems not supported in MIRA016
-			// ret = mira016_write(mira016, MIRA016_VFLIP_REG,
-			//		        ctrl->val);
+			ret = mira016_write(mira016, MIRA016_BANK_SEL_REG, 0x00);
+
+			if (ctrl->val == 0)
+			{
+				printk(KERN_ERR "[MIRA016]: VFLIP: disable %d.\n", ctrl->val);
+				ret = mira016_write(mira016, YWIN_DIR_REG, 0x0);
+				ret = mira016_write_be16(mira016, YWIN_START_REG, 14);
+
+			}
+			else
+			{
+				printk(KERN_ERR "[MIRA016]: VFLIP: enable %d.\n", ctrl->val);
+				ret = mira016_write(mira016, YWIN_DIR_REG, 0x0);
+				ret = mira016_write(mira016, YWIN_START_REG, 413);
+			}
+
 			break;
 		case V4L2_CID_VBLANK:
 			/*
@@ -2590,17 +2627,17 @@ static int mira016_init_controls(struct mira016 *mira016)
 									  mira016->mode->gain_min, mira016->mode->gain_max,
 									  MIRA016_ANALOG_GAIN_STEP, MIRA016_ANALOG_GAIN_DEFAULT);
 
-	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_HFLIP %X.\n", __func__, V4L2_CID_HFLIP);
+	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_HFLIP new %X.\n", __func__, V4L2_CID_HFLIP);
 
 	mira016->hflip = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-									   V4L2_CID_HFLIP, 0, 0, 1, 0);
+									   V4L2_CID_HFLIP, 0, 1, 1, 0);
 	if (mira016->hflip)
 		mira016->hflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_VFLIP %X.\n", __func__, V4L2_CID_VFLIP);
 
 	mira016->vflip = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops,
-									   V4L2_CID_VFLIP, 0, 0, 1, 0);
+									   V4L2_CID_VFLIP, 0, 1, 1, 0);
 	if (mira016->vflip)
 		mira016->vflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
 
