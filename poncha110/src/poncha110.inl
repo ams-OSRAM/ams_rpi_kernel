@@ -1908,29 +1908,29 @@ static const struct poncha110_mode supported_modes[] = {
 		.gain_min = 0,
 		.gain_max = 3, // this is means 0,1,2 correspond to 1x 2x 4x gain
 	},
-	// {
-	// 	/* gain 1 10bit 60 fps crop mode */
-	// 	.width = PONCHA110_PIXEL_ARRAY_WIDTH,
-	// 	.height = 980,
-	// 	.crop = {
-	// 		.left = PONCHA110_PIXEL_ARRAY_LEFT,
-	// 		.top = PONCHA110_PIXEL_ARRAY_TOP,
-	// 		.width = PONCHA110_PIXEL_ARRAY_WIDTH,
-	// 		.height = 980},
-	// 	.reg_list_pre_soft_reset = {
-	// 		.num_of_regs = ARRAY_SIZE(crop_980_10b_2lane_gain1_reg_pre_soft_reset),
-	// 		.regs = crop_980_10b_2lane_gain1_reg_pre_soft_reset,
-	// 	},
+	 {
+	 	/* gain 1 10bit 60 fps crop mode */
+	 	.width = PONCHA110_PIXEL_ARRAY_WIDTH,
+	 	.height = 980,
+	 	.crop = {
+	 		.left = PONCHA110_PIXEL_ARRAY_LEFT,
+	 		.top = PONCHA110_PIXEL_ARRAY_TOP,
+	 		.width = PONCHA110_PIXEL_ARRAY_WIDTH,
+	 		.height = 980},
+	 	.reg_list_pre_soft_reset = {
+	 		.num_of_regs = ARRAY_SIZE(crop_980_10b_2lane_gain1_reg_pre_soft_reset),
+	 		.regs = crop_980_10b_2lane_gain1_reg_pre_soft_reset,
+	 	},
 
-	// 	.min_vblank = PONCHA110_MIN_VBLANK,
-	// 	.max_vblank = PONCHA110_MAX_VBLANK,
-	// 	.hblank = PONCHA110_HBLANK_1, // TODO
-	// 	.row_length = PONCHA110_ROW_LENGTH_1,
-	// 	.bit_depth = 10,
-	// 	.code = MEDIA_BUS_FMT_SBGGR10_1X10,
-	// 	.gain_min = 0,
-	// 	.gain_max = 0, // this is means 0,1,2 correspond to 1x 2x 4x gain
-	// },
+	 	.min_vblank = PONCHA110_MIN_VBLANK,
+	 	.max_vblank = PONCHA110_MAX_VBLANK,
+	 	.hblank = PONCHA110_HBLANK_1, // TODO
+	 	.row_length = PONCHA110_ROW_LENGTH_1,
+	 	.bit_depth = 10,
+	 	.code = MEDIA_BUS_FMT_SBGGR10_1X10,
+	 	.gain_min = 0,
+	 	.gain_max = 0, // this is means 0,1,2 correspond to 1x 2x 4x gain
+	 },
 
 
 };
@@ -3325,7 +3325,7 @@ static int poncha110_set_pad_format(struct v4l2_subdev *sd,
 									  fmt->format.width,
 									  fmt->format.height);
 		poncha110_update_image_pad_format(poncha110, mode, fmt);
-		printk(KERN_INFO "[PONCHA110]: Poncha110 height mode 0 = %d.   mode 1 is %d \n", supported_modes[0].height, supported_modes[1].height);
+		// printk(KERN_INFO "[PONCHA110]: Poncha110 height mode 0 = %d.   mode 1 is %d \n", supported_modes[0].height, supported_modes[1].height);
 
 		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		{
