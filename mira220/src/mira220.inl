@@ -216,8 +216,8 @@
 #define MIRA220_EXPOSURE_MIN			1
 
 // Power on function timing
-#define MIRA220_XCLR_MIN_DELAY_US		100000
-#define MIRA220_XCLR_DELAY_RANGE_US		30
+#define MIRA220_XCLR_MIN_DELAY_US		150000
+#define MIRA220_XCLR_DELAY_RANGE_US		3000
 
 
 
@@ -3247,25 +3247,6 @@ static int mira220_power_on(struct device *dev)
 	 * Therefore, avoid reset if (skip_reg_upload == 1),
 	 * or if (skip_reset == 1).
 	 */
-	if (mira220->skip_reset == 0 && mira220->skip_reg_upload == 0) {
-		/* Pull reset to low if it is high */
-		if (mira220->powered == 1) {
-			ret = regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
-			if (ret) {
-				dev_err(&client->dev, "%s: failed to disable regulators\n",
-					__func__);
-				return ret;
-			}
-			clk_disable_unprepare(mira220->xclk);
-			usleep_range(MIRA220_XCLR_MIN_DELAY_US,
-				     MIRA220_XCLR_MIN_DELAY_US + MIRA220_XCLR_DELAY_RANGE_US);
-			mira220->powered = 0;
-		} else {
-			printk(KERN_INFO "[MIRA220]: Skip disabling regulator and clk due to mira220->powered == %d.\n", mira220->powered);
-		}
-	} else {
-		printk(KERN_INFO "[MIRA220]: Skip pulling reset to low due to mira220->skip_reset=%u.\n", mira220->skip_reset);
-	}
 
 	/* Alway enable regulator even if (skip_reset == 1) */
 	if (mira220->powered == 0) {
@@ -3306,7 +3287,7 @@ static int mira220_power_off(struct device *dev)
 	printk(KERN_INFO "[MIRA220]: Entering power off function.\n");
 
 	/* Keep reset pin high, due to mira220 consums max power when reset pin is low */
-	if (mira220->force_power_off == 1) {
+	if (mira220->skip_reset == 0) {
 		if (mira220->powered == 1) {
 			regulator_bulk_disable(MIRA220_NUM_SUPPLIES, mira220->supplies);
 			clk_disable_unprepare(mira220->xclk);
