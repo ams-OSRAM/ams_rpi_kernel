@@ -96,8 +96,8 @@
 #define MIRA016_PIXEL_ARRAY_HEIGHT 400U
 
 /* Set analog gain min and max to 0 to avoid user changing it. */
-#define MIRA016_ANALOG_GAIN_MAX 1
-#define MIRA016_ANALOG_GAIN_MIN 0
+#define MIRA016_ANALOG_GAIN_MAX 2
+#define MIRA016_ANALOG_GAIN_MIN 1
 #define MIRA016_ANALOG_GAIN_STEP 1
 #define MIRA016_ANALOG_GAIN_DEFAULT MIRA016_ANALOG_GAIN_MIN
 
@@ -3653,7 +3653,7 @@ static const char *const mira016_supply_name[] = {
  */
 static const u32 codes[] = {
 	MEDIA_BUS_FMT_SGRBG10_1X10,
-	MEDIA_BUS_FMT_SGRBG12_1X12,
+	// MEDIA_BUS_FMT_SGRBG12_1X12,
 	MEDIA_BUS_FMT_SGRBG8_1X8,
 };
 
@@ -3689,25 +3689,25 @@ static const struct mira016_mode supported_modes[] = {
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
 	},
-	{
-		/* 400x400 12 bit 100fps mode */
-		.width = 400,
-		.height = 400,
-		.crop = {.left = MIRA016_PIXEL_ARRAY_LEFT, .top = MIRA016_PIXEL_ARRAY_TOP, .width = 400, .height = 400},
-		.reg_list_pre_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_pre_soft_reset),
-			.regs = full_400_400_100fps_12b_1lane_reg_pre_soft_reset,
-		},
-		.reg_list_post_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_post_soft_reset),
-			.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
-		},
-		.min_vblank = MIRA016_MIN_VBLANK_200,
-		.max_vblank = MIRA016_MAX_VBLANK,
-		.hblank = MIRA016_HBLANK, // TODO
-		.bit_depth = 12,
-		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
-	},
+	// {
+	// 	/* 400x400 12 bit 100fps mode */
+	// 	.width = 400,
+	// 	.height = 400,
+	// 	.crop = {.left = MIRA016_PIXEL_ARRAY_LEFT, .top = MIRA016_PIXEL_ARRAY_TOP, .width = 400, .height = 400},
+	// 	.reg_list_pre_soft_reset = {
+	// 		.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_pre_soft_reset),
+	// 		.regs = full_400_400_100fps_12b_1lane_reg_pre_soft_reset,
+	// 	},
+	// 	.reg_list_post_soft_reset = {
+	// 		.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_post_soft_reset),
+	// 		.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
+	// 	},
+	// 	.min_vblank = MIRA016_MIN_VBLANK_200,
+	// 	.max_vblank = MIRA016_MAX_VBLANK,
+	// 	.hblank = MIRA016_HBLANK, // TODO
+	// 	.bit_depth = 12,
+	// 	.code = MEDIA_BUS_FMT_SGRBG12_1X12,
+	// },
 	{
 		/* 400x400 8 bit 100fps mode */
 		.width = 400,
@@ -4894,17 +4894,17 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 	if (mira016->bit_depth == 12)
 	{
 		// Select register sequence according to gain value
-		if (gain == 0)
+		if (gain == 1)
 		{
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us + 100);
-			printk(KERN_INFO "[mira016]: Write reg sequence for analog gain x1 in 12 bit mode");
+			printk(KERN_INFO "[mira016]: Write reg sequence for FIXED analog gain x1 in 12 bit mode");
 			num_of_regs = ARRAY_SIZE(partial_analog_gain_x1_12bit);
 			ret = mira016_write_regs(mira016, partial_analog_gain_x1_12bit, num_of_regs);
 			mira016_write_start_streaming_regs(mira016);
 			mira016->row_length = 1504; 
 		}
-		else if (gain == 1)
+		else if (gain == 2)
 		{
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us + 100);
@@ -4923,7 +4923,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 	else if (mira016->bit_depth == 10)
 	{
 		// Select register sequence according to gain value
-		if (gain == 0)
+		if (gain == 1)
 		{
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us + 100);
@@ -4933,7 +4933,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			mira016_write_start_streaming_regs(mira016);
 			mira016->row_length = 1092; 
 		}
-		else if (gain == 1)
+		else if (gain == 2)
 		{
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us + 100);
@@ -4952,7 +4952,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 	else if (mira016->bit_depth == 8)
 	{
 		// Select register sequence according to gain value
-		if (gain == 0)
+		if (gain == 1)
 		{
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us + 100);
@@ -4962,7 +4962,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			mira016_write_start_streaming_regs(mira016);
 			mira016->row_length = 1042; 
 		}
-		else if (gain == 1)
+		else if (gain == 2)
 		{
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us + 100);
@@ -5456,16 +5456,16 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			// return 0;
 			break;
 
-		case MEDIA_BUS_FMT_SGRBG12_1X12:
-			printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 12 bit mode.\n");
-			mira016->mode = &supported_modes[1];
-			mira016->bit_depth = 12;
-			// return 0;
-			break;
+		// case MEDIA_BUS_FMT_SGRBG12_1X12:
+		// 	printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 12 bit mode.\n");
+		// 	mira016->mode = &supported_modes[1];
+		// 	mira016->bit_depth = 12;
+		// 	// return 0;
+		// 	break;
 
 		case MEDIA_BUS_FMT_SGRBG8_1X8:
 			printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 8 bit mode.\n");
-			mira016->mode = &supported_modes[2];
+			mira016->mode = &supported_modes[1];
 			mira016->bit_depth = 8;
 			// return 0;
 			break;
@@ -5563,14 +5563,14 @@ static int mira016_set_framefmt(struct mira016 *mira016)
 		mira016->mode = &supported_modes[0];
 		mira016->bit_depth = 10;
 		return 0;
-	case MEDIA_BUS_FMT_SGRBG12_1X12:
-		printk(KERN_INFO "[MIRA016]: mira016_set_framefmt() selects 12 bit mode.\n");
-		mira016->mode = &supported_modes[1];
-		mira016->bit_depth = 12;
-		return 0;
+	// case MEDIA_BUS_FMT_SGRBG12_1X12:
+	// 	printk(KERN_INFO "[MIRA016]: mira016_set_framefmt() selects 12 bit mode.\n");
+	// 	mira016->mode = &supported_modes[1];
+	// 	mira016->bit_depth = 12;
+	// 	return 0;
 	case MEDIA_BUS_FMT_SGRBG8_1X8:
 		printk(KERN_INFO "[MIRA016]: mira016_set_framefmt() selects 8 bit mode.\n");
-		mira016->mode = &supported_modes[2];
+		mira016->mode = &supported_modes[1];
 		mira016->bit_depth = 8;
 		return 0;
 	default:
