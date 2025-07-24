@@ -249,6 +249,8 @@ struct mira016_mode
 	struct mira016_reg_list reg_list_post_soft_reset;
 	u32 gain_min;
 	u32 gain_max;
+	u32 gain_step;
+
 	u32 min_vblank;
 	u32 max_vblank;
 	u32 hblank;
@@ -286,7 +288,7 @@ static const u32 codes[] = {
 	// MEDIA_BUS_FMT_Y12_1X12,
 	MEDIA_BUS_FMT_SGRBG8_1X8,
 	MEDIA_BUS_FMT_SGRBG10_1X10,
-	MEDIA_BUS_FMT_SGRBG12_1X12,
+	// MEDIA_BUS_FMT_SGRBG12_1X12,
 };
 
 /* Mode configs */
@@ -298,31 +300,6 @@ static const u32 codes[] = {
  */
 #define MIRA016_SUPPORTED_MODE_SIZE_PUBLIC 1
 static const struct mira016_mode supported_modes[] = {
-	{
-		/* 12 bit mode */
-		.width = 400,
-		.height = 400,
-		.crop = {
-			.left = MIRA016_PIXEL_ARRAY_LEFT,
-			.top = MIRA016_PIXEL_ARRAY_TOP,
-			.width = 400,
-			.height = 400},
-		.reg_list_pre_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_pre_soft_reset),
-			.regs = full_400_400_100fps_12b_1lane_reg_pre_soft_reset,
-		},
-		.reg_list_post_soft_reset = {
-			.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_post_soft_reset),
-			.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
-		},
-		.min_vblank = MIRA016_MIN_VBLANK_60,
-		.max_vblank = MIRA016_MAX_VBLANK,
-		.hblank = MIRA016_HBLANK, // TODO
-		.bit_depth = 12,
-		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
-		.gain_min = 0,
-		.gain_max = 1, // this is means 0,1,2 correspond to 1x 2x 4x gain
-	},
 	{
 		/* 10 bit highspeed / low power mode */
 		.width = 400,
@@ -343,6 +320,7 @@ static const struct mira016_mode supported_modes[] = {
 		.bit_depth = 10,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
 		.gain_min = 0,
+		.gain_step = 1,
 		.gain_max = ARRAY_SIZE(fine_gain_lut_10bit_hs_4x) - 1,
 	},
 	{
@@ -365,8 +343,35 @@ static const struct mira016_mode supported_modes[] = {
 		.bit_depth = 8,
 		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
 		.gain_min = 0,
+		.gain_step = 1,
 		.gain_max = ARRAY_SIZE(fine_gain_lut_8bit_16x) - 1,
 	},
+	// {
+	// 	/* 12 bit mode */
+	// 	.width = 400,
+	// 	.height = 400,
+	// 	.crop = {
+	// 		.left = MIRA016_PIXEL_ARRAY_LEFT,
+	// 		.top = MIRA016_PIXEL_ARRAY_TOP,
+	// 		.width = 400,
+	// 		.height = 400},
+	// 	.reg_list_pre_soft_reset = {
+	// 		.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_pre_soft_reset),
+	// 		.regs = full_400_400_100fps_12b_1lane_reg_pre_soft_reset,
+	// 	},
+	// 	.reg_list_post_soft_reset = {
+	// 		.num_of_regs = ARRAY_SIZE(full_400_400_100fps_12b_1lane_reg_post_soft_reset),
+	// 		.regs = full_400_400_100fps_12b_1lane_reg_post_soft_reset,
+	// 	},
+	// 	.min_vblank = MIRA016_MIN_VBLANK_60,
+	// 	.max_vblank = MIRA016_MAX_VBLANK,
+	// 	.hblank = MIRA016_HBLANK, // TODO
+	// 	.bit_depth = 12,
+	// 	.code = MEDIA_BUS_FMT_SGRBG12_1X12,
+	// 	.gain_min = 0,
+	// 	.gain_step = 24,
+	// 	.gain_max = 24, // refer to the lookup table.
+	// },
 
 };
 
@@ -930,18 +935,18 @@ static int mira016_write_illum_trig_regs(struct mira016 *mira016)
 		// printk(KERN_INFO "[MIRA016]: LPS DISABLED. Exposure name is  to %u.\n", mira016->exposure->name);
 		u32 cur_exposure = (mira016->exposure->val * MIRA016_DEFAULT_LINE_LENGTH);
 
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur is  to %u.\n", mira016->exposure->val);
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur IN US  is  to %u.\n", cur_exposure);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur is  to %u.\n", mira016->exposure->val);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. Exposure cur IN US  is  to %u.\n", cur_exposure);
 
 		u32 readout_time = (11 + MIRA016_PIXEL_ARRAY_HEIGHT) * mira016->row_length * 8 / MIRA016_DATA_RATE;
 
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. MIRA016_LPS_CYCLE_TIME is  to %u.\n", MIRA016_LPS_CYCLE_TIME);
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. MIRA016_GLOB_TIME is  to %u.\n", MIRA016_GLOB_TIME);
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. frame time is  to %u.\n", mira016->target_frame_time_us);
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. glob time is  to %u.\n", MIRA016_GLOB_TIME);
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. read time is  to %u.\n", MIRA016_READOUT_TIME);
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. new read time is  to %u.\n", readout_time);
-		printk(KERN_INFO "[MIRA016]: LPS ENABLED. mira016->target_frame_time_us - MIRA016_GLOB_TIME - readout_time is  to %u.\n", mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. MIRA016_LPS_CYCLE_TIME is  to %u.\n", MIRA016_LPS_CYCLE_TIME);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. MIRA016_GLOB_TIME is  to %u.\n", MIRA016_GLOB_TIME);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. frame time is  to %u.\n", mira016->target_frame_time_us);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. glob time is  to %u.\n", MIRA016_GLOB_TIME);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. read time is  to %u.\n", MIRA016_READOUT_TIME);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. new read time is  to %u.\n", readout_time);
+		// printk(KERN_INFO "[MIRA016]: LPS ENABLED. mira016->target_frame_time_us - MIRA016_GLOB_TIME - readout_time is  to %u.\n", mira016->target_frame_time_us - MIRA016_GLOB_TIME - MIRA016_READOUT_TIME);
 
 		// case 1: EXP_TIME < LPS_CYCLE_TIME
 		if (cur_exposure < MIRA016_LPS_CYCLE_TIME)
@@ -1493,7 +1498,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 	if (mira016->bit_depth == 12)
 	{
 		// Select register sequence according to gain value
-		if (gain == 0)
+		if (gain == 1)
 		{
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us + 100);
@@ -1503,7 +1508,7 @@ static int mira016_write_analog_gain_reg(struct mira016 *mira016, u8 gain)
 			mira016_write_start_streaming_regs(mira016);
 			mira016->row_length = 1504;
 		}
-		else if (gain == 1)
+		else if (gain == 2)
 		{
 			mira016_write_stop_streaming_regs(mira016);
 			usleep_range(wait_us, wait_us + 100);
@@ -1640,8 +1645,8 @@ static void mira016_set_default_format(struct mira016 *mira016)
 	struct v4l2_mbus_framefmt *fmt;
 
 	fmt = &mira016->fmt;
-	fmt->code = MEDIA_BUS_FMT_SGRBG12_1X12; // MEDIA_BUS_FMT_Y12_1X12;
-	mira016->bit_depth = 12;
+	fmt->code = MEDIA_BUS_FMT_SGRBG10_1X10; // MEDIA_BUS_FMT_Y12_1X12;
+	mira016->bit_depth = 10;
 	fmt->colorspace = V4L2_COLORSPACE_RAW;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
@@ -1668,7 +1673,7 @@ static int mira016_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	try_fmt_img->width = supported_modes[0].width;
 	try_fmt_img->height = supported_modes[0].height;
 	try_fmt_img->code = mira016_validate_format_code_or_default(mira016,
-																MEDIA_BUS_FMT_SGRBG12_1X12);
+																MEDIA_BUS_FMT_SGRBG10_1X10);
 	try_fmt_img->field = V4L2_FIELD_NONE;
 
 	/* TODO(jalv): Initialize try_fmt for the embedded metadata pad */
@@ -2030,11 +2035,13 @@ static int __mira016_get_pad_format(struct mira016 *mira016,
 {
 	if (fmt->pad >= NUM_PADS)
 		return -EINVAL;
+	printk(KERN_ERR "[MIRA016] [PB]: __mira016_get_pad_format");
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 	{
 		struct v4l2_mbus_framefmt *try_fmt =
 			v4l2_subdev_get_try_format(&mira016->sd, sd_state, fmt->pad);
+		printk(KERN_ERR "[MIRA016] [PB]: __mira016_get_pad_format V4L2_SUBDEV_FORMAT_TRY");
 
 		try_fmt->code = fmt->pad == IMAGE_PAD ? mira016_validate_format_code_or_default(mira016, try_fmt->code) : MEDIA_BUS_FMT_SENSOR_DATA;
 		fmt->format = *try_fmt;
@@ -2043,6 +2050,8 @@ static int __mira016_get_pad_format(struct mira016 *mira016,
 	{
 		if (fmt->pad == IMAGE_PAD)
 		{
+			printk(KERN_ERR "[MIRA016] [PB]: __mira016_get_pad_format IMAGE_PAD");
+
 			mira016_update_image_pad_format(mira016, mira016->mode,
 											fmt);
 			fmt->format.code = mira016_validate_format_code_or_default(mira016,
@@ -2063,6 +2072,7 @@ static int mira016_get_pad_format(struct v4l2_subdev *sd,
 {
 	struct mira016 *mira016 = to_mira016(sd);
 	int ret;
+	printk(KERN_ERR "[MIRA016] [PB]: mira016_get_pad_format IMAGE_PAD");
 
 	mutex_lock(&mira016->mutex);
 	ret = __mira016_get_pad_format(mira016, sd_state, fmt);
@@ -2081,6 +2091,7 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 	struct v4l2_mbus_framefmt *framefmt;
 	u32 max_exposure = 0, default_exp = 0;
 	int rc = 0;
+	printk(KERN_INFO "[MIRA016] [PB]: set pad format \n");
 
 	if (fmt->pad >= NUM_PADS)
 		return -EINVAL;
@@ -2096,28 +2107,30 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 		switch (fmt->format.code)
 		{
 		case MEDIA_BUS_FMT_SGRBG10_1X10:
-			printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 10 bit mode.\n");
-			mira016->mode = &supported_modes[1];
+			printk(KERN_INFO "[MIRA016] [PB]: fmt->format.code() selects 10 bit mode.\n");
+			mira016->mode = &supported_modes[0];
 			mira016->bit_depth = 10;
 			// return 0;
 			break;
 
-		case MEDIA_BUS_FMT_SGRBG12_1X12:
-			printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 12 bit mode.\n");
-			mira016->mode = &supported_modes[0];
-			mira016->bit_depth = 12;
-			// return 0;
-			break;
+		// case MEDIA_BUS_FMT_SGRBG12_1X12:
+		// 	printk(KERN_INFO "[MIRA016] [PB]: fmt->format.code() selects 12 bit mode.\n");
+		// 	mira016->mode = &supported_modes[2];
+		// 	mira016->bit_depth = 12;
+		// 	// return 0;
+		// 	break;
 
 		case MEDIA_BUS_FMT_SGRBG8_1X8:
-			printk(KERN_INFO "[MIRA016]: fmt->format.code() selects 8 bit mode.\n");
-			mira016->mode = &supported_modes[2];
+			printk(KERN_INFO "[MIRA016] [PB]: fmt->format.code() selects 8 bit mode.\n");
+			mira016->mode = &supported_modes[1];
 			mira016->bit_depth = 8;
 			// return 0;
 			break;
 		default:
 			printk(KERN_ERR "Unknown format requested fmt->format.code() %d", fmt->format.code);
 		}
+
+
 		mode = v4l2_find_nearest_size(supported_modes,
 									  ARRAY_SIZE(supported_modes),
 									  width, height,
@@ -2126,16 +2139,19 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 		mira016_update_image_pad_format(mira016, mode, fmt);
 		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		{
+			printk(KERN_ERR "mira016_set_pad_format - V4L2_SUBDEV_FORMAT_TRY", fmt->format.code);
+
 			framefmt = v4l2_subdev_get_try_format(sd, sd_state,
 												  fmt->pad);
 			*framefmt = fmt->format;
+
 		}
 		else if (mira016->mode != mode ||
 				 mira016->fmt.code != fmt->format.code)
 		{
 
 			mira016->fmt = fmt->format;
-			// mira016->mode = mode;
+			mira016->mode = mode;
 
 			// Update controls based on new mode (range and current value).
 			max_exposure = mira016_calculate_max_exposure_time(MIRA016_MIN_ROW_LENGTH,
@@ -2153,29 +2169,27 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 			}
 
 			printk(KERN_INFO "[MIRA016]: MIRA016 SETTING ANA GAIN RANGE  = %u.\n",
-				   ARRAY_SIZE(fine_gain_lut_8bit_16x) - 1);
+				   mira016->mode->gain_max);
 			// #FIXME #TODO
 			//  rc = __v4l2_ctrl_modify_range(mira016->gain,
 			//  					 0, ARRAY_SIZE(fine_gain_lut_8bit_16x) - 1, 1, 0);
-			rc = __v4l2_ctrl_modify_range(mira016->gain,
-										  mira016->mode->gain_min,
-										  mira016->mode->gain_max,
-										  1,
-										  0);
+			rc = 		__v4l2_ctrl_modify_range(mira016->gain,
+								 mira016->mode->gain_min, mira016->mode->gain_max,
+								 mira016->mode->gain_step, mira016->mode->gain_min);
 			if (rc)
 			{
 				dev_err(&client->dev, "Error setting gain range");
 			}
 
-			printk(KERN_INFO "[MIRA016]: MIRA016 VBLANK  = %u.\n",
-				   mira016->mode->min_vblank);
+			// printk(KERN_INFO "[MIRA016]: MIRA016 VBLANK  = %u.\n",
+			// 	   mira016->mode->min_vblank);
 
 			rc = __v4l2_ctrl_modify_range(mira016->vblank,
 										  mira016->mode->min_vblank,
 										  mira016->mode->max_vblank,
 										  1,
 										  MIRA016_DEFAULT_VBLANK_60 // 200 fps
-);
+			);
 			if (rc)
 			{
 				dev_err(&client->dev, "Error setting exposure range");
@@ -2190,12 +2204,16 @@ static int mira016_set_pad_format(struct v4l2_subdev *sd,
 		}
 	}
 	else
-	{
+	{	
+		printk(KERN_INFO "[MIRA016] [PB]: already in the right pad format.\n");
+
 		if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		{
 			framefmt = v4l2_subdev_get_try_format(sd, sd_state,
 												  fmt->pad);
 			*framefmt = fmt->format;
+			printk(KERN_ERR "mira016_set_pad_format but not img pad - V4L2_SUBDEV_FORMAT_TRY", fmt->format.code);
+
 		}
 		else
 		{
@@ -2216,26 +2234,26 @@ static int mira016_set_framefmt(struct mira016 *mira016)
 	{
 	case MEDIA_BUS_FMT_SGRBG8_1X8:
 		printk(KERN_INFO "[MIRA016]: mira016_set_framefmt() selects 8 bit mode.\n");
-		mira016->mode = &supported_modes[2];
+		mira016->mode = &supported_modes[1];
 		mira016->bit_depth = 8;
 		__v4l2_ctrl_modify_range(mira016->gain,
 								 0, ARRAY_SIZE(fine_gain_lut_8bit_16x) - 1, 1, 0);
 		return 0;
 	case MEDIA_BUS_FMT_SGRBG10_1X10:
 		printk(KERN_INFO "[MIRA016]: mira016_set_framefmt() selects 10 bit mode.\n");
-		mira016->mode = &supported_modes[1];
+		mira016->mode = &supported_modes[0];
 		mira016->bit_depth = 10;
 		__v4l2_ctrl_modify_range(mira016->gain,
 								 0, ARRAY_SIZE(fine_gain_lut_10bit_hs_4x) - 1, 1, 0);
 		return 0;
-	case MEDIA_BUS_FMT_SGRBG12_1X12:
-		printk(KERN_INFO "[MIRA016]: mira016_set_framefmt() selects 12 bit mode.\n");
-		mira016->mode = &supported_modes[0];
-		mira016->bit_depth = 12;
-		__v4l2_ctrl_modify_range(mira016->gain,
-								 mira016->mode->gain_min, mira016->mode->gain_max,
-								 MIRA016_ANALOG_GAIN_STEP, MIRA016_ANALOG_GAIN_DEFAULT);
-		return 0;
+	// case MEDIA_BUS_FMT_SGRBG12_1X12:
+	// 	printk(KERN_INFO "[MIRA016]: mira016_set_framefmt() selects 12 bit mode.\n");
+	// 	mira016->mode = &supported_modes[2];
+	// 	mira016->bit_depth = 12;
+	// 	__v4l2_ctrl_modify_range(mira016->gain,
+	// 							 mira016->mode->gain_min, mira016->mode->gain_max,
+	// 							 mira016->mode->gain_step, mira016->mode->gain_min);
+	// 	return 0;
 	default:
 		printk(KERN_ERR "Unknown format requested %d", mira016->fmt.code);
 	}
@@ -2375,12 +2393,12 @@ static int mira016_start_streaming(struct mira016 *mira016)
 	}
 
 	/* vflip and hflip cannot change during streaming */
-	printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl grab vflip grab vflip.\n");
+	// printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl grab vflip grab vflip.\n");
 	__v4l2_ctrl_grab(mira016->vflip, true);
-	printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl grab vflip grab hflip.\n");
+	// printk(KERN_INFO "[MIRA016]: Entering v4l2 ctrl grab vflip grab hflip.\n");
 	__v4l2_ctrl_grab(mira016->hflip, true);
 
-	printk(KERN_INFO "[MIRA016]: %s Enable illumination trigger.\n", __func__);
+	// printk(KERN_INFO "[MIRA016]: %s Enable illumination trigger.\n", __func__);
 	mira016->illum_enable = 1;
 	mira016_write_illum_trig_regs(mira016);
 
@@ -2405,7 +2423,7 @@ static void mira016_stop_streaming(struct mira016 *mira016)
 		if (mira016->skip_reg_upload == 0 ||
 			(mira016->skip_reg_upload == 1 && mira016->force_stream_ctrl == 1))
 		{
-			printk(KERN_INFO "[MIRA016]: Writing stop streaming regs.\n");
+			// printk(KERN_INFO "[MIRA016]: Writing stop streaming regs.\n");
 			ret = mira016_write_stop_streaming_regs(mira016);
 			if (ret)
 			{
@@ -2626,7 +2644,7 @@ static int mira016_init_controls(struct mira016 *mira016)
 
 	mira016->gain = v4l2_ctrl_new_std(ctrl_hdlr, &mira016_ctrl_ops, V4L2_CID_ANALOGUE_GAIN,
 									  mira016->mode->gain_min, mira016->mode->gain_max,
-									  MIRA016_ANALOG_GAIN_STEP, MIRA016_ANALOG_GAIN_DEFAULT);
+									  mira016->mode->gain_step,mira016->mode->gain_min);
 
 	printk(KERN_INFO "[MIRA016]: %s V4L2_CID_HFLIP new %X.\n", __func__, V4L2_CID_HFLIP);
 
@@ -2841,9 +2859,8 @@ static int mira016_probe(struct i2c_client *client)
 	/* ILLUM_DELAY is in unit of TIME_UNIT, equal to 1 us. In continuous stream mode, zero delay is 1<<19. */
 	mira016->illum_delay = MIRA016_ILLUM_DELAY_DEFAULT;
 	/* Set default mode to max resolution */
-	mira016->mode = &supported_modes[1];
-	/* Set default mode to max resolution */
 	mira016->mode = &supported_modes[0];
+	/* Set default mode to max resolution */
 
 	printk(KERN_INFO "[MIRA016]: Entering init controls function.\n");
 
